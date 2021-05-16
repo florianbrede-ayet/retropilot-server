@@ -397,12 +397,11 @@ app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
 // DEVICE REGISTRATION OR RE-ACTIVATION
 app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res) => {
     var imei1 = req.query.imei;
-    var imei2 = req.query.imei2;
     var serial = req.query.serial;
     var public_key = req.query.public_key;
     var register_token = req.query.register_token;
 
-    if (imei1==null || imei1.length<5 || imei2==null || imei2.length<5 || serial==null || serial.length<5 || public_key==null || public_key.length<5 || register_token==null || register_token.length<5) {
+    if (imei1==null || imei1.length<5 || serial==null || serial.length<5 || public_key==null || public_key.length<5 || register_token==null || register_token.length<5) {
         logger.error("HTTP.V2.PILOTAUTH a required parameter is missing or empty");
         res.status(400);
         res.send('Malformed Request.');
@@ -418,15 +417,15 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
         return;
     }
     
-    var device = db.get('devices').find({imei: imei1, imei2: imei2, serial: serial});
+    var device = db.get('devices').find({imei: imei1, serial: serial});
     if (device.value()==null) {
-        logger.info("HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE ("+imei1+", "+imei2+", "+serial+")");
+        logger.info("HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE ("+imei1+", "+serial+")");
         while(true) {
             var dongleId = crypto.randomBytes(4).toString('hex');
             var device = db.get('devices').find({dongle_id: dongleId}).value();
             if (!device) {
                 var resultingDevice = db.get('devices')
-                    .push({ dongle_id: dongleId, account_id: 0, imei: imei1, imei2: imei2, serial: serial, device_type: 'freon', public_key: public_key, created: Date.now(), last_ping: Date.now()})
+                    .push({ dongle_id: dongleId, account_id: 0, imei: imei1, serial: serial, device_type: 'freon', public_key: public_key, created: Date.now(), last_ping: Date.now()})
                     .write();
                 
                 var device = db.get('devices').find({dongle_id: dongleId}).value();
@@ -440,7 +439,7 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
     }
     else {
         device.assign({last_ping: Date.now(), public_key: public_key}).write();
-        logger.info("HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE ("+imei1+", "+imei2+", "+serial+") with dongle_id "+device.value().dongle_id+"");
+        logger.info("HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE ("+imei1+", "+serial+") with dongle_id "+device.value().dongle_id+"");
         res.status(200);
         res.json({dongle_id: device.value().dongle_id});
         return;
