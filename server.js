@@ -928,7 +928,7 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
 
     var cabanaUrl = null;
     if (drive.is_processed) {
-        cabanaUrl=config.cabanaUrl+'?retropilotIdentifier='+device.dongle_id+'|'+dongleIdHash+'|'+drive.identifier+'|'+driveIdentifierHash+'&demo=1"';
+        cabanaUrl=config.cabanaUrl+'?retropilotIdentifier='+device.dongle_id+'|'+dongleIdHash+'|'+drive.identifier+'|'+driveIdentifierHash+'&retropilotHost='+encodeURIComponent(config.baseUrl)+'&demo=1"';
     }
 
     const directoryTree = dirTree(config.storagePath+device.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.identifier);

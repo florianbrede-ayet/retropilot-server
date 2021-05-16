@@ -13,12 +13,13 @@ var config = {
     sslKey: 'certs/retropilot.key',
     sslCrt: 'certs/retropilot.crt',
 
-    baseUploadUrl: 'http://192.168.1.165:3000/backend/post_upload',
-    
-    baseDriveDownloadUrl: 'http://192.168.1.165:3000/realdata/',
+    baseUrl: 'http://192.168.1.165:3000/',  // base url of the retropilot server
+    baseUploadUrl: 'http://192.168.1.165:3000/backend/post_upload', // base url sent to devices for POSTing drives & logs
+    baseDriveDownloadUrl: 'http://192.168.1.165:3000/realdata/', // base download url for drive & log data
     baseDriveDownloadPathMapping: '/realdata', // path mapping of above download url for expressjs, prefix with "/"
 
     storagePath: 'realdata/', // relative or absolute ( "/..." for absolute path )
+    
     deviceStorageQuotaMb: 200000,
     deviceDriveQuota: 1000,
     deviceDriveExpirationDays: 30,
