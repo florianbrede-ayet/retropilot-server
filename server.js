@@ -23,10 +23,15 @@ const sendmail = require('sendmail')();
 const htmlspecialchars = require('htmlspecialchars');
 
 const dirTree = require("directory-tree");
+const execSync = require('child_process').execSync;
 
 
 const adapter = new FileSync(config.databaseFile);
 const db = low(adapter);
+
+const ALL = 1E8;
+
+var totalStorageUsed=null; // global variable that is regularly updated in the background to track the total used storage
 
 
 log4js.configure({
@@ -192,6 +197,13 @@ function getAuthenticatedAccount(req) {
     return account.value();    
 }
 
+function updateTotalStorageUsed() {
+    var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/")===0 ? false : true)});
+    if (verifiedPath!==null) {
+        totalStorageUsed = execSync("du -hs "+verifiedPath+" | awk -F'\t' '{print $1;}'").toString();
+    }
+    setTimeout(function() {updateTotalStorageUsed();}, 120000); // update the used storage each 120 seconds
+}
 
 
 // CREATE OUR SERVER EXPRESS APP
@@ -271,7 +283,7 @@ app.put('/backend/post_upload', bodyParser.raw({ inflate: true, limit: '100000kb
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
 app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
-    var path = req.query.path; // todo: validate filename
+    var path = req.query.path;
     logger.info("HTTP.UPLOAD_URL called for "+req.params.dongleId+" and file "+path+": "+JSON.stringify(req.headers));
     
     var device = db.get('devices').find({ dongle_id: req.params.dongleId});    
@@ -425,7 +437,7 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
             var device = db.get('devices').find({dongle_id: dongleId}).value();
             if (!device) {
                 var resultingDevice = db.get('devices')
-                    .push({ dongle_id: dongleId, account_id: 0, imei: imei1, serial: serial, device_type: 'freon', public_key: public_key, created: Date.now(), last_ping: Date.now()})
+                    .push({ dongle_id: dongleId, account_id: 0, imei: imei1, serial: serial, device_type: 'freon', public_key: public_key, created: Date.now(), last_ping: Date.now(), storage_used: 0})
                     .write();
                 
                 var device = db.get('devices').find({dongle_id: dongleId}).value();
@@ -529,12 +541,6 @@ app.get('/useradmin', (req, res) => {
         return;
     }
 
-    var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/")===0 ? false : true)});
-    if (verifiedPath!==null) {
-        const execSync = require('child_process').execSync;
-        bytes = execSync("du -hs "+verifiedPath+" | awk -F'\t' '{print $1;}'").toString();
-    }
-
     res.status(200);
     res.send('<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>'+
                 `<br><br>
@@ -548,8 +554,7 @@ app.get('/useradmin', (req, res) => {
                 'Accounts: '+db.get('accounts').size().value()+'  |  '+
                 'Devices: '+db.get('devices').size().value()+'  |  '+
                 'Drives: '+db.get('drives').size().value()+'  |  '+
-                'Storage Used: '+(verifiedPath!==null ? bytes : '--')+'</html>');
-    
+                'Storage Used: '+(totalStorageUsed!==null ? totalStorageUsed : '--')+'<br><br>'+config.welcomeMessage+'</html>');
 }),
 
 
@@ -673,7 +678,7 @@ app.get('/useradmin/overview', (req, res) => {
         return;
     }
     
-    const devices = db.get('devices').filter({account_id: account.id}).sortBy('dongle_id').take(1000).value();
+    const devices = db.get('devices').filter({account_id: account.id}).sortBy('dongle_id').take(ALL).value();
     
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>'+
     
@@ -683,11 +688,11 @@ app.get('/useradmin/overview', (req, res) => {
                 <b>Created:</b> `+formatDate(account.created)+`<br><br>
                 <b>Devices:</b><br>
                 <table border=1 cellpadding=2 cellspacing=2>
-                    <tr><th>dongle_id</th><th>device_type</th><th>created</th><th>last_ping</th></tr>
+                    <tr><th>dongle_id</th><th>device_type</th><th>created</th><th>last_ping</th><th>storage_used</th></tr>
                 `;
                 
     for (var i in devices) {
-        response+='<tr><td><a href="/useradmin/device/'+devices[i].dongle_id+'">'+devices[i].dongle_id+'</a></td><td>'+devices[i].device_type+'</td><td>'+formatDate(devices[i].created)+'</td><td>'+formatDate(devices[i].last_ping)+'</td></tr>';
+        response+='<tr><td><a href="/useradmin/device/'+devices[i].dongle_id+'">'+devices[i].dongle_id+'</a></td><td>'+devices[i].device_type+'</td><td>'+formatDate(devices[i].created)+'</td><td>'+formatDate(devices[i].last_ping)+'</td><td>'+devices[i].storage_used+' MB</td></tr>';
     }
     response+=`</table>
                 <br>
@@ -771,7 +776,7 @@ app.get('/useradmin/device/:dongleId', (req, res) => {
     }
 
     device = device.value();
-    const drives = db.get('drives').filter({dongle_id: device.dongle_id, is_deleted: false}).sortBy('created').take(1000).value();
+    const drives = db.get('drives').filter({dongle_id: device.dongle_id, is_deleted: false}).sortBy('created').take(ALL).value();
 
     var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
     
@@ -812,8 +817,8 @@ app.get('/useradmin/device/:dongleId', (req, res) => {
                 <b>Last Ping:</b> `+formatDate(device.last_ping)+`<br>
                 <b>Public Key:</b><br><span style="font-size: 0.8em">`+device.public_key.replace(/\r?\n|\r/g, "<br>")+`</span>
                 <br>
-                <b>QuotaDrives:</b> `+drives.length+` / `+config.deviceDriveQuota+`<br>
-                <b>Quota Storage:</b> `+(0)+` MB / `+config.deviceStorageQuotaMb+` MB<br>
+                <b>Stored Drives:</b> `+drives.length+`<br>
+                <b>Quota Storage:</b> `+device.storage_used+` MB / `+config.deviceStorageQuotaMb+` MB<br>
                 <br>
                 `;
 
@@ -953,6 +958,7 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
 
     
 
+    var directorySegments={};
     for (var i in directoryTree.children) {
          // skip any non-directory entries (for example m3u8 file in the drive directory)
         if (directoryTree.children[i].type!='directory') continue;
@@ -982,9 +988,25 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
             isStalled=drive_segment.is_stalled;
         }
 
-        response+='<tr><td>'+segment+'</td><td>'+qcamera+'</td><td>'+qlog+'</td><td>'+fcamera+'</td><td>'+rlog+'</td><td>'+dcamera+'</td><td>'+isProcessed+'</td><td>'+isStalled+'</td></tr>';
+        directorySegments["seg-"+segment] = '<tr><td>'+segment+'</td><td>'+qcamera+'</td><td>'+qlog+'</td><td>'+fcamera+'</td><td>'+rlog+'</td><td>'+dcamera+'</td><td>'+isProcessed+'</td><td>'+isStalled+'</td></tr>';
     }
-    
+
+    var qcamera = '--';
+    var fcamera = '--';
+    var dcamera = '--';
+    var qlog = '--';
+    var rlog = '--';
+    var isProcessed='?';
+    var isStalled='?';
+        
+    for (var i=0; i<=drive.max_segment; i++) {
+        if (directorySegments["seg-"+i]==undefined) {
+            response+='<tr><td>'+i+'</td><td>'+qcamera+'</td><td>'+qlog+'</td><td>'+fcamera+'</td><td>'+rlog+'</td><td>'+dcamera+'</td><td>'+isProcessed+'</td><td>'+isStalled+'</td></tr>';
+        }
+        else
+            response+=directorySegments["seg-"+i];
+    }
+
     response+=`</table>
                 <br><br>
                 <hr/>
@@ -1019,11 +1041,12 @@ app.post('*', (req, res) => {
 
 
 
-lockfile.lock('retropilot_server.lock', { realpath: false, stale: 30000, update: 2000 })
+lockfile.lock('retropilot_server.lock'+Math.random(), { realpath: false, stale: 30000, update: 2000 })
 .then((release) => {
     console.log("STARTING SERVER...");
     initializeDatabase();
     initializeStorage();
+    updateTotalStorageUsed();
 
     var privateKey  = fs.readFileSync(config.sslKey, 'utf8');
     var certificate = fs.readFileSync(config.sslCrt, 'utf8');

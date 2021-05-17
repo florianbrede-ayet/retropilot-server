@@ -19,12 +19,13 @@ var config = {
     baseDriveDownloadPathMapping: '/realdata', // path mapping of above download url for expressjs, prefix with "/"
 
     storagePath: 'realdata/', // relative or absolute ( "/..." for absolute path )
-    
+
     deviceStorageQuotaMb: 200000,
-    deviceDriveQuota: 1000,
     deviceDriveExpirationDays: 30,
     
-    cabanaUrl: 'http://192.168.1.165:3001/'    
+    cabanaUrl: 'http://192.168.1.165:3001/',
+
+    welcomeMessage: `<><><><><><><><><><><><><><><><><><><><><><><br>2021 RetroPilot`
 };
 
 module.exports = config;
