@@ -1,7 +1,7 @@
 var config = {
     applicationSalt: 'RANDOM_SEED',
     
-    databaseFile: 'database.json',
+    databaseFile: 'database.sqlite',
     
     allowAccountRegistration: true,
     
