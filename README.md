@@ -3,18 +3,21 @@ replacement for comma.ai backend and useradmin dashboard. can be combined with a
 
 ### [Server] Summary
 
-The server consists of 2 node scripts. 
+The server consists of 2 node scripts.
+
 `server.js` is using expressjs and runs the backend (file upload / communication with openpilot) and the useradmin dashboard to manage / view / download drives & logs.
 `worker.js` is a background worker that is processing drives (analyzing video files & logs) to prepare drives for playback in cabana and to gather statistics. It automatically terminates itself after 60 minutes to make sure the video/log libraries do not cause memory leaks.
 
 Both scripts can be started with a cronjob each minute, they use locking to make sure they run exclusively.
 
+**Attention:** Minimum required node version is **node 10**.
 
 ### [Server] Installation
 
 ```
 npm install
 cp config.sample.js config.js
+cp database.empty.sqlite database.sqlite
 > EDIT config.js
 ```
 
@@ -22,10 +25,10 @@ cp config.sample.js config.js
 ### [Server] Running
 
 ```
-node server.js
+node -r esm server.js
 ```
 ```
-node worker.js
+node -r esm worker.js
 ```
 
 
