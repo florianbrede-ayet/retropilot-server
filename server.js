@@ -4,6 +4,9 @@ const path = require('path');
 const crypto = require('crypto');
 const  log4js = require('log4js');
 
+import sqlite3 from 'sqlite3'
+import { open } from 'sqlite'
+
 const lockfile = require('proper-lockfile');
 
 var http = require('http');
@@ -15,9 +18,6 @@ const bodyParser = require('body-parser');
 const cookieParser=require('cookie-parser');
 const jwt = require('jsonwebtoken');
 
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
-
 const sendmail = require('sendmail')();
 
 const htmlspecialchars = require('htmlspecialchars');
@@ -25,11 +25,7 @@ const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const execSync = require('child_process').execSync;
 
-
-const adapter = new FileSync(config.databaseFile);
-const db = low(adapter);
-
-const ALL = 1E8;
+var db = null;
 
 var totalStorageUsed=null; // global variable that is regularly updated in the background to track the total used storage
 
@@ -40,15 +36,6 @@ log4js.configure({
 });
   
 var logger = log4js.getLogger('default'); 
-
-
-function initializeDatabase() {
-    db.read();
-    if (!db.has('devices').value()) {
-        db.defaults({ accounts: [], devices: [], drives: [], drive_segments: [] })
-            .write();
-    }
-}
 
 function initializeStorage() {
     var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/")===0 ? false : true)});
@@ -181,20 +168,20 @@ function moveUploadedFile(buffer, directory, filename) {
     return false;    
 };
 
-function getAuthenticatedAccount(req) {
-    sessionCookie=req.signedCookies.session;
+async function getAuthenticatedAccount(req) {
+    var sessionCookie=(req.signedCookies!==undefined ? req.signedCookies.session : null);
     if (!sessionCookie || sessionCookie.expires<=Date.now()) {
         return null;
     }
     
-    var account = db.get('accounts').find({ email: sessionCookie.account});    
-    if (!account.value() || account.value().banned) {
+    sessionCookie={account: 'florianbrede@googlemail.com'};
+    const account = await db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', sessionCookie.account.trim().toLowerCase());
+    if (!account || account.banned) {
         res.clearCookie('session');        
         return null;
     }
-    account.assign({last_ping: Date.now()}).write();
-
-    return account.value();    
+    const result = await db.run('UPDATE accounts SET last_ping = ? WHERE email = ?', Date.now(), account.email);
+    return account;    
 }
 
 function updateTotalStorageUsed() {
@@ -203,6 +190,13 @@ function updateTotalStorageUsed() {
         totalStorageUsed = execSync("du -hs "+verifiedPath+" | awk -F'\t' '{print $1;}'").toString();
     }
     setTimeout(function() {updateTotalStorageUsed();}, 120000); // update the used storage each 120 seconds
+}
+
+function runAsyncWrapper (callback) {
+    return function (req, res, next) {
+        callback(req, res, next)
+        .catch(next)
+    }
 }
 
 
@@ -216,7 +210,7 @@ app.use('/favicon.ico', express.static('static/favicon.ico'));
 app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
-app.put('/backend/post_upload', bodyParser.raw({ inflate: true, limit: '100000kb', type: '*/*' }), function(req, res) {
+app.put('/backend/post_upload', bodyParser.raw({ inflate: true, limit: '100000kb', type: '*/*' }), runAsyncWrapper(async (req, res) => {
     var buf = new Buffer(req.body.toString('binary'),'binary');
     logger.info("HTTP.PUT /backend/post_upload for dongle "+req.query.dongleId+" with body length: "+buf.length);
     
@@ -278,17 +272,17 @@ app.put('/backend/post_upload', bodyParser.raw({ inflate: true, limit: '100000kb
             }
         }
     }
-});
+})),
 
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
-app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
+app.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
     var path = req.query.path;
     logger.info("HTTP.UPLOAD_URL called for "+req.params.dongleId+" and file "+path+": "+JSON.stringify(req.headers));
     
-    var device = db.get('devices').find({ dongle_id: req.params.dongleId});    
-    
-    if (device.value()==undefined || device.value().account_id==0) {
+    const device = await db.get('SELECT * FROM devices WHERE dongle_id = ?', req.params.dongleId);
+
+    if (device==null || device.account_id==0) {
         logger.info("HTTP.UPLOAD_URL device "+req.params.dongleId+" not found or not linked to an account / refusing uploads");                    
         res.status(400);
         res.send('Unauthorized.');
@@ -296,18 +290,21 @@ app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
     }
 
     var decoded=null;
-    if (device.value().public_key.length>0) {
-        decoded = validateJWTToken(req.headers.authorization, device.value().public_key);
+    if (device.public_key.length>0) {
+        decoded = validateJWTToken(req.headers.authorization, device.public_key);
     }
     
     if (decoded==null || decoded.identity!==req.params.dongleId) {
-        logger.info("HTTP.UPLOAD_URL JWT authorization failed, token: '"+req.headers.authorization+"', device: "+JSON.stringify(device.value())+", decoded: "+JSON.stringify(decoded)+"");                    
+        logger.info("HTTP.UPLOAD_URL JWT authorization failed, token: '"+req.headers.authorization+"', device: "+JSON.stringify(device)+", decoded: "+JSON.stringify(decoded)+"");                    
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
 
-    device.assign({last_ping: Date.now()}).write();
+    const result = await db.run(
+        'UPDATE devices SET last_ping = ? WHERE dongle_id = ?',
+        Date.now(), device.dongle_id
+      );
 
     var responseUrl = null;
     var ts = Date.now(); // we use this to make sure old URLs cannot be reused (timeout after 60min)
@@ -364,31 +361,45 @@ app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
             responseUrl = config.baseUploadUrl +'?file='+filename+'&dir='+directory+'&dongleId='+req.params.dongleId+'&ts='+ts+'&token='+token;
             logger.info("HTTP.UPLOAD_URL matched 'drive' file upload, constructed responseUrl: "+responseUrl);            
 
-            var drive = db.get('drives').find({identifier: driveName, dongle_id: req.params.dongleId});
-            if (!drive.value()) {
+            const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveName, req.params.dongleId);
+
+            if (drive==null) {
                 // create a new drive
-                var drive = db.get('drives')
-                    .push({identifier: driveName, dongle_id: req.params.dongleId, max_segment: segment, duration: 0, distance_meters: 0, filesize: 0, upload_complete: false, is_processed: false, created: Date.now(), last_upload: Date.now(), is_preserved: false, is_deleted: false})
-                    .write();
-                
-                var drive_segment = db.get('drive_segments')
-                    .push({segment_id: segment, drive_identifier: driveName, dongle_id: req.params.dongleId, duration: 0, distance_meters: 0, upload_complete: false, is_processed: false, is_stalled: false, created: Date.now()})
-                    .write();
+                var timeSplit = driveName.split('--');
+                var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g, ':');
 
-                logger.info("HTTP.UPLOAD_URL created new drive: "+JSON.stringify(drive));
+                const driveResult = await db.run(
+                    'INSERT INTO drives (identifier, dongle_id, max_segment, duration, distance_meters, filesize, upload_complete, is_processed, drive_date, created, last_upload, is_preserved, is_deleted, is_physically_removed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        driveName, req.params.dongleId, segment, 0, 0, 0, false, false, Date.parse(timeString), Date.now(), Date.now(), false, false, false);
+
+
+                const driveSegmentResult = await db.run(
+                    'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        segment, driveName, req.params.dongleId, 0, 0, false, false, false, Date.now());
+
+                logger.info("HTTP.UPLOAD_URL created new drive #"+JSON.stringify(driveResult.lastID));
             }
-            else {
-                drive.assign({last_upload: Date.now(), max_segment: Math.max(drive.value().max_segment, segment), upload_complete : false, is_processed : false}).write();
-                var drive_segment = db.get('drive_segments').find({segment_id: segment, drive_identifier: driveName, dongle_id: req.params.dongleId});
-                if (!drive_segment.value())
-                    var drive_segment = db.get('drive_segments')
-                        .push({segment_id: segment, drive_identifier: driveName, dongle_id: req.params.dongleId, duration: 0, distance_meters: 0, upload_complete: false, is_processed: false, is_stalled: false, created: Date.now()})
-                        .write();
-                else
-                drive_segment.assign({upload_complete: false, is_stalled: false}).write();
+            else {     
+                const driveResult = await db.run(
+                    'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?', 
+                        Date.now(), Math.max(drive.max_segment, segment), false, false, driveName, req.params.dongleId
+                  );
 
+                const drive_segment = await db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, req.params.dongleId, segment);
 
-                logger.info("HTTP.UPLOAD_URL updated existing drive: "+JSON.stringify(drive.value()));
+                if (drive_segment==null) {
+                    const driveSegmentResult = await db.run(
+                        'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            segment, driveName, req.params.dongleId, 0, 0, false, false, false, Date.now()
+                        );
+                } else {
+                    const driveSegmentResult = await db.run(
+                        'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', 
+                            false, false, driveName, req.params.dongleId, segment
+                      );
+                }
+
+                logger.info("HTTP.UPLOAD_URL updated existing drive: "+JSON.stringify(drive));
             }
 
         } 
@@ -403,11 +414,11 @@ app.get('/v1.3/:dongleId/upload_url/', (req, res) => {
         res.status(400);
         res.send('Malformed Request.');
     }
-}),
+})),
 
 
 // DEVICE REGISTRATION OR RE-ACTIVATION
-app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res) => {
+app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
     var imei1 = req.query.imei;
     var serial = req.query.serial;
     var public_key = req.query.public_key;
@@ -420,7 +431,7 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
         return;
     }
 
-    decoded = validateJWTToken(req.query.register_token, public_key);
+    var decoded = validateJWTToken(req.query.register_token, public_key);
 
     if (decoded==null || decoded.register==undefined) {
         logger.error("HTTP.V2.PILOTAUTH JWT token is invalid ("+JSON.stringify(decoded)+")");
@@ -429,18 +440,18 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
         return;
     }
     
-    var device = db.get('devices').find({imei: imei1, serial: serial});
-    if (device.value()==null) {
+    const device = await db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', imei1, serial);
+    if (device==null) {
         logger.info("HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE ("+imei1+", "+serial+")");
         while(true) {
             var dongleId = crypto.randomBytes(4).toString('hex');
-            var device = db.get('devices').find({dongle_id: dongleId}).value();
-            if (!device) {
-                var resultingDevice = db.get('devices')
-                    .push({ dongle_id: dongleId, account_id: 0, imei: imei1, serial: serial, device_type: 'freon', public_key: public_key, created: Date.now(), last_ping: Date.now(), storage_used: 0})
-                    .write();
-                
-                var device = db.get('devices').find({dongle_id: dongleId}).value();
+            const isDongleIdTaken = await db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', imei1, serial);
+            if (isDongleIdTaken==null) {
+                const resultingDevice = await db.run(
+                    'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        dongleId, 0, imei1, serial, 'freon', public_key, Date.now(), Date.now(), 0);
+
+                const device = await db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
 
                 logger.info("HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: "+JSON.stringify(device));
                 res.status(200);
@@ -450,17 +461,21 @@ app.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), (req, res)
         }
     }
     else {
-        device.assign({last_ping: Date.now(), public_key: public_key}).write();
-        logger.info("HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE ("+imei1+", "+serial+") with dongle_id "+device.value().dongle_id+"");
+        const result = await db.run(
+            'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
+            Date.now(), public_key, device.dongle_id
+          );
+
+        logger.info("HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE ("+imei1+", "+serial+") with dongle_id "+device.dongle_id+"");
         res.status(200);
-        res.json({dongle_id: device.value().dongle_id});
+        res.json({dongle_id: device.dongle_id});
         return;
     }
-}),
+})),
 
 
 // RETRIEVES DATASET FOR OUR MODIFIED CABANA - THIS RESPONSE IS USED TO FAKE A DEMO ROUTE
-app.get('/useradmin/cabana_drive/:extendedRouteIdentifier', (req, res) => {
+app.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(async (req, res) => {
 
     var params = req.params.extendedRouteIdentifier.split('|');
     var dongleId=params[0];
@@ -468,7 +483,7 @@ app.get('/useradmin/cabana_drive/:extendedRouteIdentifier', (req, res) => {
     var driveIdentifier=params[2];
     var driveIdentifierHashReq=params[3];
     
-    var drive = db.get('drives').find({ identifier: driveIdentifier, dongle_id: dongleId}).value();
+    const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
     
     if (!drive) {
         res.status(200);
@@ -507,7 +522,7 @@ app.get('/useradmin/cabana_drive/:extendedRouteIdentifier', (req, res) => {
         driveIdentifier: drive.identifier,
         dongleId: drive.dongle_id
     });
-}),
+})),
 
 
 //////////////////////////////////////////////////////////////////////
@@ -515,9 +530,11 @@ app.get('/useradmin/cabana_drive/:extendedRouteIdentifier', (req, res) => {
 //////////////////////////////////////////////////////////////////////
 
 
-app.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), (req, res) => {
-    const account = db.get('accounts').find({ email: req.body.email, password: crypto.createHash('sha256').update(req.body.password+config.applicationSalt).digest('hex')}).value();    
+app.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
+    const account = await db.get('SELECT * FROM accounts WHERE email = ? AND password = ?', req.body.email, crypto.createHash('sha256').update(req.body.password+config.applicationSalt).digest('hex'));
 
+
+    
     if (!account || account.banned) {
         res.status(200);
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid credentials or banned account'));
@@ -525,21 +542,25 @@ app.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), (req, res
     }
     res.cookie('session', {account: account.email, expires: Date.now()+1000*3600*24*365}, {signed: true});
     res.redirect('/useradmin/overview');
-}),
+})),
 
 
-app.get('/useradmin/signout', (req, res) => {
+app.get('/useradmin/signout', runAsyncWrapper(async (req, res) => {
     res.clearCookie('session');
     res.redirect('/useradmin');
-}),
+})),
 
 
-app.get('/useradmin', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account!=null) {
         res.redirect('/useradmin/overview');
         return;
     }
+
+    const accounts = await db.get('SELECT COUNT(*) AS num FROM accounts');
+    const devices = await db.get('SELECT COUNT(*) AS num FROM devices');
+    const drives= await db.get('SELECT COUNT(*) AS num FROM drives');
 
     res.status(200);
     res.send('<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>'+
@@ -551,27 +572,27 @@ app.get('/useradmin', (req, res) => {
                 <input type="password" name="password" placeholder="Password" required>
                 <input type="submit">
                 </form><br><br>`+(!config.allowAccountRegistration ? '<i>User Account Registration is disabled on this Server</i>' : '<a href="/useradmin/register">Register new Account</a>')+`<br><br>`+
-                'Accounts: '+db.get('accounts').size().value()+'  |  '+
-                'Devices: '+db.get('devices').size().value()+'  |  '+
-                'Drives: '+db.get('drives').size().value()+'  |  '+
+                'Accounts: '+accounts.num+'  |  '+
+                'Devices: '+devices.num+'  |  '+
+                'Drives: '+drives.num+'  |  '+
                 'Storage Used: '+(totalStorageUsed!==null ? totalStorageUsed : '--')+'<br><br>'+config.welcomeMessage+'</html>');
-}),
+})),
 
 
-app.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }), (req, res) => {
+app.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
     if (!config.allowAccountRegistration) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
 
-    account = getAuthenticatedAccount(req);
-    if (account!=null) {
+    const authAccount = await getAuthenticatedAccount(req);
+    if (authAccount!=null) {
         res.redirect('/useradmin/overview');
         return;
     }
-
-    account = db.get('accounts').find({ email: req.body.email.trim()}).value();    
+ 
+    const account = await db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', req.body.email.trim().toLowerCase());
     if (account!=null) {
         res.redirect('/useradmin/register?status='+encodeURIComponent('Email is already registered'));        
         return;
@@ -604,24 +625,20 @@ app.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }),
         }
         else {
 
-            var newId = db.get('accounts').size().value()+1;
-            db.get('accounts')
-                .push({ id: newId, 
-                        email: req.body.email, 
-                        password: crypto.createHash('sha256').update(req.body.password+config.applicationSalt).digest('hex'), 
-                        created: Date.now(), 
-                        banned: false})
-                .write();
+            const result = await db.run(
+                'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
+                    req.body.email, 
+                    crypto.createHash('sha256').update(req.body.password+config.applicationSalt).digest('hex'), 
+                    Date.now(), false);
             
-            const account = db.get('accounts').find({ email: req.body.email}).value();
-            if (account) {
-                logger.info("USERADMIN REGISTRATION - created new account #"+account.id+" with email "+account.email+"");
-                res.cookie('session', {account: account.email, expires: Date.now()+1000*3600*24*365}, {signed: true});
+            if (result.lastID!=undefined) {            
+                logger.info("USERADMIN REGISTRATION - created new account #"+result.lastID+" with email "+req.body.email+"");
+                res.cookie('session', {account: req.body.email, expires: Date.now()+1000*3600*24*365}, {signed: true});
                 res.redirect('/useradmin/overview');
                 return;
             }
             else {
-                logger.error("USERADMIN REGISTRATION - account creation failed, resulting account data with #"+newId+" and email "+req.body.email+" is: "+account);
+                logger.error("USERADMIN REGISTRATION - account creation failed, resulting account data for email "+req.body.email+" is: "+result);
                 infoText='Unable to complete account registration (database error).<br><br>';
             }
         }
@@ -641,17 +658,17 @@ app.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }),
                 <input type="password" name="password2" placeholder="Repeat Password"  value="`+(req.body.password2!=undefined ? htmlspecialchars(req.body.password2.trim()) : '')+`" required>
                 <input type="submit" value="Finish Registration">
                 </html>`);
-}),
+})),
 
 
-app.get('/useradmin/register', (req, res) => {
+app.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
     if (!config.allowAccountRegistration) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
 
-    const account = getAuthenticatedAccount(req);
+    const account = await getAuthenticatedAccount(req);
     if (account!=null) {
         res.redirect('/useradmin/overview');
         return;
@@ -668,18 +685,18 @@ app.get('/useradmin/register', (req, res) => {
                 <input type="email" name="email" placeholder="Email" required>
                 <input type="submit" value="Verify Email">
                 </html>`);
-}),
+})),
 
 
-app.get('/useradmin/overview', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
     }
     
-    const devices = db.get('devices').filter({account_id: account.id}).sortBy('dongle_id').take(ALL).value();
-    
+    const devices = await db.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id)
+
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>'+
     
                 `<br><br><h3>Account Overview</h3>
@@ -710,31 +727,36 @@ app.get('/useradmin/overview', (req, res) => {
     res.status(200);
     res.send(response);
     
-}),
+})),
 
 
-app.get('/useradmin/unpair_device/:dongleId', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
     }
     
-    var device = db.get('devices').find({ account_id: account.id, dongle_id: req.params.dongleId});
-    
-    if (device.value()==undefined) {
+    const device = await db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
+
+    if (device==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
+    
+    const result = await db.run(
+        'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
+        0, 
+        req.params.dongleId
+      );
 
-    device.assign({account_id: 0}).write();
     res.redirect('/useradmin/overview');
-}),
+})),
 
 
-app.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
@@ -742,41 +764,45 @@ app.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), (r
 
     var qrCodeParts = req.body.qr_string.split("--"); // imei, serial, jwtToken
 
-    var device = db.get('devices').find({imei: qrCodeParts[0], serial: qrCodeParts[1]});
-    if (device.value()==null) {
+    const device = await db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
+    if (device==null) {
         res.redirect('/useradmin/overview?linkstatus='+encodeURIComponent('Device not registered on Server'));
     }
-    decoded = validateJWTToken(qrCodeParts[2], device.value().public_key);
+    var decoded = validateJWTToken(qrCodeParts[2], device.public_key);
     if (decoded==null || decoded.pair==undefined) {
         res.redirect('/useradmin/overview?linkstatus='+encodeURIComponent('Device QR Token is invalid or has expired'));        
     }
-    if (device.value().account_id!=0) {
+    if (device.account_id!=0) {
         res.redirect('/useradmin/overview?linkstatus='+encodeURIComponent('Device is already paired, unpair in that account first'));        
     }
 
-    device.assign({account_id: account.id}).write();
+    const result = await db.run(
+        'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
+        account.id, 
+        device.dongle_id
+      );
 
     res.redirect('/useradmin/overview');
-}),
+})),
 
 
-app.get('/useradmin/device/:dongleId', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
     }
     
-    var device = db.get('devices').find({ account_id: account.id, dongle_id: req.params.dongleId});
+    const device = await db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
     
-    if (device.value()==undefined) {
+    if (device==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
 
-    device = device.value();
-    const drives = db.get('drives').filter({dongle_id: device.dongle_id, is_deleted: false}).sortBy('created').take(ALL).value();
+
+    const drives = await db.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
 
     var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
     
@@ -786,7 +812,7 @@ app.get('/useradmin/device/:dongleId', (req, res) => {
         for (var i=0; i<bootlogDirectoryTree.children.length; i++) {
             
             var timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-            var timeString = timeSplit[0]+' '+timeSplit[1].replace('-',':');
+            var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g, ':');
             bootlogFiles.push({'name': bootlogDirectoryTree.children[i].name, 'size': bootlogDirectoryTree.children[i].size, 'date': Date.parse(timeString)});
         }
         bootlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
@@ -798,7 +824,7 @@ app.get('/useradmin/device/:dongleId', (req, res) => {
         for (var i=0; i<crashlogDirectoryTree.children.length; i++) {
             
             var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-            var timeString = timeSplit[0]+' '+timeSplit[1].replace('-',':');
+            var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g, ':');
             crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString)});
         }
         crashlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
@@ -860,70 +886,72 @@ app.get('/useradmin/device/:dongleId', (req, res) => {
     res.status(200);
     res.send(response);
     
-}),
+})),
 
 
-app.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
     }
     
-    var device = db.get('devices').find({ account_id: account.id, dongle_id: req.params.dongleId});
+    const device = await db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
     
-    if (device.value()==undefined) {
+    if (device==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
-    device = device.value();
     
-    var drive = db.get('drives').find({ identifier: req.params.driveIdentifier, dongle_id: req.params.dongleId});
+    const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
     
-    if (drive.value()==undefined) {
+    if (drive==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
 
     if (req.params.action=='delete') {
-        drive.assign({is_deleted: true}).write();        
+        const result = await db.run(
+            'UPDATE drives SET is_deleted = ? WHERE id = ?',
+            true, drive.id
+          );
     }
     else if (req.params.action=='preserve') {
-        drive.assign({is_preserved: true}).write();        
+        const result = await db.run(
+            'UPDATE drives SET is_preserved = ? WHERE id = ?',
+            true, drive.id
+          );
     }
 
     res.redirect('/useradmin/device/'+device.dongle_id);
 
-}),
+})),
 
 
-app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
-    const account = getAuthenticatedAccount(req);
+app.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
+    const account = await getAuthenticatedAccount(req);
     if (account==null) {
         res.redirect('/useradmin?status='+encodeURIComponent('Invalid or expired session'));
         return;
     }
     
-    var device = db.get('devices').find({ account_id: account.id, dongle_id: req.params.dongleId});
+    const device = await db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
     
-    if (device.value()==undefined) {
+    if (device==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
-    device = device.value();
     
-    var drive = db.get('drives').find({ identifier: req.params.driveIdentifier, dongle_id: req.params.dongleId, is_deleted: false});
+    const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
     
-    if (drive.value()==undefined) {
+    if (drive==null) {
         res.status(400);
         res.send('Unauthorized.');
         return;
     }
-
-    drive = drive.value();
 
     var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
     var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
@@ -936,11 +964,13 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
     }
 
     const directoryTree = dirTree(config.storagePath+device.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.identifier);
-    
+
+
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>'+
                 `
                 <a href="/useradmin/device/`+device.dongle_id+`">< < < Back To Device `+device.dongle_id+`</a>
                 <br><br><h3>Drive `+drive.identifier+` on `+drive.dongle_id+`</h3>
+                <b>Drive Date:</b> `+formatDate(drive.drive_date)+`<br>
                 <b>Upload Date:</b> `+formatDate(drive.created)+`<br>
                 <b>Num Segments:</b> `+(drive.max_segment+1)+`<br>
                 <b>Storage:</b> `+Math.round(drive.filesize/1024)+` MiB<br>
@@ -982,7 +1012,8 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
         var isProcessed='?';
         var isStalled='?';
         
-        var drive_segment = db.get('drive_segments').find({segment_id: parseInt(segment), drive_identifier: drive.identifier, dongle_id: device.dongle_id}).value();
+        const drive_segment = await db.get('SELECT * FROM drive_segments WHERE segment_id = ? AND drive_identifier = ? AND dongle_id = ?', parseInt(segment), drive.identifier, device.dongle_id);
+
         if (drive_segment) {
             isProcessed=drive_segment.is_processed;
             isStalled=drive_segment.is_stalled;
@@ -1015,52 +1046,71 @@ app.get('/useradmin/drive/:dongleId/:driveIdentifier', (req, res) => {
     res.status(200);
     res.send(response);
     
-}),
+})),
 
 
-app.get('/', (req, res) => {
+app.get('/', runAsyncWrapper(async (req, res) => {
     res.status(404);
     var response = '<html style="font-family: monospace"><h2>404 Not found</h2>'+
     'Are you looking for the <a href="/useradmin">useradmin dashboard</a>?';
     res.send(response);
-}),
+})),
 
 
-app.get('*', (req, res) => {
+app.get('*', runAsyncWrapper(async (req, res) => {
     logger.error("HTTP.GET unhandled request: "+simpleStringify(req)+", "+simpleStringify(res)+"")
     res.status(400);
     res.send('Not Implemented');
-}),
+})),
 
 
-app.post('*', (req, res) => {
+app.post('*', runAsyncWrapper(async (req, res) => {
     logger.error("HTTP.POST unhandled request: "+simpleStringify(req)+", "+simpleStringify(res)+"")
     res.status(400);
     res.send('Not Implemented');
-});
+}));
 
 
 
-lockfile.lock('retropilot_server.lock'+Math.random(), { realpath: false, stale: 30000, update: 2000 })
+lockfile.lock('retropilot_server.lock', { realpath: false, stale: 30000, update: 2000 })
 .then((release) => {
     console.log("STARTING SERVER...");
-    initializeDatabase();
-    initializeStorage();
-    updateTotalStorageUsed();
 
-    var privateKey  = fs.readFileSync(config.sslKey, 'utf8');
-    var certificate = fs.readFileSync(config.sslCrt, 'utf8');
-    var sslCredentials = {key: privateKey, cert: certificate/* ,    ca: fs.readFileSync('certs/ca.crt') */};
+    (async () => {
+        try {
+            db = await open({
+                filename: config.databaseFile,
+                driver: sqlite3.Database,
+                mode: sqlite3.OPEN_READWRITE
+            });
+            await db.get('SELECT * FROM accounts LIMIT 1')
+            await db.get('SELECT * FROM devices LIMIT 1')
+            await db.get('SELECT * FROM drives LIMIT 1')
+            await db.get('SELECT * FROM drive_segments LIMIT 1')
 
-    var httpServer = http.createServer(app);
-    var httpsServer = https.createServer(sslCredentials, app);
+        } catch(exception) {
+            logger.error(exception);
+            process.exit();
+        }
 
-    httpServer.listen(config.httpPort, config.httpInterface, () => {
-        logger.info(`Retropilot Server listening at http://`+config.httpInterface+`:`+config.httpPort)
-    });  
-    httpsServer.listen(config.httpsPort, config.httpsInterface, () => {
-        logger.info(`Retropilot Server listening at https://`+config.httpsInterface+`:`+config.httpsPort)
-    });     
+        initializeStorage();
+        updateTotalStorageUsed();
+
+        var privateKey  = fs.readFileSync(config.sslKey, 'utf8');
+        var certificate = fs.readFileSync(config.sslCrt, 'utf8');
+        var sslCredentials = {key: privateKey, cert: certificate/* ,    ca: fs.readFileSync('certs/ca.crt') */};
+
+        var httpServer = http.createServer(app);
+        var httpsServer = https.createServer(sslCredentials, app);
+
+        httpServer.listen(config.httpPort, config.httpInterface, () => {
+            logger.info(`Retropilot Server listening at http://`+config.httpInterface+`:`+config.httpPort)
+        });  
+        httpsServer.listen(config.httpsPort, config.httpsInterface, () => {
+            logger.info(`Retropilot Server listening at https://`+config.httpsInterface+`:`+config.httpsPort)
+        });     
+    })();
+
 }).catch((e) => {
     console.error(e)
     process.exit();	  		  

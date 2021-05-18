@@ -3,6 +3,6 @@ realdata/
 worker.log
 server.log
 package-lock.json
-database.json
+database.sqlite
 config.js
 .vscode

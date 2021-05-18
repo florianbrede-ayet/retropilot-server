@@ -4,6 +4,9 @@ const path = require('path');
 const crypto = require('crypto');
 const  log4js = require('log4js');
 
+import sqlite3 from 'sqlite3'
+import { open } from 'sqlite'
+
 const lockfile = require('proper-lockfile');
 
 var http = require('http');
@@ -14,9 +17,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser=require('cookie-parser');
 const jwt = require('jsonwebtoken');
-
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
 
 const sendmail = require('sendmail')();
 
@@ -32,10 +32,8 @@ var ffprobe = require('ffprobe'),
     ffprobeStatic = require('ffprobe-static');
 const { exception } = require('console');
  
-const adapter = new FileSync(config.databaseFile);
-const db = low(adapter);
+var db = null;
 
-const ALL = 1E8;
 var lastCleaningTime=0;
 var startTime=Date.now();
 
@@ -47,14 +45,6 @@ log4js.configure({
   
 var logger = log4js.getLogger('default'); 
 
-
-function initializeDatabase() {
-    db.read();
-    if (!db.has('devices').value()) {
-        logger.error("database not initialized, exit worker");
-        process.exit();
-    }
-}
 
 function initializeStorage() {
     var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/")===0 ? false : true)});
@@ -284,34 +274,39 @@ function processSegmentsRecursive() {
         return updateDrives();
 
     var segmentWrapper = segmentProcessQueue[segmentProcessPosition];
-    var segment = db.get('drive_segments').find({dongle_id: segmentWrapper.segment.dongle_id, drive_identifier: segmentWrapper.segment.drive_identifier, segment_id: segmentWrapper.segment.segment_id});
+    const segment = segmentWrapper.segment;
+
     const uploadComplete = segmentWrapper.uploadComplete;
     const driveIdentifier = segmentWrapper.driveIdentifier;
     const fileStatus = segmentWrapper.fileStatus;
 
-    logger.info('processSegmentsRecursive '+segment.value().dongle_id+' '+segment.value().drive_identifier+' '+segment.value().segment_id);
+    logger.info('processSegmentsRecursive '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id);
 
     var p1 = processSegmentRLog(fileStatus['rlog.bz2']);
     var p2 = processSegmentVideo(fileStatus['qcamera.ts']);
     Promise.all([p1, p2]).then((values) => {
-        logger.info('processSegmentsRecursive '+segment.value().dongle_id+' '+segment.value().drive_identifier+' '+segment.value().segment_id+' '+(Math.round(rlog_totalDist*100)/100)+'m, duration: '+qcamera_duration+'s');
-        
-        var updates={duration: qcamera_duration, distance_meters: Math.round(rlog_totalDist*10)/10, is_processed: true, upload_complete: uploadComplete, is_stalled: false};
-        segment.assign(updates).write();
-
-        affectedDrives[driveIdentifier]=true;
-
-        segmentProcessPosition++;
-        setTimeout(function() {processSegmentsRecursive();}, 0);
-    }).catch(function () {    });
+        (async () => {
+            logger.info('processSegmentsRecursive '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id+' '+(Math.round(rlog_totalDist*100)/100)+'m, duration: '+qcamera_duration+'s');
+            const driveSegmentResult = await db.run(
+                'UPDATE drive_segments SET duration = ?, distance_meters = ?, is_processed = ?, upload_complete = ?, is_stalled = ? WHERE id = ?', 
+                    qcamera_duration, Math.round(rlog_totalDist*10)/10, true, uploadComplete, false,
+                    segment.id
+            );
+            affectedDrives[driveIdentifier]=true;
+            segmentProcessPosition++;
+            setTimeout(function() {processSegmentsRecursive();}, 0);  
+        })();
+    }).catch((error) => {
+        logger.error(error);
+      });
 }
 
-function updateSegments() {
+async function updateSegments() {
     segmentProcessQueue=[];
     segmentProcessPosition=0;
     affectedDrives={};
 
-    drive_segments = db.get('drive_segments').filter({upload_complete: false, is_stalled: false}).sortBy('created').take(ALL).value();
+    const drive_segments = await db.all('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? ORDER BY created ASC', false, false);
     for (var t=0; t<drive_segments.length; t++) {
         var segment = drive_segments[t];
         
@@ -340,19 +335,23 @@ function updateSegments() {
         }
         else if (uploadComplete) {
             logger.info('updateSegments uploadComplete for '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id);
-            var updateSegment = db.get('drive_segments').find({dongle_id: segment.dongle_id, drive_identifier: segment.drive_identifier, segment_id: segment.segment_id});
-            var updates={upload_complete: true, is_stalled: false};
-            updateSegment.assign(updates).write();    
+            
+            const driveSegmentResult = await db.run(
+                'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE id = ?', 
+                    true, false, segment.id);
+
             affectedDrives[segment.dongle_id+"|"+segment.drive_identifier]=true;
         }
         else if (Date.now()-segment.created>10*24*3600*1000) { // ignore non-uploaded segments after 10 days until a new upload_url is requested (which resets is_stalled)
             logger.info('updateSegments isStalled for '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id);
-            var updateSegment = db.get('drive_segments').find({dongle_id: segment.dongle_id, drive_identifier: segment.drive_identifier, segment_id: segment.segment_id});
-            var updates={is_stalled: true};
-            updateSegment.assign(updates).write();    
+
+            const driveSegmentResult = await db.run(
+                'UPDATE drive_segments SET is_stalled = ? WHERE id = ?', 
+                    true, segment.id);
+
         }
 
-        if (segmentProcessQueue.length>50) // we process at most 50 segments per batch
+        if (segmentProcessQueue.length>=50) // we process at most 50 segments per batch
             break;
     }
 
@@ -363,36 +362,39 @@ function updateSegments() {
 
 }
 
-function updateDevices() {
+async function updateDevices() {
     // go through all affected devices (with deleted or updated drives) and update them (storage_used)
     logger.info("updateDevices - affected drives: "+JSON.stringify(affectedDevices));
     for (const [key, value] of Object.entries(affectedDevices)) {
         var dongleId = key;
 
-        var device = db.get('devices').find({dongle_id: dongleId});
-        if (!device.value()) continue;
+        const device = await db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+        if (device==null) continue;
 
-        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.value().dongle_id).digest('hex');
-        var devicePath=config.storagePath+device.value().dongle_id+"/"+dongleIdHash;
+        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
+        var devicePath=config.storagePath+device.dongle_id+"/"+dongleIdHash;
         var deviceQuotaMb = Math.round(parseInt(execSync("du -s "+devicePath+" | awk -F'\t' '{print $1;}'").toString())/1024);
         logger.info("updateDevices device "+dongleId+" has an updated storage_used of: "+deviceQuotaMb+" MB");
-        device.assign({storage_used: deviceQuotaMb}).write();
+        
+        const deviceResult = await db.run(
+            'UPDATE devices SET storage_used = ? WHERE dongle_id = ?', 
+                deviceQuotaMb, device.dongle_id);
     }
     affectedDevices=[];
 }
 
-function updateDrives() {
+async function updateDrives() {
     // go through all affected drives and update them / complete and/or build m3u8
     logger.info("updateDrives - affected drives: "+JSON.stringify(affectedDrives));
     for (const [key, value] of Object.entries(affectedDrives)) {
         [dongleId, driveIdentifier] = key.split('|');
-        var drive = db.get('drives').find({ identifier: driveIdentifier, dongle_id: dongleId});
-        if (!drive.value()) continue;
+        const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
+        if (drive==null) continue;
 
-        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.value().dongle_id).digest('hex');
-        var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.value().identifier).digest('hex');
-        var driveUrl=config.baseDriveDownloadUrl+drive.value().dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.value().identifier;
-        var drivePath=config.storagePath+drive.value().dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.value().identifier;
+        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
+        var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
+        var driveUrl=config.baseDriveDownloadUrl+drive.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.identifier;
+        var drivePath=config.storagePath+drive.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.identifier;
 
         var uploadComplete=true;
         var isProcessed=true;
@@ -401,7 +403,7 @@ function updateDrives() {
         var totalDurationSeconds=0;
         var playlistSegmentStrings='';
 
-        drive_segments = db.get('drive_segments').filter({drive_identifier: driveIdentifier, dongle_id: dongleId}).sortBy('created').take(ALL).value();
+        const drive_segments = await db.all('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? ORDER BY segment_id ASC', driveIdentifier, dongleId);
         for (var t=0; t<drive_segments.length; t++) {
             if (!drive_segments[t].upload_complete) uploadComplete=false;
             if (!drive_segments[t].is_processed) isProcessed=false;
@@ -414,18 +416,20 @@ function updateDrives() {
             }            
         }
 
-        var updates = {distance_meters: Math.round(totalDistanceMeters), duration: totalDurationSeconds, upload_complete : uploadComplete, is_processed : isProcessed};
+        var filesize=drive.filesize;
         if (uploadComplete) {
-            updates['filesize'] = 0;
             try {
                 var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
                 var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(driveIdentifier).digest('hex');
-                updates['filesize'] = parseInt(execSync("du -s "+drivePath+" | awk -F'\t' '{print $1;}'").toString()); // in kilobytes
+                filesize = parseInt(execSync("du -s "+drivePath+" | awk -F'\t' '{print $1;}'").toString()); // in kilobytes
             }
             catch (exception) {}    
         } 
-        logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" uploadComplete: "+JSON.stringify(updates));
-        drive.assign(updates).write();
+        logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" uploadComplete: "+uploadComplete);
+        
+        const driveResult = await db.run(
+            'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ? WHERE id = ?', 
+                Math.round(totalDistanceMeters), totalDurationSeconds, uploadComplete, isProcessed, filesize, drive.id);
 
         affectedDevices[dongleId]=true;
         
@@ -449,78 +453,79 @@ function updateDrives() {
     setTimeout(function() {mainWorkerLoop();}, 0);
 }
 
-function deleteExpiredDrives() {
+async function deleteExpiredDrives() {
     var expirationTs = Date.now()-config.deviceDriveExpirationDays*24*3600*1000;
 
-    var expiredDrives = db.get('drives').filter({is_preserved: false, is_deleted: false}).orderBy('created', 'asc').take(ALL).value();
+    const expiredDrives = await db.all('SELECT * FROM drives WHERE is_preserved = ? AND is_deleted = ? AND created < ?', false, false, expirationTs);
     for (var t=0; t<expiredDrives.length; t++) {
-        if (expiredDrives[t].created>expirationTs) {
-            break; // the drives are queried ordered by date, so break at the first newer one
-        }
-        
-        var drive = db.get('drives').find({ identifier: expiredDrives[t].identifier, dongle_id: expiredDrives[t].dongle_id});
-        if (!drive.value()) continue;
         logger.info("deleteExpiredDrives drive "+expiredDrives[t].dongle_id+" "+expiredDrives[t].identifier+" is older than "+config.deviceDriveExpirationDays+" days, set is_deleted=true");
-        drive.assign({is_deleted: true}).write();
+        const driveResult = await db.run(
+            'UPDATE drives SET is_deleted = ? WHERE id = ?', 
+                true, expiredDrives[t].id);
     }
 }
 
 
-function removeDeletedDrivesPhysically() {
-    var expiredDrives = db.get('drives').filter({is_deleted: true}).orderBy('created', 'asc').take(ALL).value();
-    for (var t=0; t<expiredDrives.length; t++) {
-        logger.info("removeDeletedDrivesPhysically drive "+expiredDrives[t].dongle_id+" "+expiredDrives[t].identifier+" is deleted, remove physical files and clean database");
-        var drive = db.get('drives').find({ identifier: expiredDrives[t].identifier, dongle_id: expiredDrives[t].dongle_id});
-        if (!drive.value()) continue;
+async function removeDeletedDrivesPhysically() {
+    const deletedDrives = await db.all('SELECT * FROM drives WHERE is_deleted = ? AND is_physically_removed = ?', true, false);
+    for (var t=0; t<deletedDrives.length; t++) {
+        logger.info("removeDeletedDrivesPhysically drive "+deletedDrives[t].dongle_id+" "+deletedDrives[t].identifier+" is deleted, remove physical files and clean database");
+        
+        
+        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(deletedDrives[t].dongle_id).digest('hex');
+        var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(deletedDrives[t].identifier).digest('hex');
 
-        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(expiredDrives[t].dongle_id).digest('hex');
-        var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(expiredDrives[t].identifier).digest('hex');
-
-        const drivePath = config.storagePath+expiredDrives[t].dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"";
-        logger.info("removeDeletedDrivesPhysically drive "+expiredDrives[t].dongle_id+" "+expiredDrives[t].identifier+" storage path is "+drivePath);
+        const drivePath = config.storagePath+deletedDrives[t].dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"";
+        logger.info("removeDeletedDrivesPhysically drive "+deletedDrives[t].dongle_id+" "+deletedDrives[t].identifier+" storage path is "+drivePath);
          try {
             deleteFolderRecursive(drivePath, { recursive: true });
-            db.get('drives').remove({ identifier: expiredDrives[t].identifier, dongle_id: expiredDrives[t].dongle_id}).write();
-            affectedDevices[expiredDrives[t].dongle_id]=true;
+            
+            const driveResult = await db.run(
+                'UPDATE drives SET is_physically_removed = ? WHERE id = ?', 
+                    true, deletedDrives[t].id);
+            
+            const driveSegmentResult = await db.run(
+                'DELETE FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ?', 
+                deletedDrives[t].identifier, deletedDrives[t].dongle_id);
+            
+            affectedDevices[deletedDrives[t].dongle_id]=true;
         } catch (exception) {
             logger.error(exception);
         }
     }
 }
 
-function deleteOverQuotaDrives() {
-    var devices = db.get('devices').filter({}).orderBy('storage_used', 'desc').take(ALL).value();
+async function deleteOverQuotaDrives() {
+    const devices = await db.all('SELECT * FROM devices WHERE storage_used > ?', config.deviceStorageQuotaMb);
+    
     for (var t=0; t<devices.length; t++) {
-        if (devices[t].storage_used>config.deviceStorageQuotaMb) {
-            var foundDriveToDelete=false;
+        var foundDriveToDelete=false;
 
-            var allDrives = db.get('drives').filter({dongle_id: devices[t].dongle_id, is_preserved: false, is_deleted: false}).orderBy('created', 'asc').take(1).value();
-            for (var i=0; i<allDrives.length; i++) {
-                logger.info("deleteExpiredDrives drive "+allDrives[i].dongle_id+" "+allDrives[i].identifier+" (normal) is deleted for over-quota");
-                var drive = db.get('drives').find({ identifier: allDrives[i].identifier, dongle_id: allDrives[i].dongle_id});
-                if (!drive.value()) continue;
-                drive.assign({is_deleted: true}).write();
+        const driveNormal = await db.get('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, false, false);
+        if (driveNormal!=null) {
+            logger.info("deleteOverQuotaDrives drive "+driveNormal.dongle_id+" "+driveNormal.identifier+" (normal) is deleted for over-quota");
+            const driveResult = await db.run(
+                'UPDATE drives SET is_deleted = ? WHERE id = ?', 
+                    true, driveNormal.id);
+            foundDriveToDelete=true;
+        }
+
+        if (!foundDriveToDelete) {
+            const drivePreserved = await db.get('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, true, false);
+            if (drivePreserved!=null) {
+                logger.info("deleteOverQuotaDrives drive "+drivePreserved.dongle_id+" "+drivePreserved.identifier+" (preserved!) is deleted for over-quota");
+                const driveResult = await db.run(
+                    'UPDATE drives SET is_deleted = ? WHERE id = ?', 
+                        true, drivePreserved.id);
                 foundDriveToDelete=true;
-                break;
-            }
-
-            if (!foundDriveToDelete) {
-                var allDrives = db.get('drives').filter({dongle_id: devices[t].dongle_id, is_preserved: true, is_deleted: false}).orderBy('created', 'asc').take(1).value();
-                for (var i=0; i<allDrives.length; i++) {
-                    logger.info("deleteOverQuotaDrives drive "+allDrives[i].dongle_id+" "+allDrives[i].identifier+" (preserved!) is deleted for over-quota");
-                    var drive = db.get('drives').find({ identifier: allDrives[i].identifier, dongle_id: allDrives[i].dongle_id});
-                    if (!drive.value()) continue;
-                    drive.assign({is_deleted: true}).write();
-                    foundDriveToDelete=true;
-                    break;
-                }
             }
         }
+
     }
 }
 
-function deleteBootAndCrashLogs() {
-    var devices = db.get('devices').filter({}).take(ALL).value();
+async function deleteBootAndCrashLogs() {
+    const devices = await db.all('SELECT * FROM devices');
     for (var t=0; t<devices.length; t++) {   
         var device = devices[t];
         var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
@@ -531,7 +536,7 @@ function deleteBootAndCrashLogs() {
             for (var i=0; i<bootlogDirectoryTree.children.length; i++) {
                 
                 var timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-                var timeString = timeSplit[0]+' '+timeSplit[1].replace('-',':');
+                var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g,':');
                 bootlogFiles.push({'name': bootlogDirectoryTree.children[i].name, 'size': bootlogDirectoryTree.children[i].size, 'date': Date.parse(timeString), 'path' : bootlogDirectoryTree.children[i].path});
             }
             bootlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
@@ -552,7 +557,7 @@ function deleteBootAndCrashLogs() {
             for (var i=0; i<crashlogDirectoryTree.children.length; i++) {
                 
                 var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-                var timeString = timeSplit[0]+' '+timeSplit[1].replace('-',':');
+                var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g,':');
                 crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString)});
             }
             crashlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
@@ -576,16 +581,19 @@ function mainWorkerLoop() {
         process.exit();
     }
 
-
-    if (Date.now()-lastCleaningTime>20*3600*1000) {
-        deleteBootAndCrashLogs();
-        deleteExpiredDrives();
-        deleteOverQuotaDrives();
-        removeDeletedDrivesPhysically();
-        lastCleaningTime=Date.now();
+    try {
+        if (Date.now()-lastCleaningTime>20*3600*1000) {
+            deleteBootAndCrashLogs();
+            deleteExpiredDrives();
+            deleteOverQuotaDrives();
+            removeDeletedDrivesPhysically();
+            lastCleaningTime=Date.now();
+        }
+        
+        setTimeout(function() {updateSegments();}, 5000);
+    } catch (e) {
+        logger.error(e);
     }
-    
-    setTimeout(function() {updateSegments();}, 5000);
 
 
 }
@@ -594,9 +602,25 @@ function mainWorkerLoop() {
 lockfile.lock('retropilot_worker.lock', { realpath: false, stale: 30000, update: 2000 })
 .then((release) => {
     logger.info("STARTING WORKER...");
-    initializeDatabase();
-    initializeStorage();
-    setTimeout(function() {mainWorkerLoop();}, 0);
+
+    (async () => {
+        try {
+            db = await open({
+                filename: config.databaseFile,
+                driver: sqlite3.Database,
+                mode: sqlite3.OPEN_READWRITE
+            });
+            await db.get('SELECT * FROM accounts LIMIT 1')
+            await db.get('SELECT * FROM devices LIMIT 1')
+            await db.get('SELECT * FROM drives LIMIT 1')
+            await db.get('SELECT * FROM drive_segments LIMIT 1')
+        } catch(exception) {
+            logger.error(exception);
+            process.exit();
+        }
+        initializeStorage();
+        setTimeout(function() {mainWorkerLoop();}, 0);
+    })();
 }).catch((e) => {
     console.error(e)
     process.exit();	  		  
