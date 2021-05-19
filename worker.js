@@ -387,10 +387,10 @@ async function updateDrives() {
     // go through all affected drives and update them / complete and/or build m3u8
     logger.info("updateDrives - affected drives: "+JSON.stringify(affectedDrives));
     for (const [key, value] of Object.entries(affectedDrives)) {
+        var dongleId, driveIdentifier;
         [dongleId, driveIdentifier] = key.split('|');
         const drive = await db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
         if (drive==null) continue;
-
         var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
         var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
         var driveUrl=config.baseDriveDownloadUrl+drive.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+drive.identifier;
