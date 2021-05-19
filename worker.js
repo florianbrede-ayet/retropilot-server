@@ -198,18 +198,26 @@ var segmentProcessPosition=0;
 var affectedDrives={};
 var affectedDevices={};
 
-var rlog_lastTs=0;
-var rlog_prevLat=-1000;
-var rlog_prevLng=-1000;
-var rlog_totalDist = 0;
+var rlog_lastTsInternal=0;
+var rlog_prevLatInternal=-1000;
+var rlog_prevLngInternal=-1000;
+var rlog_totalDistInternal = 0;
+var rlog_lastTsExternal=0;
+var rlog_prevLatExternal=-1000;
+var rlog_prevLngExternal=-1000;
+var rlog_totalDistExternal = 0;
 var qcamera_duration = 0;
 
 function processSegmentRLog(rLogPath) {
 
-    rlog_lastTs=0;
-    rlog_prevLat=-1000;
-    rlog_prevLng=-1000;
-    rlog_totalDist = 0;
+    rlog_lastTsInternal=0;
+    rlog_prevLatInternal=-1000;
+    rlog_prevLngInternal=-1000;
+    rlog_totalDistInternal = 0;
+    rlog_lastTsExternal=0;
+    rlog_prevLatExternal=-1000;
+    rlog_prevLngExternal=-1000;
+    rlog_totalDistExternal = 0;
 
     return new Promise(
       function(resolve, reject) {
@@ -221,13 +229,13 @@ function processSegmentRLog(rLogPath) {
 
         reader(function (obj) {
             try {
-                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTs>=1000000*1000*1 && obj['GpsLocation']!==undefined) {
+                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsInternal>=1000000*1000*1 && obj['GpsLocation']!==undefined) {
                     logger.info('processSegmentRLog GpsLocation @ '+obj['LogMonoTime']+': '+obj['GpsLocation']['Latitude']+' '+obj['GpsLocation']['Longitude']);
                 
-                    if (rlog_prevLat!=-1000) {
-                        var lat1=rlog_prevLat;
+                    if (rlog_prevLatInternal!=-1000) {
+                        var lat1=rlog_prevLatInternal;
                         var lat2=obj['GpsLocation']['Latitude'];
-                        var lon1=rlog_prevLng;
+                        var lon1=rlog_prevLngInternal;
                         var lon2=obj['GpsLocation']['Longitude'];
                         var p = 0.017453292519943295;    // Math.PI / 180
                         var c = Math.cos;
@@ -236,13 +244,33 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
-                        rlog_totalDist+=dist_m;
-                        //console.log('---> distance traveled is: '+dist_m);
+                        rlog_totalDistInternal+=dist_m;
                     }
-                    rlog_prevLat=obj['GpsLocation']['Latitude'];
-                    rlog_prevLng=obj['GpsLocation']['Longitude'];
-                    rlog_lastTs = obj['LogMonoTime'];
-                }    
+                    rlog_prevLatInternal=obj['GpsLocation']['Latitude'];
+                    rlog_prevLngInternal=obj['GpsLocation']['Longitude'];
+                    rlog_lastTsInternal = obj['LogMonoTime'];
+                }
+                else if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsExternal>=1000000*1000*1 && obj['GpsLocationExternal']!==undefined) {
+                    logger.info('processSegmentRLog GpsLocationExternal @ '+obj['LogMonoTime']+': '+obj['GpsLocationExternal']['Latitude']+' '+obj['GpsLocationExternal']['Longitude']);
+                
+                    if (rlog_prevLatExternal!=-1000) {
+                        var lat1=rlog_prevLatExternal;
+                        var lat2=obj['GpsLocationExternal']['Latitude'];
+                        var lon1=rlog_prevLngExternal;
+                        var lon2=obj['GpsLocationExternal']['Longitude'];
+                        var p = 0.017453292519943295;    // Math.PI / 180
+                        var c = Math.cos;
+                        var a = 0.5 - c((lat2 - lat1) * p)/2 + 
+                                c(lat1 * p) * c(lat2 * p) * 
+                                (1 - c((lon2 - lon1) * p))/2;
+                    
+                        var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
+                        rlog_totalDistExternal+=dist_m;
+                    }
+                    rlog_prevLatExternal=obj['GpsLocationExternal']['Latitude'];
+                    rlog_prevLngExternal=obj['GpsLocationExternal']['Longitude'];
+                    rlog_lastTsExternal = obj['LogMonoTime'];
+                }
             } catch(exception) {
 
             }
@@ -286,10 +314,10 @@ function processSegmentsRecursive() {
     var p2 = processSegmentVideo(fileStatus['qcamera.ts']);
     Promise.all([p1, p2]).then((values) => {
         (async () => {
-            logger.info('processSegmentsRecursive '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id+' '+(Math.round(rlog_totalDist*100)/100)+'m, duration: '+qcamera_duration+'s');
+            logger.info('processSegmentsRecursive '+segment.dongle_id+' '+segment.drive_identifier+' '+segment.segment_id+' internal gps: '+(Math.round(rlog_totalDistInternal*100)/100)+'m, external gps: '+(Math.round(rlog_totalDistExternal*100)/100)+'m, duration: '+qcamera_duration+'s');
             const driveSegmentResult = await db.run(
                 'UPDATE drive_segments SET duration = ?, distance_meters = ?, is_processed = ?, upload_complete = ?, is_stalled = ? WHERE id = ?', 
-                    qcamera_duration, Math.round(rlog_totalDist*10)/10, true, uploadComplete, false,
+                    qcamera_duration, Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal)*10)/10, true, uploadComplete, false,
                     segment.id
             );
             affectedDrives[driveIdentifier]=true;
@@ -314,6 +342,8 @@ async function updateSegments() {
         var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(segment.drive_identifier).digest('hex');
 
         const directoryTree = dirTree(config.storagePath+segment.dongle_id+"/"+dongleIdHash+"/"+driveIdentifierHash+"/"+segment.drive_identifier+"/"+segment.segment_id);
+        if (directoryTree==null || directoryTree.children==undefined) continue; // happens if upload in progress (db entity written but directory not yet created)
+  
         var qcamera = false;
         var fcamera = false;
         var dcamera = false;
@@ -599,7 +629,7 @@ function mainWorkerLoop() {
 }
 
 
-lockfile.lock('retropilot_worker.lock', { realpath: false, stale: 30000, update: 2000 })
+lockfile.lock('retropilot_worker.lock', { realpath: false, stale: 90000, update: 2000 })
 .then((release) => {
     logger.info("STARTING WORKER...");
 
