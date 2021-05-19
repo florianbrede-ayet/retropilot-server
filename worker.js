@@ -130,7 +130,7 @@ function simpleStringify (object){
         simpleObject[prop] = object[prop];
     }
     return JSON.stringify(simpleObject); // returns cleaned up JSON
-};
+}
 
 function writeFileSync(path, buffer, permission) {
     var fileDescriptor;
@@ -175,7 +175,7 @@ function moveUploadedFile(buffer, directory, filename) {
     }
     logger.error("moveUploadedFile invalid final path, check permissions to create / write '"+(config.storagePath+directory)+"'");
     return false;    
-};
+}
 
 
 function deleteFolderRecursive(directoryPath) {
@@ -190,7 +190,7 @@ function deleteFolderRecursive(directoryPath) {
         });
         fs.rmdirSync(directoryPath);
     }
-};
+}
 
 var segmentProcessQueue=[];
 var segmentProcessPosition=0;
