@@ -52,7 +52,7 @@ function validateJWTToken(token, publicKey) {
         var decoded = jwt.verify(token.replace("JWT ", ""), publicKey, { algorithms: ['RS256'] });
         return decoded;
     } catch (exception) {
-        console.log(exception);
+        logger.error(exception);
     }
     return null;
 }
@@ -174,7 +174,6 @@ async function getAuthenticatedAccount(req) {
         return null;
     }
     
-    sessionCookie={account: 'florianbrede@googlemail.com'};
     const account = await db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', sessionCookie.account.trim().toLowerCase());
     if (!account || account.banned) {
         res.clearCookie('session');        
@@ -208,6 +207,7 @@ app.use(cookieParser(config.applicationSalt))
 app.use('/favicon.ico', express.static('static/favicon.ico'));
 
 app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
+app.use('/.well-known', express.static('.well-known'));
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
 app.put('/backend/post_upload', bodyParser.raw({ inflate: true, limit: '100000kb', type: '*/*' }), runAsyncWrapper(async (req, res) => {
