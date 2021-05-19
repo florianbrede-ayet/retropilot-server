@@ -27,7 +27,7 @@ module.exports = async (logger) => {
     return {
         db,
         models: {
-            drivesModel: require('./drives')
+            drivesModel: require('./drives')(db)
         }
     }
 }

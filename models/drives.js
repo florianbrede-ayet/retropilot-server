@@ -1,7 +1,7 @@
 
 
 
-
+let db;
 
 function getDrives(dongleId) {
 
@@ -18,7 +18,11 @@ async function deviceCheckIn(dongleId) {
     );
 }
 
-module.exports = {
-    getDevice,
-    deviceCheckIn
+module.exports = (_db) => {
+    db = _db;
+
+    return {
+        getDevice,
+        deviceCheckIn
+    }
 }
