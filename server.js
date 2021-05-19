@@ -4,8 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const log4js = require('log4js');
 
-const sqlite3 = require('sqlite3')
-const {open} = require('sqlite')
+
 
 const lockfile = require('proper-lockfile');
 
@@ -25,13 +24,6 @@ const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const execSync = require('child_process').execSync;
 
-const {drivesModel} = require('./models/index');
-const {authenticationController} = require('./controllers/authentication');
-
-var db = null;
-
-var totalStorageUsed = null; // global variable that is regularly updated in the background to track the total used storage
-
 
 log4js.configure({
     appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: "console"}},
@@ -39,6 +31,16 @@ log4js.configure({
 });
 
 var logger = log4js.getLogger('default');
+
+
+let models = require('./models/index');
+let db;
+let {authenticationController} = require('./controllers/authentication');
+
+
+var totalStorageUsed = null; // global variable that is regularly updated in the background to track the total used storage
+
+
 
 function initializeStorage() {
     var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/") === 0 ? false : true)});
@@ -287,7 +289,7 @@ app.put('/backend/post_upload', bodyParser.raw({
         const dongleId = req.params.dongleId;
         const auth = req.params.authorization;
 
-        const device = await drivesModel.getDevice(dongleId);
+        const device = await models.drivesModel.getDevice(dongleId);
 
         if (!device) {
             logger.info(`HTTP.UPLOAD_URL device ${dongleId} not found or not linked to an account / refusing uploads`);
@@ -301,7 +303,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             return res.send('Unauthorized.').status(400)
         }
 
-        await drivesModel.deviceCheckIn(dongleId)
+        await models.drivesModel.deviceCheckIn(dongleId)
 
         let responseUrl = null;
         const ts = Date.now(); // we use this to make sure old URLs cannot be reused (timeout after 60min)
@@ -1067,21 +1069,12 @@ lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 
         console.log("STARTING SERVER...");
 
         (async () => {
-            try {
-                db = await open({
-                    filename: config.databaseFile,
-                    driver: sqlite3.Database,
-                    mode: sqlite3.OPEN_READWRITE
-                });
-                await db.get('SELECT * FROM accounts LIMIT 1')
-                await db.get('SELECT * FROM devices LIMIT 1')
-                await db.get('SELECT * FROM drives LIMIT 1')
-                await db.get('SELECT * FROM drive_segments LIMIT 1')
 
-            } catch (exception) {
-                logger.error(exception);
-                process.exit();
-            }
+            // TODO clean up
+            const _models = await models(logger);
+            db = _models.db;
+            models = _models.models;
+
 
             initializeStorage();
             updateTotalStorageUsed();
