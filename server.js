@@ -35,7 +35,7 @@ var logger = log4js.getLogger('default');
 
 let models = require('./models/index');
 let db;
-let {authenticationController} = require('./controllers/authentication');
+let {authenticationController} = require('./controllers');
 
 
 var totalStorageUsed = null; // global variable that is regularly updated in the background to track the total used storage
@@ -174,6 +174,7 @@ function moveUploadedFile(buffer, directory, filename) {
 }
 
 async function getAuthenticatedAccount(req) {
+
     var sessionCookie = (req.signedCookies !== undefined ? req.signedCookies.session : null);
     if (!sessionCookie || sessionCookie.expires <= Date.now()) {
         return null;
@@ -284,12 +285,13 @@ app.put('/backend/post_upload', bodyParser.raw({
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
     app.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
         var path = req.query.path;
-        logger.info("HTTP.UPLOAD_URL called for " + req.params.dongleId + " and file " + path + ": " + JSON.stringify(req.headers));
-
         const dongleId = req.params.dongleId;
         const auth = req.params.authorization;
+        logger.info("HTTP.UPLOAD_URL called for " + req.params.dongleId + " and file " + path + ": " + JSON.stringify(req.headers));
+
 
         const device = await models.drivesModel.getDevice(dongleId);
+
 
         if (!device) {
             logger.info(`HTTP.UPLOAD_URL device ${dongleId} not found or not linked to an account / refusing uploads`);
@@ -298,7 +300,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
         let decoded = device.public_key ? await authenticationController.validateJWT(req.headers.authorization, device.public_key) : null;
 
-        if (decoded === null || decoded.identity !== req.params.dongleId) {
+        if ((decoded === undefined || decoded.identity !== req.params.dongleId)) {
             logger.info(`HTTP.UPLOAD_URL JWT authorization failed, token: ${auth} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
             return res.send('Unauthorized.').status(400)
         }
@@ -328,17 +330,16 @@ app.put('/backend/post_upload', bodyParser.raw({
             const subdirPosition = path.split("--", 2).join("--").length;
             const filenamePosition = path.indexOf("/");
             if (subdirPosition > 0 && filenamePosition > subdirPosition) {
-                const driveName = path.split("--")[0] + "--" + path.split("--")[1];
+                const driveName = `${path.split("--")[0]}--${path.split("--")[1]}`
                 const segment = parseInt(path.split("--")[2].substr(0, path.split("--")[2].indexOf("/")));
-                let directory = path.split("--")[0] + "--" + path.split("--")[1] + "/" + segment;
+                let directory = `${path.split("--")[0]}--${path.split("--")[1]}/${segment}`;
                 const filename = path.split("/")[1];
 
                 let validRequest = false;
 
-                if (filename === 'fcamera.hevc' || filename === 'qcamera.ts' || filename === 'dcamera.hevc' || filename === 'rlog.bz2' || filename === 'qlog.bz2') {
+                if ((filename === 'fcamera.hevc' || filename === 'qcamera.ts' || filename === 'dcamera.hevc' || filename === 'rlog.bz2' || filename === 'qlog.bz2') &&
+                    (!isNaN(segment) || (segment > 0 && segment < 1000))) {
                     validRequest = true;
-                } else if (isNaN(segment) || segment < 0 || segment > 10000) {
-                    validRequest = false;
                 }
 
                 if (!validRequest) {
@@ -591,7 +592,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
         var infoText = '';
 
-        if (req.body.token == undefined) { // email entered, token request
+        if (req.body.token === undefined) { // email entered, token request
             logger.info("USERADMIN REGISTRATION sending token to " + htmlspecialchars(req.body.email.trim()) + ": \"" + token + "\"");
             infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 

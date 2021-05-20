@@ -12,9 +12,9 @@ async function getDevice(dongleId) {
 }
 
 async function deviceCheckIn(dongleId) {
-    await db.run(
+    return await db.run(
         'UPDATE devices SET last_ping = ? WHERE dongle_id = ?',
-        Date.now(), dongle_id
+        Date.now(), dongleId
     );
 }
 
