@@ -244,6 +244,7 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
+                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistInternal+=dist_m;
                     }
                     rlog_prevLatInternal=obj['GpsLocation']['Latitude'];
@@ -265,6 +266,7 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
+                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistExternal+=dist_m;
                     }
                     rlog_prevLatExternal=obj['GpsLocationExternal']['Latitude'];
@@ -606,13 +608,13 @@ async function deleteBootAndCrashLogs() {
 
 
 function mainWorkerLoop() {
-    if (Date.now()-startTime>60*3600*1000) {
+    if (Date.now()-startTime>60*60*1000) {
         logger.info("EXIT WORKER AFTER 1 HOUR TO PREVENT MEMORY LEAKS...");
         process.exit();
     }
 
     try {
-        if (Date.now()-lastCleaningTime>20*3600*1000) {
+        if (Date.now()-lastCleaningTime>20*60*1000) {
             deleteBootAndCrashLogs();
             deleteExpiredDrives();
             deleteOverQuotaDrives();
