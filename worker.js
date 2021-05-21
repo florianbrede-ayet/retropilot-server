@@ -4,13 +4,13 @@ const path = require('path');
 const crypto = require('crypto');
 const  log4js = require('log4js');
 
-import sqlite3 from 'sqlite3'
-import { open } from 'sqlite'
+const sqlite3 = require('sqlite3')
+const { open } = require('sqlite')
 
 const lockfile = require('proper-lockfile');
 
-var http = require('http');
-var https = require('https');
+const http = require('http');
+const https = require('https');
 
 const express = require('express');
 const cors = require('cors');
