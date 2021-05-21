@@ -300,7 +300,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
         let decoded = device.public_key ? await authenticationController.validateJWT(req.headers.authorization, device.public_key) : null;
 
-        if ((decoded === undefined || decoded.identity !== req.params.dongleId)) {
+        if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
             logger.info(`HTTP.UPLOAD_URL JWT authorization failed, token: ${auth} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
             return res.send('Unauthorized.').status(400)
         }
