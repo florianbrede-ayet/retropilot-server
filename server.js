@@ -3,208 +3,43 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const log4js = require('log4js');
-
-
-
 const lockfile = require('proper-lockfile');
-
-var http = require('http');
-var https = require('https');
-
+const http = require('http');
+const https = require('https');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-
 const sendmail = require('sendmail')();
-
 const htmlspecialchars = require('htmlspecialchars');
-
 const dirTree = require("directory-tree");
 const execSync = require('child_process').execSync;
-
 
 log4js.configure({
     appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: "console"}},
     categories: {default: {appenders: ['out', 'logfile'], level: 'info'}}
 });
 
-var logger = log4js.getLogger('default');
+const logger = log4js.getLogger('default');
 
+// TODO evaluate if this is the best way to determine the root of project
+global.__basedir = __dirname;
 
 let models = require('./models/index');
+let controllers = require('./controllers');
 let db;
-let {authenticationController} = require('./controllers');
 
 
-var totalStorageUsed = null; // global variable that is regularly updated in the background to track the total used storage
-
-
-
-function initializeStorage() {
-    var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/") === 0 ? false : true)});
-    if (verifiedPath != null)
-        logger.info("Verified storage path " + verifiedPath);
-    else {
-        logger.error("Unable to verify storage path '" + config.storagePath + "', check filesystem / permissions");
-        process.exit();
-    }
-}
-
-function validateJWTToken(token, publicKey) {
-    try {
-        var decoded = jwt.verify(token.replace("JWT ", ""), publicKey, {algorithms: ['RS256']});
-        return decoded;
-    } catch (exception) {
-        logger.error(exception);
-    }
-    return null;
-}
-
-function formatDate(timestampMs) {
-    return new Date(timestampMs).toISOString().replace(/T/, ' ').replace(/\..+/, '');
-}
-
-function formatDuration(durationSeconds) {
-    durationSeconds = Math.round(durationSeconds);
-    var secs = durationSeconds % 60;
-    var mins = Math.floor(durationSeconds / 60);
-    var hours = Math.floor(mins / 60);
-    mins = mins % 60;
-
-    var response = '';
-    if (hours > 0) response += hours + 'h ';
-    if (hours > 0 || mins > 0) response += mins + 'm ';
-    response += secs + 's';
-    return response;
-}
-
-function mkDirByPathSync(targetDir, {isRelativeToScript = false} = {}) {
-    const sep = path.sep;
-    const initDir = path.isAbsolute(targetDir) ? sep : '';
-    const baseDir = isRelativeToScript ? __dirname : '.';
-
-    return targetDir.split(sep).reduce((parentDir, childDir) => {
-        const curDir = path.resolve(baseDir, parentDir, childDir);
-        try {
-            fs.mkdirSync(curDir);
-        } catch (err) {
-            if (err.code === 'EEXIST') { // curDir already exists!
-                return curDir;
-            }
-
-            // To avoid `EISDIR` error on Mac and `EACCES`-->`ENOENT` and `EPERM` on Windows.
-            if (err.code === 'ENOENT') { // Throw the original parentDir error on curDir `ENOENT` failure.
-                logger.error(`EACCES: permission denied, mkdir '${parentDir}'`);
-                return null;
-            }
-
-            const caughtErr = ['EACCES', 'EPERM', 'EISDIR'].indexOf(err.code) > -1;
-            if (!caughtErr || (caughtErr && curDir === path.resolve(targetDir))) {
-                logger.error("'EACCES', 'EPERM', 'EISDIR' during mkdir");
-                return null;
-            }
-        }
-
-        return curDir;
-    }, initDir);
-}
-
-function simpleStringify(object) {
-    var simpleObject = {};
-    for (var prop in object) {
-        if (!object.hasOwnProperty(prop)) {
-            continue;
-        }
-        if (typeof (object[prop]) == 'object') {
-            continue;
-        }
-        if (typeof (object[prop]) == 'function') {
-            continue;
-        }
-        simpleObject[prop] = object[prop];
-    }
-    return JSON.stringify(simpleObject); // returns cleaned up JSON
-}
-
-function writeFileSync(path, buffer, permission) {
-    var fileDescriptor;
-    try {
-        fileDescriptor = fs.openSync(path, 'w', permission);
-    } catch (e) {
-        fs.chmodSync(path, permission);
-        fileDescriptor = fs.openSync(path, 'w', permission);
-    }
-
-    if (fileDescriptor) {
-        fs.writeSync(fileDescriptor, buffer, 0, buffer.length, 0);
-        fs.closeSync(fileDescriptor);
-        logger.info("writeFileSync wiriting to '" + path + "' successful");
-        return true;
-    }
-    logger.error("writeFileSync writing to '" + path + "' failed");
-    return false;
-}
-
-function moveUploadedFile(buffer, directory, filename) {
-    logger.info("moveUploadedFile called with '" + filename + "' -> '" + directory + "'");
-
-    if (directory.indexOf("..") >= 0 || filename.indexOf("..") >= 0) {
-        logger.error("moveUploadedFile failed, .. in directory or filename");
-        return false;
-    }
-
-    if (config.storagePath.lastIndexOf("/") !== config.storagePath.length - 1)
-        directory = '/' + directory;
-    if (directory.lastIndexOf("/") !== directory.length - 1)
-        directory = directory + '/';
-
-    var finalPath = mkDirByPathSync(config.storagePath + directory, {isRelativeToScript: (config.storagePath.indexOf("/") === 0 ? false : true)});
-    if (finalPath && finalPath.length > 0) {
-        if (writeFileSync(finalPath + "/" + filename, buffer, 0o660)) {
-            logger.info("moveUploadedFile successfully written '" + (finalPath + "/" + filename) + "'");
-            return finalPath + "/" + filename;
-        }
-        logger.error("moveUploadedFile failed to writeFileSync");
-        return false;
-    }
-    logger.error("moveUploadedFile invalid final path, check permissions to create / write '" + (config.storagePath + directory) + "'");
-    return false;
-}
-
-async function getAuthenticatedAccount(req) {
-
-    var sessionCookie = (req.signedCookies !== undefined ? req.signedCookies.session : null);
-    if (!sessionCookie || sessionCookie.expires <= Date.now()) {
-        return null;
-    }
-
-    const account = await db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', sessionCookie.account.trim().toLowerCase());
-    if (!account || account.banned) {
-        res.clearCookie('session');
-        return null;
-    }
-    const result = await db.run('UPDATE accounts SET last_ping = ? WHERE email = ?', Date.now(), account.email);
-    return account;
-}
-
-function updateTotalStorageUsed() {
-    var verifiedPath = mkDirByPathSync(config.storagePath, {isRelativeToScript: (config.storagePath.indexOf("/") === 0 ? false : true)});
-    if (verifiedPath !== null) {
-        totalStorageUsed = execSync("du -hs " + verifiedPath + " | awk -F'\t' '{print $1;}'").toString();
-    }
-    setTimeout(function () {
-        updateTotalStorageUsed();
-    }, 120000); // update the used storage each 120 seconds
-}
-
+// TODO
 function runAsyncWrapper(callback) {
     return function (req, res, next) {
         callback(req, res, next)
             .catch(next)
     }
 }
+
+
 
 
 // CREATE OUR SERVER EXPRESS APP
@@ -214,7 +49,8 @@ app.use(cookieParser(config.applicationSalt))
 
 app.use('/favicon.ico', express.static('static/favicon.ico'));
 
-app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
+//app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
+
 app.use('/.well-known', express.static('.well-known'));
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
@@ -243,7 +79,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
         } else {
             logger.info("HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile");
-            var moveResult = moveUploadedFile(buf, directory, filename);
+            var moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
             if (moveResult === false) {
                 logger.error("HTTP.PUT /backend/post_upload moveUploadedFile failed");
                 res.status(500);
@@ -267,7 +103,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
         } else {
             logger.info("HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile");
-            var moveResult = moveUploadedFile(buf, directory, filename);
+            var moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
             if (moveResult === false) {
                 logger.error("HTTP.PUT /backend/post_upload moveUploadedFile failed");
                 res.status(500);
@@ -298,7 +134,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             return res.send('Unauthorized.').status(400)
         }
 
-        let decoded = device.public_key ? await authenticationController.validateJWT(req.headers.authorization, device.public_key) : null;
+        let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
 
         if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
             logger.info(`HTTP.UPLOAD_URL JWT authorization failed, token: ${auth} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
@@ -423,7 +259,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             return;
         }
 
-        var decoded = validateJWTToken(req.query.register_token, public_key);
+        var decoded = controllers.authentication.validateJWT(req.query.register_token, public_key);
 
         if (decoded == null || decoded.register == undefined) {
             logger.error("HTTP.V2.PILOTAUTH JWT token is invalid (" + JSON.stringify(decoded) + ")");
@@ -542,7 +378,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account != null) {
             res.redirect('/useradmin/overview');
             return;
@@ -565,7 +401,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             'Accounts: ' + accounts.num + '  |  ' +
             'Devices: ' + devices.num + '  |  ' +
             'Drives: ' + drives.num + '  |  ' +
-            'Storage Used: ' + (totalStorageUsed !== null ? totalStorageUsed : '--') + '<br><br>' + config.welcomeMessage + '</html>');
+            'Storage Used: ' + (await controllers.storage.getTotalStorageUsed() !== null ? await controllers.storage.getTotalStorageUsed() : '--') + '<br><br>' + config.welcomeMessage + '</html>');
     })),
 
 
@@ -576,7 +412,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             return;
         }
 
-        const authAccount = await getAuthenticatedAccount(req);
+        const authAccount = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (authAccount != null) {
             res.redirect('/useradmin/overview');
             return;
@@ -657,7 +493,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             return;
         }
 
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account != null) {
             res.redirect('/useradmin/overview');
             return;
@@ -678,7 +514,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -691,14 +527,14 @@ app.put('/backend/post_upload', bodyParser.raw({
             `<br><br><h3>Account Overview</h3>
                 <b>Account:</b> #` + account.id + `<br>
                 <b>Email:</b> ` + account.email + `<br>
-                <b>Created:</b> ` + formatDate(account.created) + `<br><br>
+                <b>Created:</b> ` + controllers.helpers.formatDate(account.created) + `<br><br>
                 <b>Devices:</b><br>
                 <table border=1 cellpadding=2 cellspacing=2>
                     <tr><th>dongle_id</th><th>device_type</th><th>created</th><th>last_ping</th><th>storage_used</th></tr>
                 `;
 
         for (var i in devices) {
-            response += '<tr><td><a href="/useradmin/device/' + devices[i].dongle_id + '">' + devices[i].dongle_id + '</a></td><td>' + devices[i].device_type + '</td><td>' + formatDate(devices[i].created) + '</td><td>' + formatDate(devices[i].last_ping) + '</td><td>' + devices[i].storage_used + ' MB</td></tr>';
+            response += '<tr><td><a href="/useradmin/device/' + devices[i].dongle_id + '">' + devices[i].dongle_id + '</a></td><td>' + devices[i].device_type + '</td><td>' + controllers.helpers.formatDate(devices[i].created) + '</td><td>' + controllers.helpers.formatDate(devices[i].last_ping) + '</td><td>' + devices[i].storage_used + ' MB</td></tr>';
         }
         response += `</table>
                 <br>
@@ -720,7 +556,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -745,7 +581,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.post('/useradmin/pair_device', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -757,7 +593,7 @@ app.put('/backend/post_upload', bodyParser.raw({
         if (device == null) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device not registered on Server'));
         }
-        var decoded = validateJWTToken(qrCodeParts[2], device.public_key);
+        var decoded = controllers.authentication.validateJWT(qrCodeParts[2], device.public_key);
         if (decoded == null || decoded.pair == undefined) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device QR Token is invalid or has expired'));
         }
@@ -776,7 +612,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -836,8 +672,8 @@ app.put('/backend/post_upload', bodyParser.raw({
                 <b>Type:</b> ` + device.device_type + `<br>
                 <b>Serial:</b> ` + device.serial + `<br>
                 <b>IMEI:</b> ` + device.imei + `<br>
-                <b>Registered:</b> ` + formatDate(device.created) + `<br>
-                <b>Last Ping:</b> ` + formatDate(device.last_ping) + `<br>
+                <b>Registered:</b> ` + controllers.helpers.formatDate(device.created) + `<br>
+                <b>Last Ping:</b> ` + controllers.helpers.formatDate(device.last_ping) + `<br>
                 <b>Public Key:</b><br><span style="font-size: 0.8em">` + device.public_key.replace(/\r?\n|\r/g, "<br>") + `</span>
                 <br>
                 <b>Stored Drives:</b> ` + drives.length + `<br>
@@ -850,7 +686,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             <tr><th>date</th><th>file</th><th>size</th></tr>
         `;
         for (var i = 0; i < Math.min(5, bootlogFiles.length); i++) {
-            response += `<tr><td>` + formatDate(bootlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/boot/" + bootlogFiles[i].name + `" target=_blank>` + bootlogFiles[i].name + `</a></td><td>` + bootlogFiles[i].size + `</td></tr>`;
+            response += `<tr><td>` + controllers.helpers.formatDate(bootlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/boot/" + bootlogFiles[i].name + `" target=_blank>` + bootlogFiles[i].name + `</a></td><td>` + bootlogFiles[i].size + `</td></tr>`;
         }
         response += `</table><br><br>`;
 
@@ -859,7 +695,7 @@ app.put('/backend/post_upload', bodyParser.raw({
             <tr><th>date</th><th>file</th><th>size</th></tr>
         `;
         for (var i = 0; i < Math.min(5, crashlogFiles.length); i++) {
-            response += `<tr><td>` + formatDate(crashlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/crash/" + crashlogFiles[i].name + `" target=_blank>` + crashlogFiles[i].name + `</a></td><td>` + crashlogFiles[i].size + `</td></tr>`;
+            response += `<tr><td>` + controllers.helpers.formatDate(crashlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/crash/" + crashlogFiles[i].name + `" target=_blank>` + crashlogFiles[i].name + `</a></td><td>` + crashlogFiles[i].size + `</td></tr>`;
         }
         response += `</table><br><br>`;
 
@@ -870,7 +706,7 @@ app.put('/backend/post_upload', bodyParser.raw({
     `;
 
         for (var i in drives) {
-            response += '<tr><td><a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '">' + (drives[i].is_preserved ? '<b>' : '') + drives[i].identifier + (drives[i].is_preserved ? '</b>' : '') + '</a></td><td>' + Math.round(drives[i].filesize / 1024) + ' MiB</td><td>' + formatDuration(drives[i].duration) + '</td><td>' + Math.round(drives[i].distance_meters / 1000) + ' km</td><td>' + drives[i].upload_complete + '</td><td>' + drives[i].is_processed + '</td><td>' + formatDate(drives[i].created) + '</td><td>' + '[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/delete" onclick="return confirm(\'Permanently delete this drive?\')">delete</a>]' + (drives[i].is_preserved ? '' : '&nbsp;&nbsp;[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/preserve">preserve</a>]') + '</tr>';
+            response += '<tr><td><a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '">' + (drives[i].is_preserved ? '<b>' : '') + drives[i].identifier + (drives[i].is_preserved ? '</b>' : '') + '</a></td><td>' + Math.round(drives[i].filesize / 1024) + ' MiB</td><td>' + controllers.helpers.formatDuration(drives[i].duration) + '</td><td>' + Math.round(drives[i].distance_meters / 1000) + ' km</td><td>' + drives[i].upload_complete + '</td><td>' + drives[i].is_processed + '</td><td>' + controllers.helpers.formatDate(drives[i].created) + '</td><td>' + '[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/delete" onclick="return confirm(\'Permanently delete this drive?\')">delete</a>]' + (drives[i].is_preserved ? '' : '&nbsp;&nbsp;[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/preserve">preserve</a>]') + '</tr>';
         }
         response += `</table>
                 <br>
@@ -887,7 +723,7 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -927,7 +763,8 @@ app.put('/backend/post_upload', bodyParser.raw({
 
 
     app.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
-        const account = await getAuthenticatedAccount(req);
+        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+
         if (account == null) {
             res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
             return;
@@ -966,11 +803,11 @@ app.put('/backend/post_upload', bodyParser.raw({
             `
                 <a href="/useradmin/device/` + device.dongle_id + `">< < < Back To Device ` + device.dongle_id + `</a>
                 <br><br><h3>Drive ` + drive.identifier + ` on ` + drive.dongle_id + `</h3>
-                <b>Drive Date:</b> ` + formatDate(drive.drive_date) + `<br>
-                <b>Upload Date:</b> ` + formatDate(drive.created) + `<br>
+                <b>Drive Date:</b> ` + controllers.helpers.formatDate(drive.drive_date) + `<br>
+                <b>Upload Date:</b> ` + controllers.helpers.formatDate(drive.created) + `<br>
                 <b>Num Segments:</b> ` + (drive.max_segment + 1) + `<br>
                 <b>Storage:</b> ` + Math.round(drive.filesize / 1024) + ` MiB<br>
-                <b>Duration:</b> ` + formatDuration(drive.duration) + `<br>
+                <b>Duration:</b> ` + controllers.helpers.formatDuration(drive.duration) + `<br>
                 <b>Distance:</b> ` + Math.round(drive.distance_meters / 1000) + ` km<br>
                 <b>Is Preserved:</b> ` + drive.is_preserved + `<br>
                 <b>Upload Complete:</b> ` + drive.upload_complete + `<br>
@@ -1043,23 +880,23 @@ app.put('/backend/post_upload', bodyParser.raw({
     })),
 
 
-    app.get('/', runAsyncWrapper(async (req, res) => {
+    app.get('/', async (req, res) => {
         res.status(404);
         var response = '<html style="font-family: monospace"><h2>404 Not found</h2>' +
             'Are you looking for the <a href="/useradmin">useradmin dashboard</a>?';
         res.send(response);
-    })),
+    }),
 
 
     app.get('*', runAsyncWrapper(async (req, res) => {
-        logger.error("HTTP.GET unhandled request: " + simpleStringify(req) + ", " + simpleStringify(res) + "")
+        logger.error("HTTP.GET unhandled request: " + controllers.helpers.simpleStringify(req) + ", " + controllers.helpers.simpleStringify(res) + "")
         res.status(400);
         res.send('Not Implemented');
     })),
 
 
     app.post('*', runAsyncWrapper(async (req, res) => {
-        logger.error("HTTP.POST unhandled request: " + simpleStringify(req) + ", " + simpleStringify(res) + "")
+        logger.error("HTTP.POST unhandled request: " + controllers.helpers.simpleStringify(req) + ", " + controllers.helpers.simpleStringify(res) + "")
         res.status(400);
         res.send('Not Implemented');
     }));
@@ -1076,9 +913,12 @@ lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 
             db = _models.db;
             models = _models.models;
 
+            const _controllers = await controllers(models, logger);
+            controllers = _controllers;
 
-            initializeStorage();
-            updateTotalStorageUsed();
+
+            controllers.storage.initializeStorage();
+            await controllers.storage.updateTotalStorageUsed();
 
             var privateKey = fs.readFileSync(config.sslKey, 'utf8');
             var certificate = fs.readFileSync(config.sslCrt, 'utf8');
