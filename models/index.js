@@ -44,10 +44,12 @@ module.exports = async (logger) => {
 
 
     return {
-        db,
         models: {
             drivesModel: require('./drives')(db),
             users: require('./users')(db),
+
+            // TODO remove access to DB queries from non models
+            __db: db // to be removed when db queries are removed from outside models.
         }
     }
 }
