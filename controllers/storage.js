@@ -21,8 +21,7 @@ function mkDirByPathSync(targetDir, {isRelativeToScript = false} = {}) {
     const sep = path.sep;
     const initDir = path.isAbsolute(targetDir) ? sep : '';
 
-    // TODO does this break anything? Commented out code will create a folder in the /controllers directory, defined __basedir as a global var in server.js
-    const baseDir =  __basedir; //isRelativeToScript ? __dirname : '.';
+    const baseDir =  isRelativeToScript ? __basedir : '.';
 
     return targetDir.split(sep).reduce((parentDir, childDir) => {
         const curDir = path.resolve(baseDir, parentDir, childDir);
