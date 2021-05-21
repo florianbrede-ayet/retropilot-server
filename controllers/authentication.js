@@ -21,14 +21,14 @@ async function getAuthenticatedAccount(req, res) {
     const email = sessionCookie.account.trim().toLowerCase();
 
 
-    // don't need to wait for this, logging a ping if a banned user attempts to sign in
 
     // TODO stop storing emails in the cookie
     const account = await models.users.getAccountFromEmail(email)
+    // Don't really care about this returning.
+    models.users.userPing(account.email);
 
     if (!account || account.banned) {
-        res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
-        return null;
+        return res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
     }
     return account;
 }
