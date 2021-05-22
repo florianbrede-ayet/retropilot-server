@@ -198,6 +198,7 @@ var segmentProcessPosition=0;
 var affectedDrives={};
 var affectedDevices={};
 
+
 var rlog_lastTsInternal=0;
 var rlog_prevLatInternal=-1000;
 var rlog_prevLngInternal=-1000;
@@ -207,6 +208,7 @@ var rlog_prevLatExternal=-1000;
 var rlog_prevLngExternal=-1000;
 var rlog_totalDistExternal = 0;
 var qcamera_duration = 0;
+
 
 function processSegmentRLog(rLogPath) {
 
@@ -221,9 +223,23 @@ function processSegmentRLog(rLogPath) {
 
     return new Promise(
       function(resolve, reject) {
-        var readStream = fs.createReadStream(rLogPath);
+        var temporaryFile = rLogPath.replace(".bz2", "");
+        
+        try {
+            execSync(`bunzip2 -k "${rLogPath}"`);
+        }
+        catch (exception) { // if bunzip2 fails, something was wrong with the file (corrupt / missing)
+            logger.error(exception);
+            try {fs.unlinkSync(temporaryFile);} catch (exception) {}
+            resolve();
+            return;
+        }
+        
+        var readStream = fs.createReadStream(temporaryFile);
         var reader = Reader(readStream);
         readStream.on('close', function () {
+            logger.info("processSegmentRLog readStream close event triggered, resolving promise");
+            try {fs.unlinkSync(temporaryFile);} catch (exception) {}
             resolve();
         });
 
@@ -628,6 +644,15 @@ function mainWorkerLoop() {
     }
 
 
+}
+
+// make sure bunzip2 is available
+try {
+    execSync(`bunzip2 --version`);
+}
+catch (exception) {
+    logger.error("bunzip2 is not installed or not available in environment path")
+    process.exit();
 }
 
 
