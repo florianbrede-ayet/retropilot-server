@@ -212,20 +212,20 @@ router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
 
 
 // DEVICE REGISTRATION OR RE-ACTIVATION
-router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
+router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (req, res) => {
     var imei1 = req.query.imei;
     var serial = req.query.serial;
     var public_key = req.query.public_key;
     var register_token = req.query.register_token;
 
     if (imei1 == null || imei1.length < 5 || serial == null || serial.length < 5 || public_key == null || public_key.length < 5 || register_token == null || register_token.length < 5) {
-        logger.error("HTTP.V2.PILOTAUTH a required parameter is missing or empty");
+        logger.error(`HTTP.V2.PILOTAUTH a required parameter is missing or empty ${JSON.stringify(req.query)}`);
         res.status(400);
         res.send('Malformed Request.');
         return;
     }
+    var decoded = await controllers.authentication.validateJWT(req.query.register_token, public_key);
 
-    var decoded = controllers.authentication.validateJWT(req.query.register_token, public_key);
 
     if (decoded == null || decoded.register == undefined) {
         logger.error("HTTP.V2.PILOTAUTH JWT token is invalid (" + JSON.stringify(decoded) + ")");
@@ -264,7 +264,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), runAsyncW
         res.json({dongle_id: device.dongle_id});
 
     }
-}))
+})
 
 
 // RETRIEVES DATASET FOR OUR MODIFIED CABANA - THIS RESPONSE IS USED TO FAKE A DEMO ROUTE

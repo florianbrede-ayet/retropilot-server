@@ -28,7 +28,7 @@ function mkDirByPathSync(targetDir, {isRelativeToScript = false} = {}) {
         try {
             fs.mkdirSync(curDir);
         } catch (err) {
-            console.debug(err);
+            //console.debug(err);
             if (err.code === 'EEXIST') { // curDir already exists!
                 return curDir;
             }

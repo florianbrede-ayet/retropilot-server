@@ -8,11 +8,11 @@ async function validateJWT(token, key) {
     try {
         return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256']});
     } catch (exception) {
-        // TODO add logger to authentication controller
-        //logger.error(exception);
+        //logger.warn(exception)
     }
     return null;
 }
+
 
 
 async function getAuthenticatedAccount(req, res) {

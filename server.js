@@ -71,7 +71,7 @@ const web = async () => {
 
 
     app.get('/', async (req, res) => {
-        res.status(404);
+        res.status(200);
         var response = '<html style="font-family: monospace"><h2>404 Not found</h2>' +
             'Are you looking for the <a href="/useradmin">useradmin dashboard</a>?';
         res.send(response);
@@ -113,15 +113,22 @@ lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 
 
 
 
+
             httpServer.listen(config.httpPort, config.httpInterface, () => {
                 logger.info(`Retropilot Server listening at http://` + config.httpInterface + `:` + config.httpPort)
             });
             httpsServer.listen(config.httpsPort, config.httpsInterface, () => {
                 logger.info(`Retropilot Server listening at https://` + config.httpsInterface + `:` + config.httpsPort)
             });
+
         })();
 
     }).catch((e) => {
     console.error(e)
     process.exit();
 });
+
+
+
+
+module.exports = app;
