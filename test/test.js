@@ -19,3 +19,4 @@ describe('loading express', function () {
 
 
 require('./routes/api.test')(server);
+require('./routes/useradmin.test')(server);

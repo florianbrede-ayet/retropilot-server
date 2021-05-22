@@ -16,12 +16,14 @@ const dirTree = require("directory-tree");
 const execSync = require('child_process').execSync;
 
 log4js.configure({
-    appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: "console"}},
-    categories: {default: {appenders: ['out', 'logfile'], level: 'info'}}
+    appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: "file", filename: "server1.log"}},
+    categories: {default: {appenders: ['out', 'logfile'], level: 'info'}},
+
+    replaceConsole: true
 });
 
 const logger = log4js.getLogger('default');
-
+logger.level = "none";
 // TODO evaluate if this is the best way to determine the root of project
 global.__basedir = __dirname;
 

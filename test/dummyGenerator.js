@@ -48,6 +48,9 @@ const rougePublicKey = "-----BEGIN PUBLIC KEY-----\n" +
     "CwIDAQAB\n" +
     "-----END PUBLIC KEY-----"
 
+const alreadyRegisteredEmail = "adam@adamblack.us"
+const newUserEmail = "newUser@retropilot.com"
+
 function makeJWT() {
     const token = jwt.sign({ register: true  }, devicePrivateKey, { algorithm: 'RS256'});
     return `JWT ${token}`
@@ -64,5 +67,5 @@ function getSerial() {
 
 
 module.exports = {
-    makeJWT, getImei, getSerial, rougePublicKey, devicePubKey, devicePrivateKey
+    makeJWT, getImei, getSerial, rougePublicKey, devicePubKey, devicePrivateKey, alreadyRegisteredEmail, newUserEmail
 }

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const sendmail = require('sendmail')();
+const sendmail = require('sendmail')({silent: true});
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const cookieParser = require('cookie-parser');
@@ -73,9 +73,18 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
 
 
 router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
+    if (!req.body.hasOwnProperty('email') || req.body.email === "") {
+        res.status(400)
+        res.send('Malformed Request');
+        logger.warn("/useradmin/register/token - Malformed Request!")
+        return;
+    }
+
+    const email = req.body.email;
+
+
     if (!config.allowAccountRegistration) {
-        res.status(400);
-        res.send('Unauthorized.');
+        res.send('Unauthorized.').status(401);
         return;
     }
 
@@ -85,23 +94,23 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
         return;
     }
 
-    const account = await models.__db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', req.body.email.trim().toLowerCase());
+    const account = await models.__db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', email.trim().toLowerCase());
     if (account != null) {
         res.redirect('/useradmin/register?status=' + encodeURIComponent('Email is already registered'));
         return;
     }
 
-    var token = crypto.createHmac('sha256', config.applicationSalt).update(req.body.email.trim()).digest('hex');
+    var token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
 
     var infoText = '';
 
     if (req.body.token === undefined) { // email entered, token request
-        logger.info("USERADMIN REGISTRATION sending token to " + htmlspecialchars(req.body.email.trim()) + ": \"" + token + "\"");
+        logger.info("USERADMIN REGISTRATION sending token to " + htmlspecialchars(email.trim()) + ": \"" + token + "\"");
         infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
         sendmail({
             from: 'no-reply@retropilot.com',
-            to: req.body.email.trim(),
+            to: email.trim(),
             subject: 'RetroPilot Registration Token',
             html: 'Your Email Registration Token Is: "' + token + '"',
         }, function (err, reply) {
@@ -117,20 +126,20 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
 
             const result = await models.__db.run(
                 'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
-                req.body.email,
+                email,
                 crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
                 Date.now(), false);
 
             if (result.lastID != undefined) {
-                logger.info("USERADMIN REGISTRATION - created new account #" + result.lastID + " with email " + req.body.email + "");
+                logger.info("USERADMIN REGISTRATION - created new account #" + result.lastID + " with email " + email + "");
                 res.cookie('session', {
-                    account: req.body.email,
+                    account: email,
                     expires: Date.now() + 1000 * 3600 * 24 * 365
                 }, {signed: true});
                 res.redirect('/useradmin/overview');
                 return;
             } else {
-                logger.error("USERADMIN REGISTRATION - account creation failed, resulting account data for email " + req.body.email + " is: " + result);
+                logger.error("USERADMIN REGISTRATION - account creation failed, resulting account data for email " + email + " is: " + result);
                 infoText = 'Unable to complete account registration (database error).<br><br>';
             }
         }
@@ -144,7 +153,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
                 <h3>Register / Finish Registration</h3>
                 ` + infoText + `
                 <form action="/useradmin/register/token" method="POST">
-                <input type="email" name="email" placeholder="Email" value="` + htmlspecialchars(req.body.email.trim()) + `"required>
+                <input type="email" name="email" placeholder="Email" value="` + htmlspecialchars(email.trim()) + `"required>
                 <input type="text" name="token" placeholder="Email Token" value="` + (req.body.token != undefined ? htmlspecialchars(req.body.token.trim()) : '') + `" required><br>
                 <input type="password" name="password" placeholder="Password"  value="` + (req.body.password != undefined ? htmlspecialchars(req.body.password.trim()) : '') + `" required>
                 <input type="password" name="password2" placeholder="Repeat Password"  value="` + (req.body.password2 != undefined ? htmlspecialchars(req.body.password2.trim()) : '') + `" required>
