@@ -4,13 +4,15 @@
   "description": "replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana instance.",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha",
     "start": "node server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@commaai/log_reader": "^0.8.0",
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
     "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -25,10 +27,12 @@
     "htmlspecialchars": "^1.0.5",
     "jsonwebtoken": "^8.5.1",
     "log4js": "^6.3.0",
+    "mocha": "^8.4.0",
     "multer": "^1.4.2",
     "proper-lockfile": "^4.1.2",
     "sendmail": "^1.6.1",
     "sqlite": "^4.0.22",
-    "sqlite3": "^5.0.2"
+    "sqlite3": "^5.0.2",
+    "supertest": "^6.1.3"
   }
 }

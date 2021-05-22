@@ -1,6 +1,13 @@
+const config = require('./../config');
 
 
+module.exports = async (models, logger) => {
 
-module.exports = {
-    authenticationController: require('./authentication')
+
+    return {
+        authentication: require('./authentication')(models, logger),
+        helpers: require('./helpers')(models, logger),
+        storage: require('./storage')(models, logger)
+    }
+
 }

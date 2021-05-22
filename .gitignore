@@ -6,3 +6,7 @@ package-lock.json
 database.sqlite
 config.js
 .vscode
+.idea
+database.sqlite
+config.js
+test/.devKeys
