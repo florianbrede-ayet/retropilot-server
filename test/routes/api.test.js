@@ -43,7 +43,7 @@ module.exports = (server) => {
                 .end(done)
         });
 
-        it('Returns 400 when incorrect public key given', function(done) {
+        it('Returns 400 when missing register_token', function(done) {
             request(server)
                 .post('/v2/pilotauth/')
                 .query({

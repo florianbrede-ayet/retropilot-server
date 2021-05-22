@@ -27,7 +27,6 @@ let logger;
 router.post('/useradmin/auth', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
     const account = await models.__db.get('SELECT * FROM accounts WHERE email = ? AND password = ?', req.body.email, crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'));
 
-
     if (!account || account.banned) {
         res.status(200);
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));
