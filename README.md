@@ -1,5 +1,7 @@
 # retropilot-server
-replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana instance.
+Replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana build.
+
+If you don't want to host your own instance, check out https://api.retropilot.org/useradmin for a hosted version of the backend, useradmin and cabana.
 
 ### [Server] Summary
 
