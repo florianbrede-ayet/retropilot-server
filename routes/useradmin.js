@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const sendmail = require('sendmail')({silent: true});
+const sendmail = require('sendmail')({silent: false});
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const cookieParser = require('cookie-parser');

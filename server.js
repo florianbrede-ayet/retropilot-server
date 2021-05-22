@@ -1,7 +1,5 @@
 const config = require('./config');
 const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 const log4js = require('log4js');
 const lockfile = require('proper-lockfile');
 const http = require('http');
@@ -9,21 +7,14 @@ const https = require('https');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
-const sendmail = require('sendmail')();
-const htmlspecialchars = require('htmlspecialchars');
-const dirTree = require("directory-tree");
-const execSync = require('child_process').execSync;
 
 log4js.configure({
-    appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: "file", filename: "server1.log"}},
+    appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: 'console'} /*{type: "file", filename: "server1.log"}*/},
     categories: {default: {appenders: ['out', 'logfile'], level: 'info'}},
 
-    replaceConsole: true
 });
 
 const logger = log4js.getLogger('default');
-logger.level = "none";
 // TODO evaluate if this is the best way to determine the root of project
 global.__basedir = __dirname;
 
