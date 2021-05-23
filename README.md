@@ -1,5 +1,5 @@
 # retropilot-server
-Replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana build.
+Replacement for comma.ai backend and useradmin dashboard. Bundled with a modified version of comma's cabana to allow viewing & analyzing drives.
 
 If you don't want to host your own instance, check out https://api.retropilot.org/useradmin for a hosted version of the backend, useradmin and cabana.
 
@@ -35,10 +35,7 @@ node -r esm worker.js
 
 
 ### [Server] CABANA Support
-Currently, cabana support is enabled through a custom cabana fork that is requesting drive information from retropilot-server and uses the `demo.js` structure from cabana to load a drive. At the moment, this limits some features like sharing (sharing the URL will publicly share a drive) and also limits caching / automatically selecting the correct `dbc`.
-
-To setup a cusom cabana server, check this repository and set the correct cabana url in `config.js`:
-https://github.com/florianbrede-ayet/retropilot-cabana
+A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet/retropilot-cabana) is directly bundled in the `cabana/` subdirectory and will be served by the express app. After starting `server.js`, cabana is ready to use.
 
 -----
 

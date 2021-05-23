@@ -62,6 +62,8 @@ const web = async () => {
 
     app.use('/.well-known', express.static('.well-known'));
 
+    app.use('/cabana', express.static('cabana/'));
+
 
     app.get('/', async (req, res) => {
         res.status(200);
