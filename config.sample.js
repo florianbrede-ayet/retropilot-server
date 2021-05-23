@@ -13,6 +13,12 @@ var config = {
     sslKey: 'certs/retropilot.key',
     sslCrt: 'certs/retropilot.crt',
 
+    smtpHost: "localhost",
+    smtpPort: 25,
+    smtpUser: "root",
+    smtpPassword: "",
+    smtpFrom: "no-reply@retropilot.org",
+
     baseUrl: 'http://192.168.1.165:3000/',  // base url of the retropilot server
     baseUploadUrl: 'http://192.168.1.165:3000/backend/post_upload', // base url sent to devices for POSTing drives & logs
     baseDriveDownloadUrl: 'http://192.168.1.165:3000/realdata/', // base download url for drive & log data

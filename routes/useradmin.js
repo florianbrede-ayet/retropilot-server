@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const sendmail = require('sendmail')({silent: false});
+const nodemailer = require('nodemailer');
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const cookieParser = require('cookie-parser');
@@ -107,15 +107,33 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
         logger.info("USERADMIN REGISTRATION sending token to " + htmlspecialchars(email.trim()) + ": \"" + token + "\"");
         infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
-        sendmail({
-            from: 'no-reply@retropilot.com',
+        let transporter = nodemailer.createTransport(
+            {
+                host: config.smtpHost,
+                port: config.smtpPort,
+                auth: {
+                    user: config.smtpUser,
+                    pass: config.smtpPassword
+                },
+                logger: true,
+                debug: false
+            },
+            {from: config.smtpFrom}
+        );
+
+        let message = {
+            from: config.smtpFrom,
             to: email.trim(),
             subject: 'RetroPilot Registration Token',
-            html: 'Your Email Registration Token Is: "' + token + '"',
-        }, function (err, reply) {
-            if (err)
-                logger.error("USERADMIN REGISTRATION - failed to send registration token email " + (err && err.stack) + "  " + reply);
+            text: 'Your Email Registration Token Is: "' + token + '"'
+        };
+
+        transporter.sendMail(message, (error, info) => {
+            if (error) {
+                logger.error(error.message);
+            }
         });
+        
     } else { // final registration form filled
         if (req.body.token != token) {
             infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
