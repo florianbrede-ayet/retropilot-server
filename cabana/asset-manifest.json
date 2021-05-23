@@ -1,0 +1,26 @@
+{
+  "files": {
+    "main.css": "/cabana/static/css/main.9ce31ab0.chunk.css",
+    "main.js": "/cabana/static/js/main.d6e019f5.chunk.js",
+    "main.js.map": "/cabana/static/js/main.d6e019f5.chunk.js.map",
+    "runtime-main.js": "/cabana/static/js/runtime-main.ec09f551.js",
+    "runtime-main.js.map": "/cabana/static/js/runtime-main.ec09f551.js.map",
+    "static/js/2.caa89369.chunk.js": "/cabana/static/js/2.caa89369.chunk.js",
+    "static/js/2.caa89369.chunk.js.map": "/cabana/static/js/2.caa89369.chunk.js.map",
+    "66fe2b555037a721fc00.worker.js": "/cabana/66fe2b555037a721fc00.worker.js",
+    "66fe2b555037a721fc00.worker.js.map": "/cabana/66fe2b555037a721fc00.worker.js.map",
+    "83feda798dbec03978d2.worker.js": "/cabana/83feda798dbec03978d2.worker.js",
+    "83feda798dbec03978d2.worker.js.map": "/cabana/83feda798dbec03978d2.worker.js.map",
+    "beaf0312537cf2a84ceb.worker.js": "/cabana/beaf0312537cf2a84ceb.worker.js",
+    "beaf0312537cf2a84ceb.worker.js.map": "/cabana/beaf0312537cf2a84ceb.worker.js.map",
+    "c7de2d6e38fac0f21bad.worker.js": "/cabana/c7de2d6e38fac0f21bad.worker.js",
+    "c7de2d6e38fac0f21bad.worker.js.map": "/cabana/c7de2d6e38fac0f21bad.worker.js.map",
+    "index.html": "/cabana/index.html",
+    "precache-manifest.3cae597c1edc860b9505d78357dee746.js": "/cabana/precache-manifest.3cae597c1edc860b9505d78357dee746.js",
+    "service-worker.js": "/cabana/service-worker.js",
+    "static/css/main.9ce31ab0.chunk.css.map": "/cabana/static/css/main.9ce31ab0.chunk.css.map",
+    "static/media/index.css": "/cabana/static/media/fontawesome-webfont.fee66e71.woff",
+    "static/media/webusb-enable-experimental-features.png": "/cabana/static/media/webusb-enable-experimental-features.e5a08e76.png",
+    "static/media/webusb-enable-webusb.png": "/cabana/static/media/webusb-enable-webusb.aceef6a0.png"
+  }
+}
