@@ -53,6 +53,7 @@ const web = async () => {
     routers = routers(models, controllers, logger)
     app.use(routers.api);
     app.use(routers.useradmin);
+    app.use(routers.useradminapi);
 
     app.use(cors());
     app.use(cookieParser(config.applicationSalt))

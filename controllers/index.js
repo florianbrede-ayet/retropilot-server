@@ -8,7 +8,8 @@ module.exports = async (models, logger) => {
         authentication: require('./authentication')(models, logger),
         helpers: require('./helpers')(models, logger),
         storage: require('./storage')(models, logger),
-        mailing: require('./mailing')(models, logger)
+        mailing: require('./mailing')(models, logger),
+        users: require('./users')(models, logger)
     }
 
 }

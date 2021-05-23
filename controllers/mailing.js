@@ -18,8 +18,6 @@ let transporter = nodemailer.createTransport(
     {from: config.smtpFrom}
 );
 
-
-
 async function sendEmailVerification(token, email) {
     if (!config.canSendMail) return logger.warn(`Mailing disabled. ${email} - ${token}`);
     console.log("mail")
