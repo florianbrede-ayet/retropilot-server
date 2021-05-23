@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
 const cookieParser = require('cookie-parser');
@@ -99,40 +98,14 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
         return;
     }
 
-    var token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
+    const token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
 
-    var infoText = '';
+    let infoText = '';
 
     if (req.body.token === undefined) { // email entered, token request
-        logger.info("USERADMIN REGISTRATION sending token to " + htmlspecialchars(email.trim()) + ": \"" + token + "\"");
         infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
-        let transporter = nodemailer.createTransport(
-            {
-                host: config.smtpHost,
-                port: config.smtpPort,
-                auth: {
-                    user: config.smtpUser,
-                    pass: config.smtpPassword
-                },
-                logger: true,
-                debug: false
-            },
-            {from: config.smtpFrom}
-        );
-
-        let message = {
-            from: config.smtpFrom,
-            to: email.trim(),
-            subject: 'RetroPilot Registration Token',
-            text: 'Your Email Registration Token Is: "' + token + '"'
-        };
-
-        transporter.sendMail(message, (error, info) => {
-            if (error) {
-                logger.error(error.message);
-            }
-        });
+    const emailStatus = await controllers.mailing.sendEmailVerification(token, email);
         
     } else { // final registration form filled
         if (req.body.token != token) {

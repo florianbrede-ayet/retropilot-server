@@ -13,11 +13,14 @@ var config = {
     sslKey: 'certs/retropilot.key',
     sslCrt: 'certs/retropilot.crt',
 
+    canSendMail: true, // Skips sending mail, all attempted mail is logged under DEBUG
     smtpHost: "localhost", // credentials for smtp server to send account registration mails. if not filled in, get the generated tokens from the server.log manually
     smtpPort: 25,
     smtpUser: "root",
     smtpPassword: "",
     smtpFrom: "no-reply@retropilot.org",
+
+    SENDGRID_API_KEY: '',
 
     baseUrl: 'http://192.168.1.165:3000/',  // base url of the retropilot server
     baseUploadUrl: 'http://192.168.1.165:3000/backend/post_upload', // base url sent to devices for POSTing drives & logs
