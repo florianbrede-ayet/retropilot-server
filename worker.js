@@ -18,8 +18,6 @@ const bodyParser = require('body-parser');
 const cookieParser=require('cookie-parser');
 const jwt = require('jsonwebtoken');
 
-const sendmail = require('sendmail')();
-
 const htmlspecialchars = require('htmlspecialchars');
 
 const dirTree = require("directory-tree");
