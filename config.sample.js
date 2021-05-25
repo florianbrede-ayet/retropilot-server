@@ -20,8 +20,6 @@ var config = {
     smtpPassword: "",
     smtpFrom: "no-reply@retropilot.org",
 
-    SENDGRID_API_KEY: '',
-
     baseUrl: 'http://192.168.1.165:3000/',  // base url of the retropilot server
     baseUploadUrl: 'http://192.168.1.165:3000/backend/post_upload', // base url sent to devices for POSTing drives & logs
     
@@ -35,7 +33,11 @@ var config = {
     deviceDriveExpirationDays: 30,
     
 
-    welcomeMessage: `<><><><><><><><><><><><><><><><><><><><><><><br>2021 RetroPilot`
+    welcomeMessage: `<><><><><><><><><><><><><><><><><><><><><><><br>2021 RetroPilot`,
+
+    flags: {
+        useUserAdminApi: false,
+    }
 };
 
 module.exports = config;

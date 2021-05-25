@@ -1,4 +1,5 @@
 var server = require('./../server')
+const config = require('./../config');
 var request = require('supertest');
 
 // TODO better way to only run tests once server is up
@@ -20,3 +21,4 @@ describe('loading express', function () {
 
 require('./routes/api.test')(server);
 require('./routes/useradmin.test')(server);
+if (config.flags.useUserAdminApi) require('./routes/userAdminApi.test')(server);

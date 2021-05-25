@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@commaai/log_reader": "^0.8.0",
+    "@sendgrid/client": "^7.4.3",
     "chai": "^4.3.4",
     "chai-http": "^4.3.0",
     "cookie-parser": "^1.4.5",
