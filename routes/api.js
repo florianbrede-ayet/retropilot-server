@@ -58,8 +58,8 @@ router.put('/backend/post_upload', bodyParser.raw({
         }
     } else {  // boot or crash upload
         var filename = req.query.file;
-        var token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + ts).digest('hex');
         var directory = req.query.dir;
+        var token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
 
         logger.info("HTTP.PUT /backend/post_upload BOOT or CRASH upload with filename: " + filename + ", token: " + req.query.token);
         if (token !== req.query.token) {
@@ -116,17 +116,24 @@ router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
 
     // boot log upload
 
-    if (path.indexOf("boot/") === 0 || path.indexOf("crash/") === 0) {
-        let filename = path.replace("/", "-");
-        const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + ts).digest('hex');
+    if (path.indexOf("boot/") === 0 || path.indexOf("crash/") === 0 || path.indexOf("bootlog.bz2")>0) {
+        if (path.indexOf("bootlog.bz2")>0) { // pre-op 0.8 way of uploading bootlogs
+            // file 2020-09-30--08-09-13--0/bootlog.bz2 to something like: boot/2021-05-11--03-03-38.bz2
+            path=`boot/${path.split("--")[0]}--${path.split("--")[1]}.bz2`;
+        }
 
+        let filename = path.replace("/", "-");
+        
         // TODO, allow multiple types
-        let uplaodType = path.indexOf("boot/") === 0 ? 'boot' : 'crash';
+        let uploadType = path.indexOf("boot/") === 0 ? 'boot' : 'crash';
 
         // "boot-2021-04-12--01-45-30.bz" for example
-        const directory = `${dongleId}/${dongleIdHash}/${uplaodType}`;
+        const directory = `${dongleId}/${dongleIdHash}/${uploadType}`;
+
+        const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
+
         responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
-        logger.info(`HTTP.UPLOAD_URL matched '${uplaodType}' file upload, constructed responseUrl: ${responseUrl}`);
+        logger.info(`HTTP.UPLOAD_URL matched '${uploadType}' file upload, constructed responseUrl: ${responseUrl}`);
     } else {
         // "2021-04-12--01-44-25--0/qlog.bz2" for example
         const subdirPosition = path.split("--", 2).join("--").length;
@@ -249,7 +256,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (re
 
                 logger.info("HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: " + JSON.stringify(device));
                 res.status(200);
-                res.json({dongle_id: device.dongle_id});
+                res.json({dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07'});
                 return;
             }
         }
@@ -261,8 +268,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (re
 
         logger.info("HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE (" + imei1 + ", " + serial + ") with dongle_id " + device.dongle_id + "");
         res.status(200);
-        res.json({dongle_id: device.dongle_id});
-
+        res.json({dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07'});
     }
 })
 
