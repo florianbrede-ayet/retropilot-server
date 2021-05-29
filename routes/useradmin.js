@@ -330,10 +330,15 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 
             var timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
             var timeString = timeSplit[0] + ' ' + timeSplit[1].replace(/-/g, ':');
+
+            var dateObj = null;
+            try {dateObj = Date.parse(timeString);} catch (exception) {}
+            if (!dateObj) dateObj = new Date(0);
+
             bootlogFiles.push({
                 'name': bootlogDirectoryTree.children[i].name,
                 'size': bootlogDirectoryTree.children[i].size,
-                'date': Date.parse(timeString)
+                'date': dateObj
             });
         }
         bootlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
@@ -346,10 +351,17 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 
             var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
             var timeString = timeSplit[0] + ' ' + timeSplit[1].replace(/-/g, ':');
+            if (timeString.indexOf("_")>0)
+                timeString = timeString.split("_")[0];
+
+            var dateObj = null;
+            try {dateObj = Date.parse(timeString);} catch (exception) {}
+            if (!dateObj) dateObj = new Date(0);
+
             crashlogFiles.push({
                 'name': crashlogDirectoryTree.children[i].name,
                 'size': crashlogDirectoryTree.children[i].size,
-                'date': Date.parse(timeString)
+                'date': dateObj
             });
         }
         crashlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
