@@ -604,7 +604,7 @@ async function deleteBootAndCrashLogs() {
                 
                 var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
                 var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g,':');
-                crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString)});
+                crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString), 'path' : crashlogDirectoryTree.children[i].path});
             }
             crashlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
             for (var c=5; c<crashlogFiles.length; c++) {
