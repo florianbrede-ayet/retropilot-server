@@ -248,7 +248,7 @@ function processSegmentRLog(rLogPath) {
 
         reader(function (obj) {
             try {
-                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsInternal>=1000000*1000*1 && obj['GpsLocation']!==undefined) {
+                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsInternal>=1000000*1000*0.99 && obj['GpsLocation']!==undefined) {
                     logger.info('processSegmentRLog GpsLocation @ '+obj['LogMonoTime']+': '+obj['GpsLocation']['Latitude']+' '+obj['GpsLocation']['Longitude']);
                 
                     if (rlog_prevLatInternal!=-1000) {
@@ -263,14 +263,14 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
-                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
+                        if (dist_m>70) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed ~250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistInternal+=dist_m;
                     }
                     rlog_prevLatInternal=obj['GpsLocation']['Latitude'];
                     rlog_prevLngInternal=obj['GpsLocation']['Longitude'];
                     rlog_lastTsInternal = obj['LogMonoTime'];
                 }
-                else if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsExternal>=1000000*1000*1 && obj['GpsLocationExternal']!==undefined) {
+                else if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsExternal>=1000000*1000*0.99 && obj['GpsLocationExternal']!==undefined) {
                     logger.info('processSegmentRLog GpsLocationExternal @ '+obj['LogMonoTime']+': '+obj['GpsLocationExternal']['Latitude']+' '+obj['GpsLocationExternal']['Longitude']);
                 
                     if (rlog_prevLatExternal!=-1000) {
@@ -285,7 +285,7 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
-                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
+                        if (dist_m>70) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed ~250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistExternal+=dist_m;
                     }
                     rlog_prevLatExternal=obj['GpsLocationExternal']['Latitude'];
@@ -294,7 +294,6 @@ function processSegmentRLog(rLogPath) {
                 }
                 else if (obj['LogMonoTime']!==undefined && obj['CarParams']!==undefined && rlog_CarParams==null) {
                     rlog_CarParams = obj['CarParams'];
-                    logger.info("SET CAR PARAMS TO: "+rlog_CarParams);
                 }
                 else if (obj['LogMonoTime']!==undefined && obj['InitData']!==undefined && rlog_InitData==null) {
                     rlog_InitData = obj['InitData'];
@@ -501,11 +500,9 @@ async function updateDrives() {
         console.log(affectedDriveInitData);
         if (affectedDriveInitData[key]!=undefined && metadata['InitData']==undefined) {
             metadata['InitData']=affectedDriveInitData[key];
-            logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" InitData: "+metadata['InitData']);    
         }
         if (affectedDriveCarParams[key]!=undefined && metadata['CarParams']==undefined)  {
             metadata['CarParams']=affectedDriveCarParams[key];
-            logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" CarParams: "+metadata['CarParams']);    
         }
         
         logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" uploadComplete: "+uploadComplete);
