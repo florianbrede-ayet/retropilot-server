@@ -417,7 +417,7 @@ async function updateSegments() {
 
         }
 
-        if (segmentProcessQueue.length>=1) // we process at most 50 segments per batch
+        if (segmentProcessQueue.length>=15) // we process at most 15 segments per batch
             break;
     }
 
