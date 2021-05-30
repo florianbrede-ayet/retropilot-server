@@ -406,11 +406,24 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 
     response += `<b>Drives (non-preserved drives expire ` + config.deviceDriveExpirationDays + ` days after upload):</b><br>
         <table border=1 cellpadding=2 cellspacing=2>
-        <tr><th>identifier</th><th>filesize</th><th>duration</th><th>distance_meters</th><th>upload_complete</th><th>is_processed</th><th>upload_date</th><th>actions</th></tr>
+        <tr><th>identifier</th><th>car</th><th>version</th><th>filesize</th><th>duration</th><th>distance_meters</th><th>upload_complete</th><th>is_processed</th><th>upload_date</th><th>actions</th></tr>
     `;
 
     for (var i in drives) {
-        response += '<tr><td><a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '">' + (drives[i].is_preserved ? '<b>' : '') + drives[i].identifier + (drives[i].is_preserved ? '</b>' : '') + '</a></td><td>' + Math.round(drives[i].filesize / 1024) + ' MiB</td><td>' + controllers.helpers.formatDuration(drives[i].duration) + '</td><td>' + Math.round(drives[i].distance_meters / 1000) + ' km</td><td>' + drives[i].upload_complete + '</td><td>' + drives[i].is_processed + '</td><td>' + controllers.helpers.formatDate(drives[i].created) + '</td><td>' + '[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/delete" onclick="return confirm(\'Permanently delete this drive?\')">delete</a>]' + (drives[i].is_preserved ? '' : '&nbsp;&nbsp;[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/preserve">preserve</a>]') + '</tr>';
+        let vehicle="";
+        let version="";
+        let metadata={};
+        try {
+            metadata=JSON.parse(drives[i].metadata);
+            if (metadata['InitData']!=undefined && metadata['InitData']['Version']!=undefined)
+                version = htmlspecialchars(metadata['InitData']['Version']);
+                if (metadata['CarParams']!=undefined && metadata['CarParams']['CarName']!=undefined)
+                vehicle += htmlspecialchars(metadata['CarParams']['CarName'].toUpperCase())+" ";
+                if (metadata['CarParams']!=undefined && metadata['CarParams']['CarFingerprint']!=undefined)
+                vehicle += htmlspecialchars(metadata['CarParams']['CarFingerprint'].toUpperCase());
+        } catch (exception) {}
+        
+        response += '<tr><td><a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '">' + (drives[i].is_preserved ? '<b>' : '') + drives[i].identifier + (drives[i].is_preserved ? '</b>' : '') + '</a></td><td>'+vehicle+'</td><td>'+version+'</td><td>' + Math.round(drives[i].filesize / 1024) + ' MiB</td><td>' + controllers.helpers.formatDuration(drives[i].duration) + '</td><td>' + Math.round(drives[i].distance_meters / 1000) + ' km</td><td>' + drives[i].upload_complete + '</td><td>' + drives[i].is_processed + '</td><td>' + controllers.helpers.formatDate(drives[i].created) + '</td><td>' + '[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/delete" onclick="return confirm(\'Permanently delete this drive?\')">delete</a>]' + (drives[i].is_preserved ? '' : '&nbsp;&nbsp;[<a href="/useradmin/drive/' + drives[i].dongle_id + '/' + drives[i].identifier + '/preserve">preserve</a>]') + '</tr>';
     }
     response += `</table>
                 <br>
@@ -499,6 +512,29 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         cabanaUrl = config.cabanaUrl + '?retropilotIdentifier=' + device.dongle_id + '|' + dongleIdHash + '|' + drive.identifier + '|' + driveIdentifierHash + '&retropilotHost=' + encodeURIComponent(config.baseUrl) + '&demo=1"';
     }
 
+    let vehicle="";
+    let version="";
+    let gitRemote="";
+    let gitBranch="";
+    let gitCommit="";
+    let metadata={};
+    try {
+        metadata=JSON.parse(drive.metadata);
+        if (metadata['InitData']!=undefined && metadata['InitData']['Version']!=undefined)
+            version = htmlspecialchars(metadata['InitData']['Version']);
+        if (metadata['InitData']!=undefined && metadata['InitData']['GitRemote']!=undefined)
+            gitRemote = htmlspecialchars(metadata['InitData']['GitRemote']);            
+        if (metadata['InitData']!=undefined && metadata['InitData']['GitBranch']!=undefined)
+            gitBranch = htmlspecialchars(metadata['InitData']['GitBranch']);            
+        if (metadata['InitData']!=undefined && metadata['InitData']['GitCommit']!=undefined)
+            gitCommit = htmlspecialchars(metadata['InitData']['GitCommit']);            
+        
+        if (metadata['CarParams']!=undefined && metadata['CarParams']['CarName']!=undefined)
+            vehicle += htmlspecialchars(metadata['CarParams']['CarName'].toUpperCase())+" ";
+        if (metadata['CarParams']!=undefined && metadata['CarParams']['CarFingerprint']!=undefined)
+            vehicle += htmlspecialchars(metadata['CarParams']['CarFingerprint'].toUpperCase());
+    } catch (exception) {}
+
     const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
 
 
@@ -507,7 +543,12 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                 <a href="/useradmin/device/` + device.dongle_id + `">< < < Back To Device ` + device.dongle_id + `</a>
                 <br><br><h3>Drive ` + drive.identifier + ` on ` + drive.dongle_id + `</h3>
                 <b>Drive Date:</b> ` + controllers.helpers.formatDate(drive.drive_date) + `<br>
-                <b>Upload Date:</b> ` + controllers.helpers.formatDate(drive.created) + `<br>
+                <b>Upload Date:</b> ` + controllers.helpers.formatDate(drive.created) + `<br><br>
+                <b>Vehicle:</b> ` + vehicle + `<br>
+                <b>Openpilot Version:</b> ` + version + `<br><br>
+                <b>GIT Remote:</b> ` + gitRemote + `<br>
+                <b>GIT Branch:</b> ` + gitBranch + `<br>
+                <b>GIT Commit:</b> ` + gitCommit + `<br><br>
                 <b>Num Segments:</b> ` + (drive.max_segment + 1) + `<br>
                 <b>Storage:</b> ` + Math.round(drive.filesize / 1024) + ` MiB<br>
                 <b>Duration:</b> ` + controllers.helpers.formatDuration(drive.duration) + `<br>
@@ -515,6 +556,22 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                 <b>Is Preserved:</b> ` + drive.is_preserved + `<br>
                 <b>Upload Complete:</b> ` + drive.upload_complete + `<br>
                 <b>Processed:</b> ` + drive.is_processed + `<br>
+                <br>
+                <b>Car Parameters:</b>
+                <a id="show-button" href="#" onclick="
+                    document.getElementById('hide-button').style.display = 'inline';
+                    document.getElementById('show-button').style.display = 'none';
+                    document.getElementById('car-parameter-div').style.display = 'block'; 
+                    return false;">Show</a>
+                <a id="hide-button" style="display: none;" href="#" onclick="
+                    document.getElementById('hide-button').style.display = 'none';
+                    document.getElementById('show-button').style.display = 'inline';
+                    document.getElementById('car-parameter-div').style.display = 'none'; 
+                    return false;">Hide</a>
+                    
+                    <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">` + JSON.stringify(metadata['CarParams']!=undefined ? metadata['CarParams'] : {}, null, 2).replace(/\r?\n|\r/g, "<br>") + `</pre>
+                <br>
+
                 <br><br>
                 ` + (cabanaUrl ? '<a href="' + cabanaUrl + '" target=_blank><b>View Drive in CABANA</b></a><br><br>' : '') + `
                 <b>Files:</b><br>

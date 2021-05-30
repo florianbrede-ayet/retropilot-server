@@ -194,6 +194,9 @@ var segmentProcessQueue=[];
 var segmentProcessPosition=0;
 
 var affectedDrives={};
+var affectedDriveInitData={};
+var affectedDriveCarParams={};
+
 var affectedDevices={};
 
 
@@ -218,6 +221,8 @@ function processSegmentRLog(rLogPath) {
     rlog_prevLatExternal=-1000;
     rlog_prevLngExternal=-1000;
     rlog_totalDistExternal = 0;
+    rlog_CarParams=null;
+    rlog_InitData=null;
 
     return new Promise(
       function(resolve, reject) {
@@ -287,6 +292,14 @@ function processSegmentRLog(rLogPath) {
                     rlog_prevLngExternal=obj['GpsLocationExternal']['Longitude'];
                     rlog_lastTsExternal = obj['LogMonoTime'];
                 }
+                else if (obj['LogMonoTime']!==undefined && obj['CarParams']!==undefined && rlog_CarParams==null) {
+                    rlog_CarParams = obj['CarParams'];
+                    logger.info("SET CAR PARAMS TO: "+rlog_CarParams);
+                }
+                else if (obj['LogMonoTime']!==undefined && obj['InitData']!==undefined && rlog_InitData==null) {
+                    rlog_InitData = obj['InitData'];
+                }
+
             } catch(exception) {
 
             }
@@ -337,6 +350,11 @@ function processSegmentsRecursive() {
                     segment.id
             );
             affectedDrives[driveIdentifier]=true;
+            if (rlog_CarParams!=null)
+                affectedDriveCarParams[driveIdentifier]=rlog_CarParams;
+            if (rlog_InitData!=null)
+                affectedDriveInitData[driveIdentifier]=rlog_InitData;
+                
             segmentProcessPosition++;
             setTimeout(function() {processSegmentsRecursive();}, 0);  
         })();
@@ -349,6 +367,8 @@ async function updateSegments() {
     segmentProcessQueue=[];
     segmentProcessPosition=0;
     affectedDrives={};
+    affectedDriveCarParams={};
+    affectedDriveInitData={};
 
     const drive_segments = await db.all('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? ORDER BY created ASC', false, false);
     for (var t=0; t<drive_segments.length; t++) {
@@ -397,7 +417,7 @@ async function updateSegments() {
 
         }
 
-        if (segmentProcessQueue.length>=50) // we process at most 50 segments per batch
+        if (segmentProcessQueue.length>=1) // we process at most 50 segments per batch
             break;
     }
 
@@ -471,11 +491,28 @@ async function updateDrives() {
             }
             catch (exception) {}    
         } 
+
+        let metadata = {};
+        try {
+            metadata = JSON.parse(drive.metadata);
+        } catch (exception) {logger.error(exception);}
+        if (metadata==null) metadata={};
+
+        console.log(affectedDriveInitData);
+        if (affectedDriveInitData[key]!=undefined && metadata['InitData']==undefined) {
+            metadata['InitData']=affectedDriveInitData[key];
+            logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" InitData: "+metadata['InitData']);    
+        }
+        if (affectedDriveCarParams[key]!=undefined && metadata['CarParams']==undefined)  {
+            metadata['CarParams']=affectedDriveCarParams[key];
+            logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" CarParams: "+metadata['CarParams']);    
+        }
+        
         logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" uploadComplete: "+uploadComplete);
         
         const driveResult = await db.run(
-            'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ? WHERE id = ?', 
-                Math.round(totalDistanceMeters), totalDurationSeconds, uploadComplete, isProcessed, filesize, drive.id);
+            'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ?, metadata = ? WHERE id = ?', 
+                Math.round(totalDistanceMeters), totalDurationSeconds, uploadComplete, isProcessed, filesize, JSON.stringify(metadata), drive.id);
 
         affectedDevices[dongleId]=true;
         
