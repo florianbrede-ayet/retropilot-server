@@ -569,7 +569,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                     document.getElementById('car-parameter-div').style.display = 'none'; 
                     return false;">Hide</a>
                     
-                    <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">` + JSON.stringify(metadata['CarParams']!=undefined ? metadata['CarParams'] : {}, null, 2).replace(/\r?\n|\r/g, "<br>") + `</pre>
+                    <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">` + JSON.stringify(metadata!=undefined && metadata['CarParams']!=undefined ? metadata['CarParams'] : {}, null, 2).replace(/\r?\n|\r/g, "<br>") + `</pre>
                 <br>
 
                 <br><br>
