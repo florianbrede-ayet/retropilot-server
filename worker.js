@@ -194,6 +194,9 @@ var segmentProcessQueue=[];
 var segmentProcessPosition=0;
 
 var affectedDrives={};
+var affectedDriveInitData={};
+var affectedDriveCarParams={};
+
 var affectedDevices={};
 
 
@@ -218,6 +221,8 @@ function processSegmentRLog(rLogPath) {
     rlog_prevLatExternal=-1000;
     rlog_prevLngExternal=-1000;
     rlog_totalDistExternal = 0;
+    rlog_CarParams=null;
+    rlog_InitData=null;
 
     return new Promise(
       function(resolve, reject) {
@@ -243,7 +248,7 @@ function processSegmentRLog(rLogPath) {
 
         reader(function (obj) {
             try {
-                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsInternal>=1000000*1000*1 && obj['GpsLocation']!==undefined) {
+                if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsInternal>=1000000*1000*0.99 && obj['GpsLocation']!==undefined) {
                     logger.info('processSegmentRLog GpsLocation @ '+obj['LogMonoTime']+': '+obj['GpsLocation']['Latitude']+' '+obj['GpsLocation']['Longitude']);
                 
                     if (rlog_prevLatInternal!=-1000) {
@@ -258,14 +263,14 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
-                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
+                        if (dist_m>70) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed ~250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistInternal+=dist_m;
                     }
                     rlog_prevLatInternal=obj['GpsLocation']['Latitude'];
                     rlog_prevLngInternal=obj['GpsLocation']['Longitude'];
                     rlog_lastTsInternal = obj['LogMonoTime'];
                 }
-                else if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsExternal>=1000000*1000*1 && obj['GpsLocationExternal']!==undefined) {
+                else if (obj['LogMonoTime']!==undefined && obj['LogMonoTime']-rlog_lastTsExternal>=1000000*1000*0.99 && obj['GpsLocationExternal']!==undefined) {
                     logger.info('processSegmentRLog GpsLocationExternal @ '+obj['LogMonoTime']+': '+obj['GpsLocationExternal']['Latitude']+' '+obj['GpsLocationExternal']['Longitude']);
                 
                     if (rlog_prevLatExternal!=-1000) {
@@ -280,13 +285,20 @@ function processSegmentRLog(rLogPath) {
                                 (1 - c((lon2 - lon1) * p))/2;
                     
                         var dist_m = 1000 * 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
-                        if (dist_m>4200) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed 250km/h for this segment, we assume the coordinates off / defective and skip it
+                        if (dist_m>70) dist_m=0; // each segment is max. 60s. if the calculated speed would exceed ~250km/h for this segment, we assume the coordinates off / defective and skip it
                         rlog_totalDistExternal+=dist_m;
                     }
                     rlog_prevLatExternal=obj['GpsLocationExternal']['Latitude'];
                     rlog_prevLngExternal=obj['GpsLocationExternal']['Longitude'];
                     rlog_lastTsExternal = obj['LogMonoTime'];
                 }
+                else if (obj['LogMonoTime']!==undefined && obj['CarParams']!==undefined && rlog_CarParams==null) {
+                    rlog_CarParams = obj['CarParams'];
+                }
+                else if (obj['LogMonoTime']!==undefined && obj['InitData']!==undefined && rlog_InitData==null) {
+                    rlog_InitData = obj['InitData'];
+                }
+
             } catch(exception) {
 
             }
@@ -337,6 +349,11 @@ function processSegmentsRecursive() {
                     segment.id
             );
             affectedDrives[driveIdentifier]=true;
+            if (rlog_CarParams!=null)
+                affectedDriveCarParams[driveIdentifier]=rlog_CarParams;
+            if (rlog_InitData!=null)
+                affectedDriveInitData[driveIdentifier]=rlog_InitData;
+                
             segmentProcessPosition++;
             setTimeout(function() {processSegmentsRecursive();}, 0);  
         })();
@@ -349,6 +366,8 @@ async function updateSegments() {
     segmentProcessQueue=[];
     segmentProcessPosition=0;
     affectedDrives={};
+    affectedDriveCarParams={};
+    affectedDriveInitData={};
 
     const drive_segments = await db.all('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? ORDER BY created ASC', false, false);
     for (var t=0; t<drive_segments.length; t++) {
@@ -397,7 +416,7 @@ async function updateSegments() {
 
         }
 
-        if (segmentProcessQueue.length>=50) // we process at most 50 segments per batch
+        if (segmentProcessQueue.length>=15) // we process at most 15 segments per batch
             break;
     }
 
@@ -471,11 +490,26 @@ async function updateDrives() {
             }
             catch (exception) {}    
         } 
+
+        let metadata = {};
+        try {
+            metadata = JSON.parse(drive.metadata);
+        } catch (exception) {logger.error(exception);}
+        if (metadata==null) metadata={};
+
+        console.log(affectedDriveInitData);
+        if (affectedDriveInitData[key]!=undefined && metadata['InitData']==undefined) {
+            metadata['InitData']=affectedDriveInitData[key];
+        }
+        if (affectedDriveCarParams[key]!=undefined && metadata['CarParams']==undefined)  {
+            metadata['CarParams']=affectedDriveCarParams[key];
+        }
+        
         logger.info("updateDrives drive "+dongleId+" "+driveIdentifier+" uploadComplete: "+uploadComplete);
         
         const driveResult = await db.run(
-            'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ? WHERE id = ?', 
-                Math.round(totalDistanceMeters), totalDurationSeconds, uploadComplete, isProcessed, filesize, drive.id);
+            'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ?, metadata = ? WHERE id = ?', 
+                Math.round(totalDistanceMeters), totalDurationSeconds, uploadComplete, isProcessed, filesize, JSON.stringify(metadata), drive.id);
 
         affectedDevices[dongleId]=true;
         
@@ -604,7 +638,7 @@ async function deleteBootAndCrashLogs() {
                 
                 var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
                 var timeString = timeSplit[0]+' '+timeSplit[1].replace(/-/g,':');
-                crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString)});
+                crashlogFiles.push({'name': crashlogDirectoryTree.children[i].name, 'size': crashlogDirectoryTree.children[i].size, 'date': Date.parse(timeString), 'path' : crashlogDirectoryTree.children[i].path});
             }
             crashlogFiles.sort((a,b) => (a.date < b.date) ? 1 : -1);
             for (var c=5; c<crashlogFiles.length; c++) {
