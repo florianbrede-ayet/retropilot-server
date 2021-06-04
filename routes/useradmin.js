@@ -52,7 +52,7 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
 
     const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
     const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
-    const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
+    const drives = await models.__db.get('SELECT COUNT(*) AS num, SUM(distance_meters) as distance, SUM(duration) as duration FROM drives');
 
     res.status(200);
     res.send('<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
@@ -67,6 +67,8 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
         'Accounts: ' + accounts.num + '  |  ' +
         'Devices: ' + devices.num + '  |  ' +
         'Drives: ' + drives.num + '  |  ' +
+        'Distance Traveled: ' + Math.round(drives.distance/1000) + ' km  |  ' +
+        'Time Traveled: ' + controllers.helpers.formatDuration(drives.duration) + '  |  ' +
         'Storage Used: ' + (await controllers.storage.getTotalStorageUsed() !== null ? await controllers.storage.getTotalStorageUsed() : '--') + '<br><br>' + config.welcomeMessage + '</html>');
 }))
 
@@ -240,6 +242,8 @@ router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
                 </form><br><br>
                 <hr/>
                 <a href="/useradmin/signout">Sign Out</a>`;
+
+    response+='<br>' + config.welcomeMessage + '</html>';
 
     res.status(200);
     res.send(response);
