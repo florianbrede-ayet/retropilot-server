@@ -144,11 +144,11 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
         
     };
     
-    const statresult = await models.__db.all('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id)
+    const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id)
     if (statresult != null && statresult.routes != null) {
         stats.all.routes = statresult.routes;
-        stats.all.distance = statresult.distance;
-        stats.all.duration = statresult.duration;
+        stats.all.distance = statresult.distance!=null ? statresult.distance : 0;
+        stats.all.duration = statresult.duration!=null ? statresult.duration : 0;
     }
 
     // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO" week)
@@ -158,11 +158,11 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     let lastMonday = new Date(d.setDate(diff));
     lastMonday.setHours(0, 0, 0, 0);
     
-    const statresultweek = await models.__db.all('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=? AND drive_date >= ?', device.dongle_id, lastMonday.getTime())
+    const statresultweek = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=? AND drive_date >= ?', device.dongle_id, lastMonday.getTime())
     if (statresultweek != null && statresultweek.routes != null) {
         stats.week.routes = statresultweek.routes;
-        stats.week.distance = statresultweek.distance;
-        stats.week.duration = statresultweek.duration;
+        stats.week.distance = statresultweek.distance!=null ? statresultweek.distance : 0;
+        stats.week.duration = statresultweek.duration!=null ? statresultweek.duration : 0;
     }
 
     logger.info("HTTP.STATS for " + req.params.dongleId + " returning: "+JSON.stringify(stats));
