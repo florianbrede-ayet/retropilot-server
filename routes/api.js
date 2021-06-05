@@ -148,7 +148,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     if (statresult != null && statresult.routes != null) {
         stats.all.routes = statresult.routes;
         stats.all.distance = statresult.distance!=null ? statresult.distance : 0;
-        stats.all.duration = statresult.duration!=null ? statresult.duration : 0;
+        stats.all.minutes = statresult.duration!=null ? statresult.duration : 0;
     }
 
     // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO" week)
@@ -162,7 +162,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     if (statresultweek != null && statresultweek.routes != null) {
         stats.week.routes = statresultweek.routes;
         stats.week.distance = statresultweek.distance!=null ? statresultweek.distance : 0;
-        stats.week.duration = statresultweek.duration!=null ? statresultweek.duration : 0;
+        stats.week.minutes = statresultweek.duration!=null ? statresultweek.duration : 0;
     }
 
     logger.info("HTTP.STATS for " + req.params.dongleId + " returning: "+JSON.stringify(stats));
