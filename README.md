@@ -40,32 +40,44 @@ A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet
 -----
 
 
-### Preparing OpenPilot Device
+### [Device] Preparation / Enable Custom Server
 
-#### Option (a) By modying endpoint URL in OpenPilot
-The only replacement required in code is in `common/api/__init__.py`:
+On the device or in your fork's code, replace all API endpoints with your own server endpoint. 
+This could be executed directly on the device in the shell to use `https://api.retropilot.org` as backend:
 ```
-def api_get(endpoint, method='GET', timeout=None, access_token=None, **params):
-  backend = "https://api.commadotai.com/" # replace with the RetroPilot server
+find /data/openpilot -type f -exec sed -i 's/https:\/\/api.commadotai.com/https:\/\/api.retropilot.org/g' {} +
 ```
 
-#### Option (b) Without code changes (not functional yet)
-
-
-### Re-Registering OpenPilot Device
-To re-register a freon previously registered on comma or a different server, you have to remove the old `dongleId` and reboot:
+### [Device] Swapping Servers (Back)
+To switch a device between different servers, you have to remove the old `DongleId` and reboot:
 ```
 rm /data/params/d/DongleID
 reboot
 ```
 
+There is no need to backup the `DongleId`, as the new server will identify your device based on its imei, serial and public key.
+
+### [Device] Raw Drives Not Uploading (fcamera & rlog)
+1. Raw data is only uploaded if the device is sufficiently charged, not connected to an active panda (offroad) and there are no immediate files (boot, crash, qcamera, qlog) remaining.<br>
+2. Your branch might have raw uploads disabled, check *Device Settings > Upload Raw Logs*.
+
+
+If that doesn't help or the option is not available, try:
+
+```
+echo "1" > /data/params/d/IsUploadRawEnabled
+echo "1" > /data/params/d/UploadRaw
+reboot
+```
+
+-----
+
 
 ### Current Limitations
-Right now, the OpenPilot dashboard does not display any statistics or pairing status.
-The reason is that at least pre 0.8.3, the `offroad.apk` with react and comma-api is for some reason either ignoring `/etc/hosts` changes or not accepting the certificate from *Preparing > Option b)*.
+OpenPilot before 0.8.3 will not display any statistics or pairing status in the dashboard.
+The reason is that pre 0.8.3, the `offroad.apk` with react and comma-api would require recompilation to accept the new endpoints.
 
-Right now statistics are only available through the *RetroPilot Useradmin*, the beauty however is that the Pairing-QR-Code is always available so it's easy to unpair and repair the device to a different account on the RetroPilot Server.
-
+The athena websockets interface is not implemented yet, so the comma app and athena specific remote control commands (including "upload on demand") are not functional as of now.
 
 
 ### Screenshots
