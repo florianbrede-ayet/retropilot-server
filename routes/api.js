@@ -93,7 +93,10 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
 
     if (!device) {
         logger.info(`HTTP.DEVICES device ${dongleId} not found`);
-        return res.send('Unauthorized.').status(400)
+        let response={'is_paired': false, 'prime': false};
+        res.status(200);
+        res.json(response);
+        return;
     }
 
     let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
@@ -116,20 +119,6 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     const dongleId = req.params.dongleId;
     logger.info("HTTP.STATS called for " + req.params.dongleId + "");
     
-    const device = await models.drivesModel.getDevice(dongleId);
-
-    if (!device) {
-        logger.info(`HTTP.STATS device ${dongleId} not found`);
-        return res.send('Unauthorized.').status(400)
-    }
-
-    let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
-
-    if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
-        logger.info(`HTTP.STATS JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
-        return res.send('Unauthorized.').status(400)
-    }
-
     let stats = {
         all: {
             routes: 0,
@@ -143,6 +132,21 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
         },
         
     };
+
+    const device = await models.drivesModel.getDevice(dongleId);
+    if (!device) {
+        logger.info(`HTTP.STATS device ${dongleId} not found`);
+        res.status(200);
+        res.json(stats);
+        return;
+    }
+
+    let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+
+    if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+        logger.info(`HTTP.STATS JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
+        return res.send('Unauthorized.').status(400)
+    }
     
     const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id)
     if (statresult != null && statresult.routes != null) {
@@ -181,7 +185,9 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
 
     if (!device) {
         logger.info(`HTTP.OWNER device ${dongleId} not found`);
-        return res.send('Unauthorized.').status(400)
+        let response={'username': 'unregisteredDevice', 'points': 0};
+        res.status(200);
+        return;
     }
 
     let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
@@ -202,7 +208,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
             points = stats.points;
     }
 
-    let response={'owner': owner, 'points': points};
+    let response={'username': owner, 'points': points};
     logger.info("HTTP.OWNER for " + req.params.dongleId + " returning: "+JSON.stringify(response));
 
     res.status(200);
