@@ -297,7 +297,7 @@ function processSegmentRLog(rLogPath) {
         var temporaryFile = rLogPath.replace(".bz2", "");
         
         try {
-            execSync(`bunzip2 -k "${rLogPath}"`);
+            execSync(`bunzip2 -k -f "${rLogPath}"`);
         }
         catch (exception) { // if bunzip2 fails, something was wrong with the file (corrupt / missing)
             logger.error(exception);
