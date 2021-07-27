@@ -84,11 +84,143 @@ router.put('/backend/post_upload', bodyParser.raw({
 }))
 
 
+// RETURN THE PAIRING STATUS
+router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
+    const dongleId = req.params.dongleId;
+    logger.info("HTTP.DEVICES called for " + req.params.dongleId + "");
+    
+    const device = await models.drivesModel.getDevice(dongleId);
+
+    if (!device) {
+        logger.info(`HTTP.DEVICES device ${dongleId} not found`);
+        let response={'is_paired': false, 'prime': false};
+        res.status(200);
+        res.json(response);
+        return;
+    }
+
+    let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+
+    if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+        logger.info(`HTTP.DEVICES JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
+        return res.send('Unauthorized.').status(400)
+    } 
+
+    let response={'is_paired': (device.account_id>0 ? true : false), 'prime': (device.account_id>0 ? true : false)};
+    logger.info("HTTP.DEVICES for " + req.params.dongleId + " returning: "+JSON.stringify(response));
+
+    res.status(200);
+    res.json(response);
+}))
+
+
+// RETURN STATS FOR DASHBOARD
+router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => {
+    const dongleId = req.params.dongleId;
+    logger.info("HTTP.STATS called for " + req.params.dongleId + "");
+    
+    let stats = {
+        all: {
+            routes: 0,
+            distance: 0,
+            minutes: 0
+        },
+        week: {
+            routes: 0,
+            distance: 0,
+            minutes: 0
+        },
+        
+    };
+
+    const device = await models.drivesModel.getDevice(dongleId);
+    if (!device) {
+        logger.info(`HTTP.STATS device ${dongleId} not found`);
+        res.status(200);
+        res.json(stats);
+        return;
+    }
+
+    let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+
+    if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+        logger.info(`HTTP.STATS JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
+        return res.send('Unauthorized.').status(400)
+    }
+    
+    const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id)
+    if (statresult != null && statresult.routes != null) {
+        stats.all.routes = statresult.routes;
+        stats.all.distance = statresult.distance!=null ? statresult.distance : 0;
+        stats.all.minutes = statresult.duration!=null ? statresult.duration : 0;
+    }
+
+    // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO" week)
+    let d = new Date();
+    let day = d.getDay();
+    let diff = d.getDate() - day + (day == 0 ? -6:1);
+    let lastMonday = new Date(d.setDate(diff));
+    lastMonday.setHours(0, 0, 0, 0);
+    
+    const statresultweek = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=? AND drive_date >= ?', device.dongle_id, lastMonday.getTime())
+    if (statresultweek != null && statresultweek.routes != null) {
+        stats.week.routes = statresultweek.routes;
+        stats.week.distance = statresultweek.distance!=null ? statresultweek.distance : 0;
+        stats.week.minutes = statresultweek.duration!=null ? statresultweek.duration : 0;
+    }
+
+    logger.info("HTTP.STATS for " + req.params.dongleId + " returning: "+JSON.stringify(stats));
+
+    res.status(200);
+    res.json(stats);
+}))
+
+
+// RETURN USERNAME & POINTS FOR DASHBOARD
+router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
+    const dongleId = req.params.dongleId;
+    logger.info("HTTP.OWNER called for " + req.params.dongleId + "");
+    
+    const device = await models.drivesModel.getDevice(dongleId);
+
+    if (!device) {
+        logger.info(`HTTP.OWNER device ${dongleId} not found`);
+        let response={'username': 'unregisteredDevice', 'points': 0};
+        res.status(200);
+        return;
+    }
+
+    let decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+
+    if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+        logger.info(`HTTP.OWNER JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
+        return res.send('Unauthorized.').status(400)
+    }
+
+    let owner="";
+    let points=0;
+
+    const account = await models.__db.get('SELECT * FROM accounts WHERE id = ?', device.account_id);
+    if (account != null) {
+        owner = account.email.split("@")[0];
+        const stats = await models.__db.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id)
+        if (stats != null && stats.points != null)
+            points = stats.points;
+    }
+
+    let response={'username': owner, 'points': points};
+    logger.info("HTTP.OWNER for " + req.params.dongleId + " returning: "+JSON.stringify(response));
+
+    res.status(200);
+    res.json(response);
+}))
+
+
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
 router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
     var path = req.query.path;
     const dongleId = req.params.dongleId;
-    const auth = req.params.authorization;
+    const auth = req.headers.authorization;
     logger.info("HTTP.UPLOAD_URL called for " + req.params.dongleId + " and file " + path + ": " + JSON.stringify(req.headers));
 
 

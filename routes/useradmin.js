@@ -51,7 +51,7 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
 
     const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
     const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
-    const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
+    const drives = await models.__db.get('SELECT COUNT(*) AS num, SUM(distance_meters) as distance, SUM(duration) as duration FROM drives');
 
     res.status(200);
     res.send('<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
@@ -66,6 +66,8 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
         'Accounts: ' + accounts.num + '  |  ' +
         'Devices: ' + devices.num + '  |  ' +
         'Drives: ' + drives.num + '  |  ' +
+        'Distance Traveled: ' + Math.round(drives.distance/1000) + ' km  |  ' +
+        'Time Traveled: ' + controllers.helpers.formatDuration(drives.duration) + '  |  ' +
         'Storage Used: ' + (await controllers.storage.getTotalStorageUsed() !== null ? await controllers.storage.getTotalStorageUsed() : '--') + '<br><br>' + config.welcomeMessage + '</html>');
 }))
 
@@ -213,6 +215,8 @@ router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
                 </form><br><br>
                 <hr/>
                 <a href="/useradmin/signout">Sign Out</a>`;
+
+    response+='<br>' + config.welcomeMessage + '</html>';
 
     res.status(200);
     res.send(response);
@@ -511,8 +515,20 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
 
 
-    var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
-        `
+    var response = `<html style="font-family: monospace">
+                <head>
+                    <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet" />
+                    <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
+                    <style>
+                        .video-js .vjs-current-time,
+                        .vjs-no-flex .vjs-current-time {
+                          display: block;
+                        }
+                        .vjs-default-skin.vjs-paused .vjs-big-play-button {display: none;}
+                    </style>
+                </head>
+                <body>
+                <h2>Welcome To The RetroPilot Server Dashboard!</h2>
                 <a href="/useradmin/device/` + device.dongle_id + `">< < < Back To Device ` + device.dongle_id + `</a>
                 <br><br><h3>Drive ` + drive.identifier + ` on ` + drive.dongle_id + `</h3>
                 <b>Drive Date:</b> ` + controllers.helpers.formatDate(drive.drive_date) + `<br>
@@ -545,8 +561,62 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                     <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">` + JSON.stringify(metadata!=undefined && metadata['CarParams']!=undefined ? metadata['CarParams'] : {}, null, 2).replace(/\r?\n|\r/g, "<br>") + `</pre>
                 <br>
 
+                <b>Preview <span id="current_preview_segment"></span>:</b>
+                `
+                +(
+                cabanaUrl ? `
+                    <video id="drive_preview" class="video-js vjs-default-skin" controls width="480" height="386">
+                        <source src="`+driveUrl+`/qcamera.m3u8" type='application/x-mpegURL'>
+                    </video>
+                    <script>
+                    var player = videojs('drive_preview',
+                    {
+                        "controls": true, "autoplay": false, "preload": "auto",
+                        "controlBar": {
+                            "remainingTimeDisplay": false
+                        }
+                    }
+                    );
+                    player.on('timeupdate', function () {
+                        var segment = get_current_segment_info(this);
+                        document.getElementById('current_preview_segment').textContent='(Segment: '+segment[0]+' | '+segment[1]+'% - Timestamp: '+segment[2]+')';
+                    });
+                    
+                    function get_current_segment_info(obj, old_segment = null) {
+                        var target_media = obj.tech().vhs.playlists.media();
+                        if (!target_media) {
+                            return [0, 0, 0];    
+                        }
+                        var snapshot_time = obj.currentTime();
+                        var segment;
+                        var segment_time;
+                        for (var i = 0, l = target_media.segments.length; i < l; i++) {
+                            if (snapshot_time < target_media.segments[i].end) {
+                                segment = target_media.segments[i];
+                                break;
+                            }
+                        }
+                    
+                        if (segment) {
+                            segment_time = Math.max(0, snapshot_time - (segment.end - segment.duration));
+                        } else {
+                            segment = target_media.segments[0];
+                            segment_time = 0;
+                        }
+                        if (segment) {
+                            var uri_arr = segment.uri.split("/");
+                            return [uri_arr[uri_arr.length-2], Math.round(100/segment.duration*segment_time), Math.round(snapshot_time)];
+                        }
+                        return [0, 0, Math.round(snapshot_time)];
+                    }
+
+                    </script>
+                ` : `(avaiable after processing)`)
+                +
+                `
+                <br>
+                ` + (cabanaUrl ? '<a href="' + cabanaUrl + '" target=_blank><b>View Drive in CABANA</b></a>' : 'View Drive in CABANA') + `
                 <br><br>
-                ` + (cabanaUrl ? '<a href="' + cabanaUrl + '" target=_blank><b>View Drive in CABANA</b></a><br><br>' : '') + `
                 <b>Files:</b><br>
                 <table border=1 cellpadding=2 cellspacing=2>
                     <tr><th>segment</th><th>qcamera</th><th>qlog</th><th>fcamera</th><th>rlog</th><th>dcamera</th><th>processed</th><th>stalled</th></tr>
@@ -605,7 +675,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     response += `</table>
                 <br><br>
                 <hr/>
-                <a href="/useradmin/signout">Sign Out</a></html>`;
+                <a href="/useradmin/signout">Sign Out</a></body></html>`;
 
     res.status(200);
     res.send(response);
