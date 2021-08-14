@@ -5,6 +5,10 @@ let models;
 let logger;
 
 
+async function getAccountFromId(id) {
+    return await models.users.getAccountFromId(id);
+}
+
 async function createAccount(email, password) {
     if (!email || !password) return {success: false, status: 400, data: {missingData: true}};
     if (!config.allowAccountRegistration) {
@@ -38,6 +42,7 @@ async function verifyEmailToken(token) {
 }
 
 
+
 module.exports = (_models, _logger) => {
     models = _models;
     logger = _logger;
@@ -45,5 +50,6 @@ module.exports = (_models, _logger) => {
     return {
         createAccount,
         verifyEmailToken,
+        getAccountFromId
     }
 }

@@ -28,7 +28,8 @@ async function getAuthenticatedAccount(req, res) {
     models.users.userPing(account.email);
 
     if (!account || account.banned) {
-        return res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
+        res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
+        return false
     }
     return account;
 }

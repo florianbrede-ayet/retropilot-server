@@ -25,6 +25,9 @@ async function verifyAccountEmail(email, verified, newToken) {
     return await db.get('UPDATE accounts SET verified=? WHERE email = ?', verified, email);
 }
 
+async function banAccount(ban, userId) {
+    return await db.get('UPDATE accounts SET banned=? WHERE id = ?', ban ? 1 : 0, userId)
+}
 
 
 module.exports = (_db) => {
@@ -36,6 +39,7 @@ module.exports = (_db) => {
         createUser,
         getAccountFromId,
         getAccountFromVerifyToken,
-        verifyAccountEmail
+        verifyAccountEmail,
+        banAccount
     }
 }
