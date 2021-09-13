@@ -766,7 +766,7 @@ async function mainWorkerLoop() {
 
 // make sure bunzip2 is available
 try {
-    execSync(`bunzip2 --version`);
+    execSync(`bunzip2 --help`);
 }
 catch (exception) {
     logger.error("bunzip2 is not installed or not available in environment path")
