@@ -357,7 +357,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (re
     var public_key = req.query.public_key;
     var register_token = req.query.register_token;
 
-    if (imei1 == null || imei1.length < 5 || serial == null || serial.length < 5 || public_key == null || public_key.length < 5 || register_token == null || register_token.length < 5) {
+    if (serial == null || serial.length < 5 || public_key == null || public_key.length < 5 || register_token == null || register_token.length < 5) {
         logger.error(`HTTP.V2.PILOTAUTH a required parameter is missing or empty ${JSON.stringify(req.query)}`);
         res.status(400);
         res.send('Malformed Request.');
@@ -373,12 +373,12 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (re
         return;
     }
 
-    const device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', imei1, serial);
+    const device = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
     if (device == null) {
         logger.info("HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (" + imei1 + ", " + serial + ")");
         while (true) {
             var dongleId = crypto.randomBytes(4).toString('hex');
-            const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', imei1, serial);
+            const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE AND serial = ?', serial);
             if (isDongleIdTaken == null) {
                 const resultingDevice = await models.__db.run(
                     'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
