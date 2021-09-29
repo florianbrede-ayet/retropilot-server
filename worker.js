@@ -443,7 +443,7 @@ async function updateSegments() {
     affectedDriveInitData={};
 
     const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? ORDER BY created ASC', false, false);
-    if (drive_segments!==null) { 
+    if (drive_segments!=null) { 
         for (var t=0; t<drive_segments.length; t++) {
             var segment = drive_segments[t];
             
@@ -545,7 +545,7 @@ async function updateDrives() {
         var playlistSegmentStrings='';
 
         const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? ORDER BY segment_id ASC', driveIdentifier, dongleId);
-        if (drive_segments!==null) {
+        if (drive_segments!=null) {
             for (var t=0; t<drive_segments.length; t++) {
                 if (!drive_segments[t].upload_complete) uploadComplete=false;
                 if (!drive_segments[t].is_processed) isProcessed=false;
@@ -647,7 +647,7 @@ async function removeDeletedDrivesPhysically() {
                 'DELETE FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ?', 
                 deletedDrives[t].identifier, deletedDrives[t].dongle_id);
             
-            if (driveResult!==null && driveSegmentResult!==null) deleteFolderRecursive(drivePath, { recursive: true });
+            if (driveResult!=null && driveSegmentResult!=null) deleteFolderRecursive(drivePath, { recursive: true });
             affectedDevices[deletedDrives[t].dongle_id]=true;
         } catch (exception) {
             logger.error(exception);
@@ -665,7 +665,7 @@ async function deleteOverQuotaDrives() {
         var foundDriveToDelete=false;
 
         const driveNormal = await dbProtectedGet('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, false, false);
-        if (driveNormal!==null) {
+        if (driveNormal!=null) {
             logger.info("deleteOverQuotaDrives drive "+driveNormal.dongle_id+" "+driveNormal.identifier+" (normal) is deleted for over-quota");
             const driveResult = await dbProtectedRun(
                 'UPDATE drives SET is_deleted = ? WHERE id = ?', 
@@ -675,7 +675,7 @@ async function deleteOverQuotaDrives() {
 
         if (!foundDriveToDelete) {
             const drivePreserved = await dbProtectedGet('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, true, false);
-            if (drivePreserved!==null) {
+            if (drivePreserved!=null) {
                 logger.info("deleteOverQuotaDrives drive "+drivePreserved.dongle_id+" "+drivePreserved.identifier+" (preserved!) is deleted for over-quota");
                 const driveResult = await dbProtectedRun(
                     'UPDATE drives SET is_deleted = ? WHERE id = ?', 
@@ -766,7 +766,7 @@ async function mainWorkerLoop() {
 
 // make sure bunzip2 is available
 try {
-    execSync(`bunzip2 --version`);
+    execSync(`bunzip2 --help`);
 }
 catch (exception) {
     logger.error("bunzip2 is not installed or not available in environment path")
