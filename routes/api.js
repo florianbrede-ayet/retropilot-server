@@ -378,7 +378,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({extended: true}), async (re
         logger.info("HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (" + imei1 + ", " + serial + ")");
         while (true) {
             var dongleId = crypto.randomBytes(4).toString('hex');
-            const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE AND serial = ?', serial);
+            const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
             if (isDongleIdTaken == null) {
                 const resultingDevice = await models.__db.run(
                     'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
