@@ -6,9 +6,9 @@ let logger;
 
 async function validateJWT(token, key) {
     try {
-        return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256']});
+        return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256'], ignoreNotBefore: true});
     } catch (exception) {
-        //logger.warn(exception)
+        logger.warn(exception)
     }
     return null;
 }
