@@ -6,12 +6,12 @@ let logger;
 
 async function validateJWT(token, key) {
     try {
-        return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256']});
+        return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256'], ignoreNotBefore: true});
     } catch (exception) {
         logger.warn(`failed to validate JWT error: ${exception}`)
     }
     return null;
-}
+}//
 
 async function readJWT(token) {
     try {
