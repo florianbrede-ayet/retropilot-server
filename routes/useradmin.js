@@ -256,13 +256,24 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
             return;
         }
 
-        var qrCodeParts = req.body.qr_string.split("--"); // imei, serial, jwtToken
+        // Legacy registrations encode QR data as imei - serial - pairtoken, => 0.8.3 uses only a pairtoken
+        const qrCode = req.body.qr_string;
+        var qrCodeParts = qrCode.split("--");
+        let device;
+        let pairJWT;
+        if (qrCodeParts.length > 0) {
+             device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
+             pairJWT = qrCodeParts[2];
+        } else {
+            pairJWT = qrCode;
+            const data = controllers.authentication.readJWT(qrCode);
+            device = await models.__db.get('SELECT * FROM devices WHERE dongleId = ?', data.identiy);
+        }
 
-        const device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
         if (device == null) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device not registered on Server'));
         }
-        var decoded = controllers.authentication.validateJWT(qrCodeParts[2], device.public_key);
+        var decoded = controllers.authentication.validateJWT(pairJWT, device.public_key);
         if (decoded == null || decoded.pair == undefined) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device QR Token is invalid or has expired'));
         }
@@ -278,7 +289,7 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
 
         res.redirect('/useradmin/overview');
     }))
-
+    
 
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     const account = await controllers.authentication.getAuthenticatedAccount(req, res);

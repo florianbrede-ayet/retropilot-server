@@ -8,7 +8,16 @@ async function validateJWT(token, key) {
     try {
         return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256']});
     } catch (exception) {
-        //logger.warn(exception)
+        logger.warn(`failed to validate JWT error: ${exception}`)
+    }
+    return null;
+}
+
+async function readJWT(token) {
+    try {
+        return jwt.decode(key);
+    } catch (exception) {
+        logger.warn(`failed to read JWT error: ${exception}`)
     }
     return null;
 }
