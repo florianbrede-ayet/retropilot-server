@@ -20,18 +20,24 @@ let transporter = nodemailer.createTransport(
 
 async function sendEmailVerification(token, email) {
     if (!config.canSendMail) return logger.warn(`Mailing disabled. ${email} - ${token}`);
-    console.log("mail")
+
     let message = {
         from: config.smtpFrom,
         to: email.trim(),
         subject: 'RetroPilot Registration Token',
         text: 'Your Email Registration Token Is: "' + token + '"'
     };
+    let error, info;
 
-    const {error, info} = await transporter.sendMail(message);
+    try {
+        error, info = await transporter.sendMail(message)
+    } catch (exception) {
+        logger.warn(`Email to ${email} FAILED ${error} - ${token}`);
+    } 
+
 
     if (error) {
-        logger.warn(`Email to ${email} FAILED ${error}`);
+        logger.warn(`Email to ${email} FAILED ${error} - ${token}`);
         return false;
     }
 
