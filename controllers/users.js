@@ -1,12 +1,12 @@
 const config = require('./../config');
 const crypto = require('crypto');
-
+const models_orm = require('./../models/index.model')
 let models;
 let logger;
 
 
 async function getAccountFromId(id) {
-    return await models.users.getAccountFromId(id);
+    return await models_orm.models.accounts.findByPk(id)
 }
 
 async function createAccount(email, password) {
@@ -17,27 +17,47 @@ async function createAccount(email, password) {
     const emailToken = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
     password = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
 
-    if (await models.users.getAccountFromEmail(email) != null) {
+    
+    const account = await models_orm.models.accounts.findOne({ where: { email: email }});
+    if (account != null && account.dataValues != null) {
         return {success: true, status: 409, data: {alreadyRegistered: true}};
     }
 
-    const registerAction = await models.users.createUser(email, password, Date.now(), Date.now(), emailToken)
+    const registerAction = await models_orm.models.accounts.create({
+       email: email, 
+       password: password, 
+       created: Date.now(), 
+       last_ping: Date.now(), 
+       email_verify_token: emailToken
+    })
 
-    const didAccountRegister = await models.users.getAccountFromEmail(email);
 
-    if (didAccountRegister != null) {
-        return {success: true, status, status: 200}
+    const didAccountRegister = await models_orm.models.accounts.findOne({ where: { email: email }});
+
+    if (didAccountRegister != null && didAccountRegister.dataValues != null) {
+        return {success: true, status: 200}
     }
 }
 
 async function verifyEmailToken(token) {
     if (!token) return {success: false, status: 400, data: {missingToken: true}}
+    const account = await models_orm.models.accounts.findOne({ where: { email_verify_token: token }});
 
-    const account = await models.users.getAccountFromVerifyToken(token);
     if (account === null) return {success: false, status: 404, data: {badToken: true}}
     if (account.verified === 1) return {success: true, status: 404, data: {alreadyVerified: true}}
 
-    const verified = await models.users.verifyAccountEmail(account.email, true, null);
+    const update = models_orm.models.accounts.update(
+        {
+          verified: true
+        },
+        {
+        where: {
+            id: account.id
+        }
+       }
+    )
+
+
     return {success: true, status: 200, data: {successfullyVerified: true}}
 }
 

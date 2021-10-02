@@ -19,8 +19,11 @@ const logger = log4js.getLogger('default');
 global.__basedir = __dirname;
 
 let models = require('./models/index');
+let models_sqli = require('./models/index.model');
 let controllers = require('./controllers');
 let routers = require('./routes')
+
+
 
 let db;
 
@@ -55,7 +58,7 @@ const web = async () => {
     app.use(routers.useradmin);
 
     if (config.flags.useUserAdminApi) app.use(routers.useradminapi);
-    app.use(routers.adminApi)
+    //app.use(routers.adminApi)
 
 
     app.use(cors());
@@ -91,9 +94,6 @@ const web = async () => {
     }));
 
 }
-
-
-
 
 
 lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 2000})
