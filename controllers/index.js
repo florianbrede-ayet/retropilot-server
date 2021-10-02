@@ -1,7 +1,7 @@
 const config = require('./../config');
 
 
-module.exports = async (models, logger) => {
+module.exports = async (models, logger, models_sqli) => {
 
 
     return {
