@@ -24,21 +24,23 @@ let logger;
 
 
 router.post('/useradmin/auth', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    const account = await models.__db.get('SELECT * FROM accounts WHERE email = ? AND password = ?', req.body.email, crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'));
+    const signIn = await controllers.authentication.signIn(req.body.email, req.body.password)
 
-    if (!account || account.banned) {
-        res.status(200);
+    console.log(signIn)
+
+    if (signIn.success) {
+        res.cookie('jwt', signIn.jwt, {signed: true});
+        res.redirect('/useradmin/overview');
+    } else {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));
-        return;
     }
-    res.cookie('session', {account: account.email, expires: Date.now() + 1000 * 3600 * 24 * 365}, {signed: true});
-    res.redirect('/useradmin/overview');
 }))
 
 
 router.get('/useradmin/signout', runAsyncWrapper(async (req, res) => {
     res.clearCookie('session');
-    res.redirect('/useradmin');
+    res.clearCookie('jwt');
+    res.redirect('/useradmin?status=' + encodeURIComponent('Signed out'));
 }))
 
 
@@ -124,11 +126,8 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
 
             if (result.lastID != undefined) {
                 logger.info("USERADMIN REGISTRATION - created new account #" + result.lastID + " with email " + email + "");
-                res.cookie('session', {
-                    account: email,
-                    expires: Date.now() + 1000 * 3600 * 24 * 365
-                }, {signed: true});
-                res.redirect('/useradmin/overview');
+        
+                res.redirect('/useradmin?status=' + encodeURIComponent('Successfully registered'));
                 return;
             } else {
                 logger.error("USERADMIN REGISTRATION - account creation failed, resulting account data for email " + email + " is: " + result);

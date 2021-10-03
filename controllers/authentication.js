@@ -23,6 +23,27 @@ async function readJWT(token) {
     return null;
 }
 
+async function signIn(email, password) {
+
+    let account = await models_orm.models.accounts.findOne({where: {email: email}});
+
+
+    if (account.dataValues) {
+        account = account.dataValues;
+
+        const inputPassword = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
+
+        if (account.password === inputPassword) {
+            const token = jwt.sign({accountId: account.id}, config.applicationSalt)
+            return {success: true, jwt: token};
+        } else {
+            return {success: false, msg: 'BAD PASSWORD', invalidPassword: true}
+        }
+    } else {
+        return {success: false, msg: 'BAD ACCOUNT', badAccount: true}
+    }
+}
+
 
 async function changePassword(account, newPassword, oldPassword) {
     if (!account || !newPassword || !oldPassword) { return {success: false, error: 'MISSING_DATA'}}
@@ -42,29 +63,37 @@ async function changePassword(account, newPassword, oldPassword) {
     }
 }
 
+/*
+ TODO: update rest of the code to support authentication rejection reasons
+*/
+
 async function getAuthenticatedAccount(req, res) {
-    const sessionCookie = (req.signedCookies !== undefined ? req.signedCookies.session : null);
-    if (!sessionCookie || sessionCookie.expires <= Date.now()) { return null; }
-    const email = sessionCookie.account.trim().toLowerCase();
+    const sessionJWT = (req.signedCookies !== undefined ? req.signedCookies.jwt : null)
+    if ((!sessionJWT || sessionJWT.expires <= Date.now())) { return null; }
+    const token = jwt.verify(sessionJWT, config.applicationSalt);
 
-    // TODO stop storing emails in the cookie
-    const account = await models_orm.models.accounts.findOne({where: {email: email}});
+    if (token && token.accountId) {
+        const account = await models_orm.models.accounts.findOne({where: {id: token.accountId}});
 
-    if (account.dataValues) {
-        const update = models_orm.models.accounts.update({ last_ping: Date.now() },
-            { where: { id: account.id } }
-        )
+        if (account.dataValues) {
+            const update = models_orm.models.accounts.update({ last_ping: Date.now() },
+                { where: { id: account.id } }
+            )
 
-
-        if (!account || account.banned) {
-            res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
-            return false
+            if (!account || account.banned) {
+                return null; // {success: false, isBanned: true}
+            }
+            return account;
+        } else {
+            return null; // {success: false, isInvalid: true}
         }
-        return account;
     } else {
-        res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
-        return false;
+        return null; // {success: false, badToken: true}
     }
+
+    return null;
+
+    
 }
 
 
@@ -75,6 +104,7 @@ module.exports = (_models, _logger) => {
     return {
         validateJWT: validateJWT,
         getAuthenticatedAccount: getAuthenticatedAccount,
-        changePassword: changePassword
+        changePassword: changePassword,
+        signIn: signIn
     }
 }
