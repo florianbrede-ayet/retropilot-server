@@ -10,7 +10,8 @@ module.exports = async (models, logger, models_sqli) => {
         storage: require('./storage')(models, logger),
         mailing: require('./mailing')(models, logger),
         users: require('./users')(models, logger),
-        admin: require('./admin')(models, logger)
+        admin: require('./admin')(models, logger),
+        devices: require('./devices')(models, logger)
     }
 
 }

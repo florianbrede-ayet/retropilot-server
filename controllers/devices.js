@@ -2,39 +2,45 @@ const config = require('./../config');
 let models;
 let logger;
 const authenticationController = require('./authentication')(models, logger);
+const models_orm = require('./../models/index.model')
 
-function pairDevice(account, qr_string) {
 
-     // Legacy registrations encode QR data as imei - serial - pairtoken, => 0.8.3 uses only a pairtoken
-     const qrCode = req.body.qr_string;
-     var qrCodeParts = qrCode.split("--");
-     let device;
+async function pairDevice(account, qr_string) {
+     if (qr_string === undefined || qr_string === null) { return {success: false, badQr: true} }
+    // Legacy registrations encode QR data as imei - serial - pairtoken, => 0.8.3 uses only a pairtoken
+
+     var qrCodeParts = qr_string.split("--");
+     let deviceQuery;
      let pairJWT;
      if (qrCodeParts.length > 0) {
-          device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
-          pairJWT = qrCodeParts[2];
+        deviceQuery = await models_orm.models.devices.findOne({ where: { imei: qrCodeParts[0], serial: qrCodeParts[1] }});
+        pairJWT = qrCodeParts[2];
      } else {
-         pairJWT = qrCode;
-         const data = controllers.authentication.readJWT(qrCode);
-         device = await models.__db.get('SELECT * FROM devices WHERE dongleId = ?', data.identiy);
+         pairJWT = qr_string;
+         const data = authenticationController.readJWT(qr_string);
+         deviceQuery = await models_orm.models.devices.findOne({ where: { dongle_id: data.identiy }});
      }
 
-     if (device == null) {
-         res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device not registered on Server'));
-     }
+     if (deviceQuery.dataValues == null) {
+         return {success: false, registered: false}
+    }
+
+     const device = deviceQuery.dataValues;
      var decoded = controllers.authentication.validateJWT(pairJWT, device.public_key);
      if (decoded == null || decoded.pair == undefined) {
-         res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device QR Token is invalid or has expired'));
-     }
+        return {success: false, badToken: true}
+    }
      if (device.account_id != 0) {
-         res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device is already paired, unpair in that account first'));
-     }
+         return {success: false, alreadyPaired: true, dongle_id: device.dongle_id}
+    }
 
-     const result = await models.__db.run(
-         'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-         account.id,
-         device.dongle_id
-     );
+    const update = models_orm.models.accounts.update(
+        { account_id: account.id },
+        { where: { dongle_id: device.dongle_id } }
+    )
+    
+
+    return {success: true, paired: true, dongle_id: device.dongle_id, account_id: account.id}
 }
 
 
@@ -45,6 +51,6 @@ module.exports = (_models, _logger, _controllers) => {
     controllers = _controllers
 
     return {
-        
+        pairDevice: pairDevice
     }
 }

@@ -256,38 +256,21 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
             return;
         }
 
-        // Legacy registrations encode QR data as imei - serial - pairtoken, => 0.8.3 uses only a pairtoken
-        const qrCode = req.body.qr_string;
-        var qrCodeParts = qrCode.split("--");
-        let device;
-        let pairJWT;
-        if (qrCodeParts.length > 0) {
-             device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
-             pairJWT = qrCodeParts[2];
-        } else {
-            pairJWT = qrCode;
-            const data = controllers.authentication.readJWT(qrCode);
-            device = await models.__db.get('SELECT * FROM devices WHERE dongleId = ?', data.identiy);
-        }
+        const pairDevice = await controllers.devices.pairDevice(req.body.qr_string);
 
-        if (device == null) {
+        if (pairDevice.success === true) {
+            res.redirect('/useradmin/overview');
+        } else if (pairDevice.registered === true) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device not registered on Server'));
-        }
-        var decoded = controllers.authentication.validateJWT(pairJWT, device.public_key);
-        if (decoded == null || decoded.pair == undefined) {
+        } else if (pairDevice.badToken === true) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device QR Token is invalid or has expired'));
-        }
-        if (device.account_id != 0) {
+        } else if (pairDevice.alreadyPaired) {
             res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device is already paired, unpair in that account first'));
+        } else if (pairDevice.badQr) {
+            res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Bad QR'));
+        } else {
+            res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent(`Unspecified Error ${JSON.stringify(pairDevice)}`));
         }
-
-        const result = await models.__db.run(
-            'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-            account.id,
-            device.dongle_id
-        );
-
-        res.redirect('/useradmin/overview');
     }))
 
 

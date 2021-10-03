@@ -68,5 +68,9 @@ module.exports = (sequelize) => {
 			allowNull: true,
 			type: DataTypes.TEXT
 		},
-	});
+	},
+	{
+		timestamps: false,
+	}
+	);
 };

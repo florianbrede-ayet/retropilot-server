@@ -1,7 +1,7 @@
-
 const jwt = require('jsonwebtoken');
 let models;
 let logger;
+const models_orm = require('./../models/index.model')
 
 
 async function validateJWT(token, key) {
@@ -33,15 +33,23 @@ async function getAuthenticatedAccount(req, res) {
 
 
     // TODO stop storing emails in the cookie
-    const account = await models.users.getAccountFromEmail(email)
-    // Don't really care about this returning.
-    models.users.userPing(account.email);
+    const account = await models_orm.models.accounts.findOne({where: {email: email}});
 
-    if (!account || account.banned) {
+    if (account.dataValues) {
+        const update = models_orm.models.accounts.update({ last_ping: Date.now() },
+            { where: { id: account.id } }
+        )
+
+
+        if (!account || account.banned) {
+            res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
+            return false
+        }
+        return account;
+    } else {
         res ? res.clearCookie('session') : logger.warn(`getAuthenticatedAccount unable to clear banned user (${account.email}) cookie, res not passed`);
-        return false
+        return false;
     }
-    return account;
 }
 
 
