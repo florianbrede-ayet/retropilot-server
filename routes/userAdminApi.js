@@ -222,7 +222,7 @@ router.get('/retropilot/0/overview', runAsyncWrapper(async (req, res) => {
 }))
 
 
-router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
+router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
     const account = await controllers.authentication.getAuthenticatedAccount(req, res);
     if (account == null) {
         return res.json({success: false, data: {session: false}}).status(403)
@@ -243,38 +243,38 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
     res.json({success: true, data: {unlink: true}})
 }))
 
+router.post('/retropilot/0/pair_device', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
+    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    if (account == null) {
+        res.json({success: false, msg: 'UNAUTHORISED', status: 403})
+    }
+
+    const pairDevice = await controllers.devices.pairDevice(req.body.qr_string);
+
+    if (pairDevice.success === true) {
+        res.json({success: true, msg: 'Paired', status: 200, data: pairDevice})
+    } else {
+        res.json({success: false, msg:'error', data: pairDevice})
+    }
+}))
+
+
+router.post('/retropilot/0/password/change', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
+    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    if (account == null) {
+        res.json({success: false, msg: 'UNAUTHORISED', status: 403})
+    }
+
+    const pwChange = await controllers.authentication.changePassword(account, req.body.newPassword, req.body.oldPassword);
+
+    if (pwChange.success === true) {
+        res.json({success: true})
+    } else {
+        res.json({success: false, data: pwChange});
+    }
+}));
+
 /*
-
-    router.post('/useradmin/pair_device', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-        const account = await controllers.authentication.getAuthenticatedAccount(req, res);
-        if (account == null) {
-            res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
-            return;
-        }
-
-        var qrCodeParts = req.body.qr_string.split("--"); // imei, serial, jwtToken
-
-        const device = await models.__db.get('SELECT * FROM devices WHERE imei = ? AND serial = ?', qrCodeParts[0], qrCodeParts[1]);
-        if (device == null) {
-            res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device not registered on Server'));
-        }
-        var decoded = controllers.authentication.validateJWT(qrCodeParts[2], device.public_key);
-        if (decoded == null || decoded.pair == undefined) {
-            res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device QR Token is invalid or has expired'));
-        }
-        if (device.account_id != 0) {
-            res.redirect('/useradmin/overview?linkstatus=' + encodeURIComponent('Device is already paired, unpair in that account first'));
-        }
-
-        const result = await models.__db.run(
-            'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-            account.id,
-            device.dongle_id
-        );
-
-        res.redirect('/useradmin/overview');
-    }))
-
 
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     const account = await controllers.authentication.getAuthenticatedAccount(req, res);
