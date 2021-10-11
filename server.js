@@ -57,6 +57,8 @@ const web = async () => {
     app.use(routers.api);
     app.use(routers.useradmin);
 
+    app.use(routers.admin);
+
     //if (config.flags.useUserAdminApi) app.use(routers.useradminapi);
     //app.use(routers.useradminapi)
 

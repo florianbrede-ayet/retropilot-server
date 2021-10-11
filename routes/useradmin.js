@@ -229,21 +229,7 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
         return;
     }
-
-    const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
-
-    if (device == null) {
-        res.status(400);
-        res.send('Unauthorized.');
-        return;
-    }
-
-    const result = await models.__db.run(
-        'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-        0,
-        req.params.dongleId
-    );
-
+    
     res.redirect('/useradmin/overview');
 })),
 

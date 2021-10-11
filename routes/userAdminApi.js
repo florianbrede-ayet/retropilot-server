@@ -81,6 +81,7 @@ router.post('/retropilot/0/register/email', bodyParser.urlencoded({extended: tru
     }
 }));
 
+
 router.get('/retropilot/0/register/verify/:token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
     if (!req.params.token) {
         res.json({success: false, status: 400, data: {missingToken: true}}).status(400);
@@ -95,7 +96,28 @@ router.get('/retropilot/0/register/verify/:token', bodyParser.urlencoded({extend
     } else {
         return res.json({success: false, msg: 'contact server admin'}).status(500);
     }
+}));
 
+
+
+
+
+
+router.get('/retropilot/0/dongle/:dongle_id/nickname/:nickname', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
+    if (!req.params.nickname || !req.params.dongle_id) {
+        return res.json({success: false, status: 400, msg: 'MISSING PRAMS'}).status(400);
+    }
+
+    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    if (account == null) {
+        return res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
+
+    }
+
+    const setNickname = await controllers.devices.setDeviceNickname(account, req.params.dongle_id, req.params.nickname)
+    if (setNickname.status === true) {
+        res.json({success: true, data: {nickname: setNickname.data.nickname}})
+    }
 }));
 
 /*

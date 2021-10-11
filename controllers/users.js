@@ -1,6 +1,7 @@
 const config = require('./../config');
 const crypto = require('crypto');
-const models_orm = require('./../models/index.model')
+const models_orm = require('./../models/index.model');
+const authentication = require('./authentication');
 let models;
 let logger;
 
@@ -57,9 +58,15 @@ async function verifyEmailToken(token) {
        }
     )
 
-
     return {success: true, status: 200, data: {successfullyVerified: true}}
 }
+
+
+async function getAllUsers() {
+    const users = await models_orm.models.accounts.findAll({attributes: ['id', 'last_ping', 'created', 'admin', 'banned']})
+    return users;
+}
+
 
 
 
@@ -70,6 +77,7 @@ module.exports = (_models, _logger) => {
     return {
         createAccount,
         verifyEmailToken,
-        getAccountFromId
+        getAccountFromId,
+        getAllUsers
     }
 }

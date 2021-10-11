@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-let models;
 let logger;
 const models_orm = require('./../models/index.model')
 const crypto = require('crypto');
@@ -97,14 +96,10 @@ async function getAuthenticatedAccount(req, res) {
 }
 
 
-module.exports = (_models, _logger) => {
-    models = _models;
-    logger = _logger;
 
-    return {
-        validateJWT: validateJWT,
-        getAuthenticatedAccount: getAuthenticatedAccount,
-        changePassword: changePassword,
-        signIn: signIn
-    }
+module.exports = {
+    validateJWT: validateJWT,
+    getAuthenticatedAccount: getAuthenticatedAccount,
+    changePassword: changePassword,
+    signIn: signIn
 }
