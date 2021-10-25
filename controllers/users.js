@@ -2,8 +2,7 @@ const config = require('./../config');
 const crypto = require('crypto');
 const models_orm = require('./../models/index.model');
 const authentication = require('./authentication');
-let models;
-let logger;
+
 
 
 async function getAccountFromId(id) {
@@ -70,14 +69,9 @@ async function getAllUsers() {
 
 
 
-module.exports = (_models, _logger) => {
-    models = _models;
-    logger = _logger;
-
-    return {
+module.exports =   {
         createAccount,
         verifyEmailToken,
         getAccountFromId,
         getAllUsers
     }
-}

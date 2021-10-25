@@ -241,7 +241,7 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
             return;
         }
 
-        const pairDevice = await controllers.devices.pairDevice(req.body.qr_string);
+        const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
 
         if (pairDevice.success === true) {
             res.redirect('/useradmin/overview');

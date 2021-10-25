@@ -40,6 +40,11 @@ function runAsyncWrapper(callback) {
 const app = express();
 
 
+
+
+const athena = require('./Anetha/index');
+
+
 const web = async () => {
     // TODO clean up
     const _models = await models(logger);
@@ -57,10 +62,16 @@ const web = async () => {
     app.use(routers.api);
     app.use(routers.useradmin);
 
+    app.use((req, res, next) => {
+
+        req.athenaWebsocketTemp = athena;
+        return next();
+    });
+
+
     app.use('/admin', routers.admin);
 
-    //if (config.flags.useUserAdminApi) app.use(routers.useradminapi);
-    //app.use(routers.useradminapi)
+    
 
 
     app.use(cors());
@@ -84,14 +95,14 @@ const web = async () => {
 
     app.get('*', runAsyncWrapper(async (req, res) => {
         logger.error("HTTP.GET unhandled request: " + controllers.helpers.simpleStringify(req) + ", " + controllers.helpers.simpleStringify(res) + "")
-        res.status(400);
+        res.status(404);
         res.send('Not Implemented');
     }))
 
 
     app.post('*', runAsyncWrapper(async (req, res) => {
         logger.error("HTTP.POST unhandled request: " + controllers.helpers.simpleStringify(req) + ", " + controllers.helpers.simpleStringify(res) + "")
-        res.status(400);
+        res.status(404);
         res.send('Not Implemented');
     }));
 
@@ -111,8 +122,6 @@ lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 
 
             var httpServer = http.createServer(app);
             var httpsServer = https.createServer(sslCredentials, app);
-
-
 
 
             httpServer.listen(config.httpPort, config.httpInterface, () => {

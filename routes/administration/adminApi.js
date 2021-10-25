@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const { route } = require('../../server');
 const config = require('./../../config');
-
+const deviceController = require('./../../controllers/devices')
 
 function runAsyncWrapper(callback) {
     return function (req, res, next) {
@@ -66,19 +66,24 @@ router.get('/device/:dongle_id', runAsyncWrapper(async (req, res) => {
 
 }));
 
-router.get('/device', runAsyncWrapper(async (req, res) => {
+router.get('/device/:dongle_id/pair/:user_id', runAsyncWrapper(async (req, res) => {
+    if (!req.params.dongle_id || !req.params.user_id) { return req.status(400).json({error: true, msg: 'MISSING DATA', status: 400})}
+    
+    const pairDeviceToAccountId = await controllers.devices.pairDeviceToAccountId(req.params.dongle_id, req.params.user_id)
 
-    return res.status(200).json({success: true, data: await controllers.devices.getAllDevicesFiltered()})
+    return res.status(200).json(pairDeviceToAccountId)
+
+}));
+
+router.get('/device', runAsyncWrapper(async (req, res) => {
+    const filteredDevices = await controllers.devices.getAllDevicesFiltered();
+    console.log("fil", filteredDevices)
+    return res.status(200).json({success: true, data: filteredDevices})
 
 }));
 
 router.get('/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(async (req, res) => {
     if (!req.params.dongle_id || !req.params.ignore_uploads) { return req.status(400).json({error: true, msg: 'MISSING DATA', status: 400})}
-
-
-    
-
-
 
 }));
 
@@ -107,6 +112,12 @@ router.get('/admin/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(as
 }));
 
 
+router.get('/device/:dongle_id/athena/reboot', runAsyncWrapper(async (req, res) => {
+
+    req.athenaWebsocketTemp.rebootDevice(req.params.dongle_id)
+    res.send("ok");
+
+}));
 
 
 module.exports = (_models, _controllers, _logger) => {

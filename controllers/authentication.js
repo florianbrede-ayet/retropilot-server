@@ -8,7 +8,7 @@ async function validateJWT(token, key) {
     try {
         return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256'], ignoreNotBefore: true});
     } catch (exception) {
-        logger.warn(`failed to validate JWT ${exception}`)
+        console.log(`failed to validate JWT ${exception}`)
     }
     return null;
 }
@@ -26,12 +26,9 @@ async function signIn(email, password) {
 
     let account = await models_orm.models.accounts.findOne({where: {email: email}});
 
-
     if (account.dataValues) {
         account = account.dataValues;
-
         const inputPassword = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
-
         if (account.password === inputPassword) {
             const token = jwt.sign({accountId: account.id}, config.applicationSalt)
             return {success: true, jwt: token};
@@ -42,6 +39,8 @@ async function signIn(email, password) {
         return {success: false, msg: 'BAD ACCOUNT', badAccount: true}
     }
 }
+
+
 
 
 async function changePassword(account, newPassword, oldPassword) {
@@ -101,5 +100,6 @@ module.exports = {
     validateJWT: validateJWT,
     getAuthenticatedAccount: getAuthenticatedAccount,
     changePassword: changePassword,
-    signIn: signIn
+    signIn: signIn,
+    readJWT: readJWT
 }

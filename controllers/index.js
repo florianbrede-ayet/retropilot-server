@@ -9,7 +9,7 @@ module.exports = async (models, logger, models_sqli) => {
         helpers: require('./helpers')(models, logger),
         storage: require('./storage')(models, logger),
         mailing: require('./mailing')(models, logger),
-        users: require('./users')(models, logger),
+        users: require('./users'),
         admin: require('./admin'),
         devices: require('./devices')
     }

@@ -22,13 +22,14 @@ let logger;
 
 
 router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    const account = await models.__db.get('SELECT * FROM accounts WHERE email = ? AND password = ?', req.body.email, crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'));
+    const signIn = await controllers.authentication.signIn(req.body.email, req.body.password)
 
-    if (!account || account.banned) {
-        return res.json({success: false, msg: account ? 'BANNED' : 'INVALID ACCOUNT'}).status(401);
+    if (signIn.success) {
+        res.cookie('jwt', signIn.jwt, {signed: true});
+        res.redirect('/useradmin/overview');
+    } else {
+        res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));
     }
-    res.cookie('session', {account: account.email, expires: Date.now() + 1000 * 3600 * 24 * 365}, {signed: true});
-    res.json({success: true})
 }))
 
 
@@ -65,60 +66,6 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
     Requires username and password to register
  */
 
-router.post('/retropilot/0/register/email', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    if (!req.body.hasOwnProperty('email') || req.body.email === "" || !req.body.hasOwnProperty('password') || req.body.password === "") {
-        res.json({success: false, msg: 'malformed request'}).status(400);
-        logger.warn("/useradmin/register/token - Malformed Request!")
-        return;
-    }
-
-    const accountStatus = await controllers.users.createAccount(req.body.email, req.body.password);
-
-    if (accountStatus && accountStatus.status) {
-        return res.json(accountStatus).status(accountStatus.status)
-    } else {
-        return res.json({success: false, msg: 'contact server admin'}).status(500);
-    }
-}));
-
-
-router.get('/retropilot/0/register/verify/:token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    if (!req.params.token) {
-        res.json({success: false, status: 400, data: {missingToken: true}}).status(400);
-    }
-
-    const verified = await controllers.users.verifyEmailToken(req.params.token)
-
-    console.log(verified);
-
-    if (verified && verified.status) {
-        return res.json(verified).status(verified.status)
-    } else {
-        return res.json({success: false, msg: 'contact server admin'}).status(500);
-    }
-}));
-
-
-
-
-
-
-router.get('/retropilot/0/dongle/:dongle_id/nickname/:nickname', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    if (!req.params.nickname || !req.params.dongle_id) {
-        return res.json({success: false, status: 400, msg: 'MISSING PRAMS'}).status(400);
-    }
-
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
-    if (account == null) {
-        return res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
-
-    }
-
-    const setNickname = await controllers.devices.setDeviceNickname(account, req.params.dongle_id, req.params.nickname)
-    if (setNickname.status === true) {
-        res.json({success: true, data: {nickname: setNickname.data.nickname}})
-    }
-}));
 
 /*
 router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
