@@ -70,6 +70,7 @@ const web = async () => {
 
 
     app.use('/admin', routers.admin);
+    app.use('/realtime', routers.realtime);
 
     
 
