@@ -3,6 +3,7 @@ const config = require('./../config');
 const authenticationController = require('./authentication');
 const models_orm = require('./../models/index.model')
 const sanitize = require('sanitize')();
+const { Op } = require('sequelize')
 
 
 async function pairDevice(account, qr_string) {
@@ -116,6 +117,11 @@ async function getAllDevicesFiltered() {
 }
 
 
+async function updateLastPing(device_id, dongle_id) {
+    models_orm.models.device.update({ last_ping: Date.now() }, {where: {[Op.or] : [{id: device_id}, {dongle_id: dongle_id}]}})
+}
+
+
 module.exports = {
         pairDevice: pairDevice,
         unpairDevice: unpairDevice,
@@ -125,4 +131,5 @@ module.exports = {
         setIgnoredUploads,
         getAllDevicesFiltered,
         pairDeviceToAccountId,
+        updateLastPing
     }

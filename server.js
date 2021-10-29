@@ -7,6 +7,7 @@ const https = require('https');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const rateLimit = require("express-rate-limit");
 
 log4js.configure({
     appenders: {logfile: {type: "file", filename: "server.log"}, out: {type: 'console'} /*{type: "file", filename: "server1.log"}*/},
@@ -22,6 +23,7 @@ let models = require('./models/index');
 let models_sqli = require('./models/index.model');
 let controllers = require('./controllers');
 let routers = require('./routes')
+const athena = require('./Anetha/index');
 
 
 
@@ -40,9 +42,13 @@ function runAsyncWrapper(callback) {
 const app = express();
 
 
+const athenaRateLimit = rateLimit({
+    windowMs: 30000,
+    max: config.athena.api.ratelimit
+});
 
 
-const athena = require('./Anetha/index');
+
 
 
 const web = async () => {
@@ -62,15 +68,21 @@ const web = async () => {
     app.use(routers.api);
     app.use(routers.useradmin);
 
-    app.use((req, res, next) => {
+    if (config.athena.enabled) {
+        app.use((req, res, next) => {
+            req.athenaWebsocketTemp = athena;
+            return next();
+        });
+    
+    
+        app.use('/admin', routers.admin);
+        app.use('/realtime', athenaRateLimit);
+        app.use('/realtime', routers.realtime);
+    } else {
+        logger.log("Athena disabled");
+    }
 
-        req.athenaWebsocketTemp = athena;
-        return next();
-    });
-
-
-    app.use('/admin', routers.admin);
-    app.use('/realtime', routers.realtime);
+    
 
     
 

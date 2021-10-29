@@ -37,6 +37,16 @@ var config = {
 
     flags: {
         useUserAdminApi: false,
+    },
+    
+    athena: {
+        enabled: true, // Enables Athena service
+        api: {
+            ratelimit: 100 // Maxmium hits to /realtime/* per 30s 
+        },
+        socket: {
+            heartbeatFrequency: 5000 // Higher the number = lower traffic, varies on how many devices are connected
+        }
     }
 };
 

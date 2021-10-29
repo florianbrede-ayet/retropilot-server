@@ -8,16 +8,12 @@ module.exports = (sequelize) => {
 			primaryKey: true,
 			type: DataTypes.INTEGER
 		},
-        account_id: {
+        device_id: {
 			allowNull: false,
 			type: DataTypes.INTEGER
 		},
-        device_id: {
-			allowNull: true,
-			type: DataTypes.INTEGER
-		},
         type: {
-			allowNull: true,
+			allowNull: false,
 			type: DataTypes.TEXT
 		},
         data: {

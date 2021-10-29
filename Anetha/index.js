@@ -51,13 +51,17 @@ const authenticateDongle = async (ws, res, cookies) => {
 
   
     if (verifiedJWT.identify === unsafeJwt.identify) {
+
         ws.dongleId = device.dongle_id
-        _actionLogger(null, device.id, "ATHENA_DEVICE_AUTHENTICATE_SUCCESS", null, ws._socket.remoteAddress, null);
+        ws.device_id = device.id
         console.log("AUTHENTICATED DONGLE", ws.dongleId )
+
+        _actionLogger(null, device.id, "ATHENA_DEVICE_AUTHENTICATE_SUCCESS", null, ws._socket.remoteAddress, null);
         return true;
     } else {
+      console.log("UNAUTHENTICATED DONGLE");
+
         _actionLogger(null, device.id, "ATHENA_DEVICE_AUTHENTICATE_FAILURE", null, ws._socket.remoteAddress, JSON.stringify({jwt: cookies.jwt}), null);
-        console.log("UNAUTHENTICATED DONGLE");
         return false;
     }
 }
@@ -69,8 +73,14 @@ function commandBuilder(method, params) {
 
 
 async function heartbeat() {
+
+  if (this.heartbeat - Date.now() > 300) {
+    deviceController.updateLastPing(this.device_id, this.dongleId);
+  }
+
   this.isAlive = true;
   this.heartbeat = Date.now();
+
 }
 
 async function _actionLogger(account_id, device_id, action, user_ip, device_ip, meta, dongle_id) {
@@ -82,6 +92,7 @@ async function _actionLogger(account_id, device_id, action, user_ip, device_ip, 
 async function manageConnection(ws, res)  {
   ws.badMessages = 0;
   ws.isAlive = true;
+
   ws.heartbeat = Date.now();
   
   ws.on('pong', heartbeat);
@@ -98,8 +109,21 @@ async function manageConnection(ws, res)  {
     }
 
 
+
+    models.models.athena_returned_data.create({
+      device_id: ws.device_id,
+      type: "UNKNOWN",
+      data: JSON.stringify(message),
+      created_at: Date.now()
+
+    })
+
     _actionLogger(null, null, "ATHENA_DEVICE_MESSAGE_UNKNOWN", null, ws._socket.remoteAddress, JSON.stringify([message]), ws.dongleId);
-    console.log("unknown message", JSON.stringify(message))
+    const buff = Buffer.from(JSON.stringify(message), 'utf-8');
+
+// decode buffer as UTF-8
+    console.log(buff.toString('base64'))
+
   });
 
   
@@ -131,40 +155,26 @@ function _findSocketFromDongle(dongleId) {
 
 
 
-
-// TODO - This is dumb
-function rebootDevice(dongleId, accountId) {
+function invoke(command, params, dongleId, accountId) {
   const websocket = _findSocketFromDongle(dongleId);
-  
 
   if (!websocket) {
-    return _actionLogger(accountId, null, "ATHENA_USER_INVOKE__REBOOT_FAILED_DISCONNECTED", null, null, null, ws.dongleId);
+    _actionLogger(accountId, null, "ATHENA_USER_INVOKE__FAILED_DISCONNECTED", null, null, null, dongleId);
+    return {connected: false}
   }
 
-  _actionLogger(accountId, null, "ATHENA_USER_INVOKE__REBOOT_ISSUED", null, ws._socket.remoteAddress, null, ws.dongleId);
+  _actionLogger(accountId, websocket.device_id, "ATHENA_USER_INVOKE__ISSUED", null, websocket._socket.remoteAddress, JSON.stringify({command, params}), websocket.dongleId);
 
-  websocket.send(JSON.stringify(commandBuilder('reboot')))
+  websocket.send(JSON.stringify(commandBuilder(command)))
+
+  return {dispatched: true, heartbeat: websocket.heartbeat}
 
 }
 
 
-function getDetails(dongleId, accountId) {
+function isDeviceConnected(accountId, deviceId, dongleId ) {
   const websocket = _findSocketFromDongle(dongleId);
-
-  if (!websocket) {
-    return _actionLogger(accountId, null, "ATHENA_USER_INVOKE__GETVERSION_FAILED_DISCONNECTED", null, null, null, ws.dongleId);
-  }
-
-  _actionLogger(accountId, null, "ATHENA_USER_INVOKE__GETVERSION_ISSUED", null, ws._socket.remoteAddress, null, ws.dongleId);
-
-  websocket.send(JSON.stringify(commandBuilder('getVersion')))
-
-}
-
-
-function isDeviceConnected(dongleId, accountId) {
-  const websocket = _findSocketFromDongle(dongleId);
-  _actionLogger(null, null, "ATHENA_USER_STATUS__IS_CONNECTED", null, websocket ? websocket._socket.remoteAddress : null, JSON.stringify({connected: websocket ? true : false, heartbeat: websocket ? websocket.heartbeat : null}), dongleId);
+  _actionLogger(accountId, deviceId, "ATHENA_USER_STATUS__IS_CONNECTED", null, websocket ? websocket._socket.remoteAddress : null, JSON.stringify({connected: websocket ? true : false, heartbeat: websocket ? websocket.heartbeat : null}), dongleId);
 
   if (!websocket) return {connected: false}
 
@@ -176,7 +186,6 @@ function isDeviceConnected(dongleId, accountId) {
 
 
 module.exports = {
-  rebootDevice,
-  isDeviceConnected,
-  getDetails
+  invoke,
+  isDeviceConnected
 }
