@@ -1,7 +1,3 @@
-# Proof of concept code - use master
-
-
-
 # retropilot-server
 Replacement for comma.ai backend and useradmin dashboard. Bundled with a modified version of comma's cabana to allow viewing & analyzing drives.
 
