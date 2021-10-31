@@ -13,7 +13,7 @@ async function pairDevice(account, qr_string) {
      var qrCodeParts = qr_string.split("--");
      let deviceQuery;
      let pairJWT;
-     if (qrCodeParts.length > 0) {
+     if (qrCodeParts.length > 1) {
         deviceQuery = await models_orm.models.device.findOne({ where: { serial: qrCodeParts[1] }});
         pairJWT = qrCodeParts[2];
      } else {
