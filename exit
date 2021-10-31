@@ -1,0 +1,133 @@
+[33mcommit 751742acf6acd427573ca5e943b86b3ad6ec762a[m[33m ([m[1;36mHEAD -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m
+Reflog: HEAD@{0} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: updated readme
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Fri Oct 29 21:46:48 2021 +0100
+
+    updated readme
+
+[33mcommit f4cb1ef1424c263e441522ce4915efac353d9227[m
+Reflog: HEAD@{1} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Athena, logging, etc
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Fri Oct 29 21:45:15 2021 +0100
+
+    Athena, logging, etc
+
+[33mcommit 32325111c6bd2d0b6f7e583be45032e33290233a[m[33m ([m[1;32mmain[m[33m)[m
+Reflog: HEAD@{2} (AdamSBlack <adam@adamblack.us>)
+Reflog message: checkout: moving from main to dev
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Tue Oct 26 23:38:31 2021 +0100
+
+    Added new tables to database,
+    added logging to athena
+
+[33mcommit 32325111c6bd2d0b6f7e583be45032e33290233a[m[33m ([m[1;32mmain[m[33m)[m
+Reflog: HEAD@{3} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Added new tables to database,
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Tue Oct 26 23:38:31 2021 +0100
+
+    Added new tables to database,
+    added logging to athena
+
+[33mcommit 9361043d836e821499fade16537a7091169ce5e3[m
+Reflog: HEAD@{4} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Added proof of concept for Athena
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Mon Oct 25 22:56:40 2021 +0100
+
+    Added proof of concept for Athena
+
+[33mcommit 4075e5730a3a74610da52b95e0c9f83c65efb40a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Reflog: HEAD@{5} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Fixed admin API's middleware to not filter through
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Wed Oct 13 19:06:46 2021 +0100
+
+    Fixed admin API's middleware to not filter through
+    other routes
+
+[33mcommit 3596013e2fc868636243d04220f24a70b3ad8207[m
+Reflog: HEAD@{6} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: TODO: Fix admin api auth catching any undefined routes
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Mon Oct 11 19:37:58 2021 +0100
+
+    TODO: Fix admin api auth catching any undefined routes
+    Removed pointlessly stateful controllers, admin api fleshed out
+
+[33mcommit e33b10e7d0e7954c6a1e649a958317662d8d303f[m
+Reflog: HEAD@{7} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: disable useradminapi
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sun Oct 3 17:48:52 2021 +0100
+
+    disable useradminapi
+
+[33mcommit acf084743df3e868af0f4733f0db38818e93216c[m
+Reflog: HEAD@{8} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: updated database, sessions managed via signed JWT
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sun Oct 3 17:44:43 2021 +0100
+
+    updated database, sessions managed via signed JWT
+    token.
+    
+    TODO: sign tokens based user unique token, instead of
+    global salt key
+
+[33mcommit 7590e9b64473d8a0e59fdba072262f7e0efee517[m
+Reflog: HEAD@{9} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: userAdminApi now allows users to change their
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sun Oct 3 15:35:44 2021 +0100
+
+    userAdminApi now allows users to change their
+    password
+
+[33mcommit f642360a5d6cb3015082041f805ef04ba51631c1[m
+Reflog: HEAD@{10} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Device pair logic removed from route
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sun Oct 3 14:11:34 2021 +0100
+
+    Device pair logic removed from route
+    and moved into devices controller using
+    ORM now, not 100% tested
+
+[33mcommit aaedd0bfd6db7a699640345d1444e686fa059d36[m
+Reflog: HEAD@{11} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: minor
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sun Oct 3 00:08:21 2021 +0100
+
+    minor
+
+[33mcommit f5a0fc8c0dcac6edb3c63950cd319c0ae34a7e3e[m
+Reflog: HEAD@{12} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: include new models
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sat Oct 2 23:11:51 2021 +0100
+
+    include new models
+
+[33mcommit cbea324a05abc8d65d26506aeb14c4c346dcf068[m
+Reflog: HEAD@{13} (AdamSBlack <adam@adamblack.us>)
+Reflog message: commit: Implemented Sequelize ORM, moved over users.js
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Sat Oct 2 23:08:56 2021 +0100
+
+    Implemented Sequelize ORM, moved over users.js
+    to new ORM
+
+[33mcommit 6521cda85a69ad4442ffb55ddcf46e86f947adfa[m
+Reflog: HEAD@{14} (AdamSBlack <adam@adamblack.us>)
+Reflog message: clone: from https://github.com/AdamSBlack/retropilot-server.git
+Author: AdamSBlack <adam@adamblack.us>
+Date:   Thu Sep 30 20:18:37 2021 +0100
+
+    Created branch "cursed"
+    
+    Modified pairing to support new registrations
