@@ -8,8 +8,6 @@ const authenticationController = require('./../controllers/authentication');
 const deviceController = require('./../controllers/devices');
 const { ws } = require('../routes/api/realtime');
 
-var abnf = require('abnf');
-
 let wss;
 async function __server() {
   wss = new WebSocket.WebSocketServer({ path: '/ws/v2/', port: 4040, handshakeTimeout: 500 });
