@@ -9,21 +9,29 @@ module.exports = (sequelize) => {
 			type: DataTypes.INTEGER
 		},
         device_id: {
-			allowNull: false,
+			allowNull: true,
 			type: DataTypes.INTEGER
 		},
         type: {
-			allowNull: false,
+			allowNull: true,
 			type: DataTypes.TEXT
 		},
         data: {
 			allowNull: true,
-			type: DataTypes.BLOB
+			type: DataTypes.TEXT
 		},
         created_at: {
 			allowNull: true,
 			type: DataTypes.TEXT
 		},
+		uuid: {
+			allowNull: false,
+			type: DataTypes.TEXT
+		},
+		resolved_at: {
+			allowNull: true,
+			type: DataTypes.INTEGER
+		}
 
 	}, {
 		timestamps: false,

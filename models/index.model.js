@@ -3,7 +3,8 @@ const sequelize = new Sequelize({
 	dialect: 'sqlite',
 	storage: 'database.sqlite',
 	logQueryParameters: true,
-	benchmark: true
+	benchmark: true,
+	logging: false
 });
 
 const modelDefiners = [
