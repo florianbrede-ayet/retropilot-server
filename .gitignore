@@ -10,3 +10,4 @@ config.js
 database.sqlite
 config.js
 test/.devKeys
+config_prod.js
