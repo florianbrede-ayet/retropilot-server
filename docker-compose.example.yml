@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  server:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - storage:/var/lib/retropilot
+      # TODO: configure docker secrets
+      - ./certs:/etc/retropilot/certs
+    env_file:
+      - production.env
+
+  worker:
+    build: .
+    command: /usr/local/bin/node worker.js
+    restart: unless-stopped
+    volumes:
+      - storage:/var/lib/retropilot
+    env_file:
+      - production.env
+
+volumes:
+  storage:
