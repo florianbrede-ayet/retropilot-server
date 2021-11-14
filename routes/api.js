@@ -278,7 +278,7 @@ router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
 
             let validRequest = false;
 
-            if ((filename === 'fcamera.hevc' || filename === 'qcamera.ts' || filename === 'dcamera.hevc' || filename === 'rlog.bz2' || filename === 'qlog.bz2') &&
+            if ((filename === 'fcamera.hevc' || filename === 'qcamera.ts' || filename === 'dcamera.hevc' || filename === 'rlog.bz2' || filename === 'qlog.bz2'|| filename === 'ecamera.hevc') &&
                 (!isNaN(segment) || (segment > 0 && segment < 1000))) {
                 validRequest = true;
             }
