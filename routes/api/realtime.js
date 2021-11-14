@@ -6,12 +6,12 @@ const deviceController = require('./../../controllers/devices')
 const models = require('./../../models/index.model')
 
 const whitelistParams = {
-    getmessage: false,
+    getmessage: true,
     getversion: true,
     setnavdestination: true,
-    listdatadirectory: false,
+    listdatadirectory: true,
     reboot: true,
-    uploadfiletourl: false,
+    uploadfiletourl: true,
     listuploadqueue: true,
     cancelupload: true,
     primeactivated: true,
@@ -41,7 +41,7 @@ router.get('/dongle/:dongle_id/connected', async (req, res) => {
     return res.status(200).json({success: true, dongle_id: device.dongle_id, data: deviceConnected});
 })
 
-router.get('/dongle/:dongle_id/send/:method', async (req, res) => {
+router.get('/dongle/:dongle_id/send/:method/', async (req, res) => {
     const account = await authenticationController.getAuthenticatedAccount(req, res);
     if (account == null) { return res.status(403).json({error: true, errorMsg: 'Unauthenticated', errorObject: {authenticated: false}})}
     
@@ -52,8 +52,11 @@ router.get('/dongle/:dongle_id/send/:method', async (req, res) => {
     // TODO support delgation of access
     // TODO remove indication of dongle existing 
     if (device.account_id !== account.id) {return res.status(403).json({error: true, errorMsg: 'unauthorised', errorObject: {authenticated: true, dongle_exists: true, authorised_user: false}})}
+    let data;
 
-    const data = await req.athenaWebsocketTemp.invoke(req.params.method, null, device.dongle_id, account.id);
+        data = await req.athenaWebsocketTemp.invoke(req.params.method, null, device.dongle_id, account.id);
+
+
     
     return res.status(200).json({success: true, dongle_id: device.dongle_id, method: req.params.method, data: data});
 

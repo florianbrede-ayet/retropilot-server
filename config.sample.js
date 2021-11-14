@@ -41,10 +41,12 @@ var config = {
     
     athena: {
         enabled: true, // Enables Athena service
+        secure: true, // Disables crypto on Websocket server - use for testing on local network, change ATHENA_HOST in openpilot to ws:// instead of wss:// 
         api: {
             ratelimit: 100 // Maxmium hits to /realtime/* per 30s 
         },
         socket: {
+            port: 4040,
             heartbeatFrequency: 5000 // Higher the number = lower traffic, varies on how many devices are connected
         }
     }

@@ -15,6 +15,7 @@ log4js.configure({
 
 });
 
+
 const logger = log4js.getLogger('default');
 // TODO evaluate if this is the best way to determine the root of project
 global.__basedir = __dirname;
@@ -56,6 +57,13 @@ const web = async () => {
     const _models = await models(logger);
     db = _models.models.__db;
     models = _models.models;
+
+    app.use(function(req, res, next) {
+        res.header('Access-Control-Allow-Origin', "http://localhost:3000");
+        res.header('Access-Control-Allow-Credentials', true);
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+        next();
+      });
 
     const _controllers = await controllers(models, logger);
     controllers = _controllers;

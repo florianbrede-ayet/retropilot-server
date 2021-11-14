@@ -3,62 +3,86 @@ const fs = require('fs');
 const cookie = require('cookie')
 const jsonwebtoken = require('jsonwebtoken');
 const models = require('./../models/index.model')
+const config = require('./../config')
+const httpsServer = require('https');
+const httpServer = require('http');
+const { readFileSync } = require('fs');
 
 const authenticationController = require('./../controllers/authentication');
 const deviceController = require('./../controllers/devices');
 const { ws } = require('../routes/api/realtime');
+const log4js = require('log4js');
+
+const logger = log4js.getLogger('default');
+
+
+
+
 
 let wss;
-async function __server() {
-  wss = new WebSocket.WebSocketServer({ path: '/ws/v2/', port: 4040, handshakeTimeout: 500 });
+function __server() {
+  let server;
 
-  console.log("src")
+  if (config.athena.secure) {
+    server = httpsServer.createServer({
+      cert: readFileSync(config.sslCrt),
+      key: readFileSync(config.sslKey)
+    });
+  } else {
+    server = httpServer.createServer();
+  }
 
-  const interval = setInterval(function ping() {
+  wss = new WebSocket.WebSocketServer({ server }, { path: '/ws/v2/', handshakeTimeout: 500 });
+  
+  const interval = setInterval(() => {
     wss.clients.forEach(function each(ws) {
       if (ws.isAlive === false) {
+        logger.info(`Athena(Heartbeat) - Terminated ${ws.dongleId} - ${ws._socket.remoteAddress}`)
         wss.retropilotFunc.actionLogger(null, null, "ATHENA_DEVICE_TIMEOUT_FORCE_DISCONNECT", null, ws._socket.remoteAddress, null, ws.dongleId);
-        console.log("TERMINATED", ws.dongleId)
         return ws.terminate();
       }
 
       ws.isAlive = false;
       ws.ping();
     });
-  }, 5000);
+  }, config.athena.socket.heartbeatFrequency ? config.athena.socket.heartbeatFrequency : 5000);
+
+  
+  server.listen(config.athena.socket.port, () => {
+    logger.info(`Athena(Server) - UP @ ${config.athena.host}:${config.athena.port}`)
+  })
+
 
   wss.on('connection', manageConnection)
   wss.on('close', function close() {
+    logger.info(`Athena(Websocket) - DOWN`)
     clearInterval(interval);
   });
-
 }
 
 async function heartbeat() {
-  if (this.heartbeat - Date.now() > 300) {
-    deviceController.updateLastPing(this.device_id, this.dongleId);
-  }
-
   this.isAlive = true;
   this.heartbeat = Date.now();
+  ;
 }
 
 async function manageConnection(ws, res) {
+  logger.info(`Athena(Websocket) - New Connection ${ws._socket.remoteAddress}`)
   ws.badMessages = 0;
   ws.isAlive = true;
   ws.heartbeat = Date.now();
   ws.on('pong', heartbeat);
 
+
   var cookies = cookie.parse(res.headers.cookie);
+
   ws.on('message', async function incoming(message) {
     heartbeat.call(ws)
     if (!ws.dongleId) {
-     // wss.retropilotFunc.actionLogger(null, null, "ATHENA_DEVICE_UNATHENTICATED_MESSAGE", null, ws._socket.remoteAddress, JSON.stringify([message]), ws.dongleId);
+      wss.retropilotFunc.actionLogger(null, null, "ATHENA_DEVICE_UNATHENTICATED_MESSAGE", null, ws._socket.remoteAddress, JSON.stringify([message]), ws.dongleId);
       console.log("unauthenticated message, discarded");
       return null;
     }
-
-    console.log(message);
 
     const json = JSON.parse(message.toString('utf8'))
     console.log(json);
@@ -80,15 +104,16 @@ async function manageConnection(ws, res) {
 
 
   if (await wss.retropilotFunc.authenticateDongle(ws, res, cookies) === false) {
-    ws.close();
+    ws.terminate();
   }
+
 
   //ws.send(JSON.stringify(await commandBuilder('reboot')))
 }
 
 
 
-__server();
+ __server();
 
 wss.retropilotFunc = {
 
@@ -100,11 +125,23 @@ wss.retropilotFunc = {
       }
     })
 
+    
+
     return websocket;
   },
 
   authenticateDongle: async (ws, res, cookies) => {
-    unsafeJwt = jsonwebtoken.decode(cookies.jwt);
+    
+
+    try {
+      unsafeJwt = jsonwebtoken.decode(cookies.jwt);
+    } catch(e) {
+      logger.info(`Athena(Websocket) - AUTHENTICATION FAILED (INVALID JWT) IP: ${ws._socket.remoteAddress}`)
+      wss.retropilotFunc.actionLogger(null, null, "ATHENA_DEVICE_AUTHENTICATE_INVALID", null, ws._socket.remoteAddress, JSON.stringify({ jwt: cookies.jwt }), null);
+      return false;
+    }
+
+
     const device = await deviceController.getDeviceFromDongle(unsafeJwt.identity)
 
     let verifiedJWT;
@@ -112,6 +149,7 @@ wss.retropilotFunc = {
     try {
       verifiedJWT = jsonwebtoken.verify(cookies.jwt, device.public_key, { ignoreNotBefore: true });
     } catch (err) {
+      logger.info(`Athena(Websocket) - AUTHENTICATION FAILED (BAD JWT, CHECK SIGNATURE) IP: ${ws._socket.remoteAddress}`)
       wss.retropilotFunc.actionLogger(null, null, "ATHENA_DEVICE_AUTHENTICATE_INVALID", null, ws._socket.remoteAddress, JSON.stringify({ jwt: cookies.jwt }), null);
       return false;
     }
@@ -119,14 +157,13 @@ wss.retropilotFunc = {
     if (verifiedJWT.identify === unsafeJwt.identify) {
       ws.dongleId = device.dongle_id
       ws.device_id = device.id
-      console.log("AUTHENTICATED DONGLE", ws.dongleId)
-
       wss.retropilotFunc.actionLogger(null, device.id, "ATHENA_DEVICE_AUTHENTICATE_SUCCESS", null, ws._socket.remoteAddress, null);
+      logger.info(`Athena(Websocket) - AUTHENTICATED IP: ${ws._socket.remoteAddress} DONGLE ID: ${ws.dongleId} DEVICE ID: ${ws.device_id}`)
       return true;
     } else {
-      console.log("UNAUTHENTICATED DONGLE");
-
       wss.retropilotFunc.actionLogger(null, device.id, "ATHENA_DEVICE_AUTHENTICATE_FAILURE", null, ws._socket.remoteAddress, JSON.stringify({ jwt: cookies.jwt }), null);
+      logger.info(`Athena(Websocket) - AUTHENTICATION FAILED (BAD CREDENTIALS) IP: ${ws._socket.remoteAddress}`);
+
       return false;
     }
   },
