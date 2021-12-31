@@ -106,7 +106,7 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
         return res.send('Unauthorized.').status(400)
     } 
 
-    let response={'is_paired': (device.account_id>0 ? true : false), 'prime': (device.account_id>0 ? true : false)};
+    let response={'is_paired': (device.account_id !== 0 ? true : false), 'prime': (device.account_id>0 ? true : false)};
     logger.info("HTTP.DEVICES for " + req.params.dongleId + " returning: "+JSON.stringify(response));
 
     res.status(200);
@@ -215,9 +215,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
     res.json(response);
 }))
 
-
-// DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
-router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
+async function  upload(req,res)  {
     var path = req.query.path;
     const dongleId = req.params.dongleId;
     const auth = req.headers.authorization;
@@ -347,7 +345,12 @@ router.get('/v1.3/:dongleId/upload_url/', runAsyncWrapper(async (req, res) => {
         res.status(400);
         res.send('Malformed Request.');
     }
-}))
+}
+
+
+// DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
+router.get('/v1.3/:dongleId/upload_url/', upload)
+router.get('/v1.4/:dongleId/upload_url/', upload)
 
 
 // DEVICE REGISTRATION OR RE-ACTIVATION

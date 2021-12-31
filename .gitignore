@@ -11,3 +11,4 @@ database.sqlite
 config.js
 test/.devKeys
 config_prod.js
+database - copy.sqlite

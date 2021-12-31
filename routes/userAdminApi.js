@@ -218,7 +218,7 @@ router.post('/retropilot/0/pair_device', bodyParser.urlencoded({extended: true})
         res.json({success: false, msg: 'UNAUTHORISED', status: 403})
     }
 
-    const pairDevice = await controllers.devices.pairDevice(req.body.qr_string);
+    const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
 
     if (pairDevice.success === true) {
         res.json({success: true, msg: 'Paired', status: 200, data: pairDevice})
