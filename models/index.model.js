@@ -1,11 +1,17 @@
+function log() {
+return true;
+}
+
 const { Sequelize } = require('sequelize');
 const sequelize = new Sequelize({
 	dialect: 'sqlite',
 	storage: 'database.sqlite',
-	logQueryParameters: true,
-	benchmark: true,
-	logging: false
+	logging: () => {console.log("FUCK OFF")}
+	
+	
 });
+
+sequelize.options.logging = (eee) => {console.log("EEEEE")}
 
 const modelDefiners = [
 	require('./devices.model'),

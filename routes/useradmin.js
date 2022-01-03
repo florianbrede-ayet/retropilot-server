@@ -3,12 +3,13 @@ const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require("directory-tree");
-const cookieParser = require('cookie-parser');
+const cookie = require('cookie');
 const config = require('./../config');
+var cookieParser = require('cookie-parser')
+
 
 // TODO Remove this, pending on removing all auth logic from routes
-router.use(cookieParser(config.applicationSalt))
-
+router.use(cookieParser());
 
 
 function runAsyncWrapper(callback) {
@@ -29,7 +30,7 @@ router.post('/useradmin/auth', bodyParser.urlencoded({extended: true}), runAsync
     console.log(signIn)
 
     if (signIn.success) {
-        res.cookie('jwt', signIn.jwt, {signed: true});
+        res.cookie('jwt', signIn.jwt);
         res.redirect('/useradmin/overview');
     } else {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));

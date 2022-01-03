@@ -6,7 +6,6 @@ const http = require('http');
 const https = require('https');
 const express = require('express');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const rateLimit = require("express-rate-limit");
 
 log4js.configure({
@@ -24,7 +23,10 @@ let models = require('./models/index');
 let models_sqli = require('./models/index.model');
 let controllers = require('./controllers');
 let routers = require('./routes')
-const athena = require('./Anetha/index');
+const athena = require('./websocket/athena');
+const webWebsocket = require('./websocket/web');
+var cookieParser = require('cookie-parser');
+const router = require('./routes/api/realtime');
 
 
 
@@ -90,16 +92,18 @@ const web = async () => {
         logger.log("Athena disabled");
     }
 
+
     
 
     
 
 
     app.use(cors());
-    app.use(cookieParser(config.applicationSalt))
-
+    app.use(cookieParser());
     app.use('/favicon.ico', express.static('static/favicon.ico'));
     app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
+
+    app.use(routers.deviceApi)
 
     app.use('/.well-known', express.static('.well-known'));
 

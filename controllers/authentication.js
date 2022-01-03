@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const jsonwebtoken = require('jsonwebtoken');
 let logger;
 const models_orm = require('./../models/index.model')
 const crypto = require('crypto');
@@ -6,7 +6,7 @@ const config = require('./../config')
 
 async function validateJWT(token, key) {
     try {
-        return jwt.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256'], ignoreNotBefore: true});
+        return jsonwebtoken.verify(token.replace("JWT ", ""), key, {algorithms: ['RS256'], ignoreNotBefore: true});
     } catch (exception) {
         console.log(`failed to validate JWT ${exception}`)
     }
@@ -15,7 +15,7 @@ async function validateJWT(token, key) {
 
 async function readJWT(token) {
     try {
-        return jwt.decode(token);
+        return jsonwebtoken.decode(token);
     } catch (exception) {
         logger.warn(`failed to read JWT ${exception}`)
     }
@@ -30,7 +30,10 @@ async function signIn(email, password) {
         account = account.dataValues;
         const inputPassword = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
         if (account.password === inputPassword) {
-            const token = jwt.sign({accountId: account.id}, config.applicationSalt)
+            const token = jsonwebtoken.sign({accountId: account.id}, config.applicationSalt)
+            
+            // TODO: INSECURE, DEBUG
+            console.log("jwt: ", token)
             return {success: true, jwt: token};
         } else {
             return {success: false, msg: 'BAD PASSWORD', invalidPassword: true}
@@ -66,9 +69,22 @@ async function changePassword(account, newPassword, oldPassword) {
 */
 
 async function getAuthenticatedAccount(req, res) {
-    const sessionJWT = (req.signedCookies !== undefined ? req.signedCookies.jwt : null)
+    const sessionJWT = req.cookies.jwt
     if ((!sessionJWT || sessionJWT.expires <= Date.now())) { return null; }
-    const token = jwt.verify(sessionJWT, config.applicationSalt);
+
+    return await getAccountFromJWT(sessionJWT);
+}
+
+async function getAccountFromJWT(jwt) {
+
+    let token;
+
+    try {
+        token = jsonwebtoken.verify(jwt, config.applicationSalt);
+    } catch (err) {
+        return null// {success: false, msg: 'BAD_JWT'}
+    }
+
 
     if (token && token.accountId) {
         const account = await models_orm.models.accounts.findOne({where: {id: token.accountId}});
@@ -90,10 +106,7 @@ async function getAuthenticatedAccount(req, res) {
     }
 
     return null;
-
-    
 }
-
 
 
 module.exports = {
@@ -101,5 +114,6 @@ module.exports = {
     getAuthenticatedAccount: getAuthenticatedAccount,
     changePassword: changePassword,
     signIn: signIn,
-    readJWT: readJWT
+    readJWT: readJWT,
+    getAccountFromJWT: getAccountFromJWT
 }

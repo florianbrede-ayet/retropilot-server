@@ -19,7 +19,7 @@ router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({extended: tru
     const signIn = await authentication.signIn(req.body.email, req.body.password)
 
     if (signIn.success) {
-        res.cookie('jwt', signIn.jwt, {signed: true});
+        res.cookie('jwt', signIn.jwt);
         res.redirect('/useradmin/overview');
     } else {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));

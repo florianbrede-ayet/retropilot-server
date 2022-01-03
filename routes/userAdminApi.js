@@ -1,13 +1,11 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const cookieParser = require('cookie-parser');
 const config = require('./../config');
 
 // TODO Remove this, pending on removing all auth logic from routes
-router.use(cookieParser(config.applicationSalt))
-
-
+var cookieParser = require('cookie-parser')
+router.use(cookieParser())
 
 function runAsyncWrapper(callback) {
     return function (req, res, next) {
@@ -25,7 +23,7 @@ router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({extended: tru
     const signIn = await controllers.authentication.signIn(req.body.email, req.body.password)
 
     if (signIn.success) {
-        res.cookie('jwt', signIn.jwt, {signed: true});
+        res.cookie('jwt', signIn.jwt);
         res.redirect('/useradmin/overview');
     } else {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));
