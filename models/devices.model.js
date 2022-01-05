@@ -44,6 +44,7 @@ module.exports = (sequelize) => {
 			allowNull: true,
 			type: DataTypes.INTEGER
 		},
+		
         max_storage: {
 			allowNull: true,
 			type: DataTypes.INTEGER

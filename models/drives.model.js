@@ -20,6 +20,10 @@ module.exports = (sequelize) => {
 			allowNull: true,
 			type: DataTypes.INTEGER
 		},
+		upload_complete: {
+			allowedNull: true,
+			type: DataTypes.INTEGER,
+		},
         duration: {
 			allowNull: true,
 			type: DataTypes.NUMBER
@@ -44,7 +48,7 @@ module.exports = (sequelize) => {
 			allowNull: true,
 			type: DataTypes.INTEGER
 		},
-        last_updated: {
+        last_upload: {
 			allowNull: true,
 			type: DataTypes.INTEGER
 		},

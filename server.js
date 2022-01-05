@@ -98,7 +98,7 @@ const web = async () => {
     
 
 
-    app.use(cors());
+    app.use(cors({origin: 'http://localhost:3000',}));
     app.use(cookieParser());
     app.use('/favicon.ico', express.static('static/favicon.ico'));
     app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));

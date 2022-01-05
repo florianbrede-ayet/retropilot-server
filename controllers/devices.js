@@ -7,6 +7,8 @@ const sanitize = require('sanitize')();
 const { Op } = require('sequelize');
 const { Logger } = require('log4js');
 const { allowAccountRegistration } = require('./../config');
+const crypto = require('crypto')
+const dirTree = require("directory-tree");
 
 
 async function pairDevice(account, qr_string) {
@@ -152,6 +154,84 @@ async function getOwnersFromDongle(dongle_id) {
 }
 
 
+
+
+
+async function getDrives(dongle_id, include_deleted, includeMeta) {
+    let drives;
+    let query = {  where: {   dongle_id: dongle_id } };
+
+    if (!include_deleted) {query = {...query, where: {...query.where, is_deleted: false}}}
+    
+    if (!includeMeta) query = {...query, attributes: { exclude: ['metadata'] }}
+
+    return await models_orm.models.drives.findAll(query);
+}
+
+/*
+    TODO: ADD AUTHENTICATION TO ENDPOINTS
+*/
+
+async function getCrashlogs(dongle_id) {
+    const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
+
+    const crashlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/crash/`, {attributes: ['size']});
+    var crashlogFiles = [];
+    if (crashlogDirectoryTree != undefined) {
+        for (var i = 0; i < crashlogDirectoryTree.children.length; i++) {
+
+            var timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
+            var timeString = timeSplit[0] + ' ' + timeSplit[1].replace(/-/g, ':');
+            if (timeString.indexOf("_")>0)
+                timeString = timeString.split("_")[0];
+
+            var dateObj = null;
+            try {dateObj = Date.parse(timeString);} catch (exception) {}
+            if (!dateObj) dateObj = new Date(0);
+
+            crashlogFiles.push({
+                'name': crashlogDirectoryTree.children[i].name,
+                'size': crashlogDirectoryTree.children[i].size,
+                'date': dateObj,
+                'permalink': `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/crash/${crashlogDirectoryTree.children[i].name}`
+            });
+        }
+        crashlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
+    }
+    return crashlogFiles;
+}
+
+
+async function getBootlogs(dongle_id) {
+    const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
+
+    const bootlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/boot/`, {attributes: ['size']});
+    var bootlogFiles = [];
+    if (bootlogDirectoryTree != undefined) {
+        for (var i = 0; i < bootlogDirectoryTree.children.length; i++) {
+
+            var timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
+            var timeString = timeSplit[0] + ' ' + timeSplit[1].replace(/-/g, ':');
+
+            var dateObj = null;
+            try {dateObj = Date.parse(timeString);} catch (exception) {}
+            if (!dateObj) dateObj = new Date(0);
+
+            bootlogFiles.push({
+                'name': bootlogDirectoryTree.children[i].name,
+                'size': bootlogDirectoryTree.children[i].size,
+                'date': dateObj,
+                'permalink': `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${bootlogDirectoryTree.children[i].name}`
+            });
+        }
+        bootlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
+    }
+
+    return bootlogFiles;
+
+}
+
+
 module.exports = {
     pairDevice: pairDevice,
     unpairDevice: unpairDevice,
@@ -163,5 +243,12 @@ module.exports = {
     pairDeviceToAccountId,
     updateLastPing,
     isUserAuthorised,
-    getOwnersFromDongle
+    getOwnersFromDongle,
+
+
+
+    // drive stuff, move maybe?
+    getDrives,
+    getBootlogs,
+    getCrashlogs
 }
