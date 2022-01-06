@@ -27,7 +27,7 @@ function __server() {
   wss = new WebSocket.WebSocketServer({ server }, { path: '/realtime/v1', handshakeTimeout: 500 });
 
   
-  server.listen(81, () => {
+  server.listen(config.athena.port, config.athena.host, () => {
     logger.info(`Web(Server) - UP @ ${config.athena.host}:${config.athena.port}`)
   })
 
