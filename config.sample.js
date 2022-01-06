@@ -38,6 +38,12 @@ var config = {
     flags: {
         useUserAdminApi: false,
     },
+
+    clientSocket: { // Used in development, remove before prod
+            port: 81,
+            host: "0.0.0.0"
+        
+    },
     
     athena: {
         enabled: true, // Enables Athena service
