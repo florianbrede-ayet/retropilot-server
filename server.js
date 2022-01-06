@@ -150,10 +150,10 @@ lockfile.lock('retropilot_server.lock', {realpath: false, stale: 30000, update: 
 
 
             httpServer.listen(config.httpPort, config.httpInterface, () => {
-                logger.info(`Retropilot Server listening at http://` + config.httpInterface + `:` + config.httpPort)
+                logger.info(`Retropilot Server listening at http://${config.httpInterface}:${config.httpPort}`)
             });
             httpsServer.listen(config.httpsPort, config.httpsInterface, () => {
-                logger.info(`Retropilot Server listening at https://` + config.httpsInterface + `:` + config.httpsPort)
+                logger.info(`Retropilot Server listening at https://${config.httpsInterface}:${config.httpsPort}`)
             });
 
         })();
