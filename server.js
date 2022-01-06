@@ -77,6 +77,7 @@ const web = async () => {
     routers = routers(models, controllers, logger)
     app.use(routers.api);
     app.use(routers.useradmin);
+    app.use(routers.authenticationApi)
 
     if (config.athena.enabled) {
         app.use((req, res, next) => {

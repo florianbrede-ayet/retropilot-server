@@ -75,7 +75,7 @@ async function getAuthenticatedAccount(req, res) {
     return await getAccountFromJWT(sessionJWT);
 }
 
-async function getAccountFromJWT(jwt) {
+async function getAccountFromJWT(jwt, limitData) {
 
     let token;
 
@@ -87,7 +87,10 @@ async function getAccountFromJWT(jwt) {
 
 
     if (token && token.accountId) {
-        const account = await models_orm.models.accounts.findOne({where: {id: token.accountId}});
+        let query = {where: {id: token.accountId}}
+        if (limitData) query = {...query, attributes: { exclude: ['password','2fa_token', 'session_seed'] }}
+
+        const account = await models_orm.models.accounts.findOne(query);
 
         if (account.dataValues) {
             const update = models_orm.models.accounts.update({ last_ping: Date.now() },
