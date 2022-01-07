@@ -39,12 +39,12 @@ router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', i
     if (isUserAuthorised.success === false || isUserAuthorised.data.authorised === false) {return res.json({success: false, msg: isUserAuthorised.msg})}
     var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(req.params.dongle_id).digest('hex');
     var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(req.params.drive_identifier).digest('hex');
-
+    console.log(config.storagePath + req.params.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + req.params.drive_identifier)
 
     const directoryTree = dirTree(config.storagePath + req.params.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + req.params.drive_identifier);
 
 
-    res.json({success: true, data: directoryTree})
+    res.json({success: true, msg: "ok", data: directoryTree})
 })
 
 router.get('/retropilot/0/device/:dongle_id/drives/:deleted', isAuthenticated, async (req, res) => {
