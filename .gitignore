@@ -2,7 +2,6 @@ node_modules/
 realdata/
 worker.log
 server.log
-package-lock.json
 database.sqlite
 config.js
 .vscode
