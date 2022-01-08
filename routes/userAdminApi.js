@@ -24,8 +24,7 @@ router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({ extended: tr
   if (signIn.success) {
     res.cookie('jwt', signIn.jwt);
     res.redirect('/useradmin/overview');
-  }
-  else {
+  } else {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid credentials or banned account')}`);
   }
 }));
@@ -46,14 +45,14 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
       serverStats: {
         config: {
           registerAllowed: config.allowAccountRegistration,
-          welcomeMessage: config.welcomeMessage
+          welcomeMessage: config.welcomeMessage,
         },
         accounts: accounts.num,
         devices: devices.num,
         drives: drives.num,
-        storageUsed: await controllers.storage.getTotalStorageUsed()
-      }
-    }
+        storageUsed: await controllers.storage.getTotalStorageUsed(),
+      },
+    },
   }).status(200);
 }));
 
@@ -178,8 +177,8 @@ router.get('/retropilot/0/overview', runAsyncWrapper(async (req, res) => {
     success: true,
     data: {
       account,
-      devices
-    }
+      devices,
+    },
 
   }).status(200);
 }));
@@ -199,7 +198,7 @@ router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, 
   const result = await models.__db.run(
     'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
     0,
-    req.params.dongleId
+    req.params.dongleId,
   );
 
   res.json({ success: true, data: { unlink: true } });
@@ -215,10 +214,9 @@ router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true 
 
   if (pairDevice.success === true) {
     res.json({
-      success: true, msg: 'Paired', status: 200, data: pairDevice
+      success: true, msg: 'Paired', status: 200, data: pairDevice,
     });
-  }
-  else {
+  } else {
     res.json({ success: false, msg: 'error', data: pairDevice });
   }
 }));
@@ -233,8 +231,7 @@ router.post('/retropilot/0/password/change', bodyParser.urlencoded({ extended: t
 
   if (pwChange.success === true) {
     res.json({ success: true });
-  }
-  else {
+  } else {
     res.json({ success: false, data: pwChange });
   }
 }));

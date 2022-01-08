@@ -6,34 +6,34 @@ module.exports = (sequelize) => {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     account_id: {
       allowNull: false,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     device_id: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     athena: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     unpair: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     view_drives: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     created_at: {
       allowNull: true,
-      type: DataTypes.INTEGER
-    }
+      type: DataTypes.INTEGER,
+    },
 
   }, {
-    timestamps: false
+    timestamps: false,
   });
 };

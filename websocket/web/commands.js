@@ -13,12 +13,11 @@ async function isDongleOnline(ws, msg) {
       command: msg.command,
       success: true,
       id: msg.id || null,
-      data: athenaRealtime.isDeviceConnected(ws.account.id, null, msg.data.dongleId)
+      data: athenaRealtime.isDeviceConnected(ws.account.id, null, msg.data.dongleId),
     }));
-  }
-  else {
+  } else {
     ws.send(JSON.stringify({
-      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised'
+      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised',
     }));
   }
 }
@@ -33,12 +32,11 @@ async function rebootDongle(ws, msg) {
   if (isAuthorised && isAuthorised.success === true) {
     await athenaRealtime.invoke('reboot', null, msg.data.dongleId, ws.account.id, msg.id || null);
     ws.send(JSON.stringify({
-      command: msg.command, success: true, id: msg.id || null, data: { command_issued: true }
+      command: msg.command, success: true, id: msg.id || null, data: { command_issued: true },
     }));
-  }
-  else {
+  } else {
     ws.send(JSON.stringify({
-      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised'
+      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised',
     }));
   }
 }
@@ -49,12 +47,11 @@ async function takeSnapshot(ws, msg) {
   if (isAuthorised && isAuthorised.success === true) {
     await athenaRealtime.invoke('takeSnapshot', null, msg.data.dongleId, ws.account.id, msg.id || null);
     ws.send(JSON.stringify({
-      command: msg.command, success: true, id: msg.id || null, data: { command_issued: true }
+      command: msg.command, success: true, id: msg.id || null, data: { command_issued: true },
     }));
-  }
-  else {
+  } else {
     ws.send(JSON.stringify({
-      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised'
+      command: msg.command, success: false, id: msg.id || null, msg: 'not_authorised',
     }));
   }
 }
@@ -62,5 +59,5 @@ async function takeSnapshot(ws, msg) {
 module.exports = {
   isDongleOnline,
   rebootDongle,
-  takeSnapshot
+  takeSnapshot,
 };

@@ -12,8 +12,7 @@ function initializeStorage() {
   var verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
   if (verifiedPath != null) {
     logger.info(`Verified storage path ${verifiedPath}`);
-  }
-  else {
+  } else {
     logger.error(`Unable to verify storage path '${config.storagePath}', check filesystem / permissions`);
     process.exit();
   }
@@ -29,8 +28,7 @@ function mkDirByPathSync(targetDir, { isRelativeToScript = false } = {}) {
     const curDir = path.resolve(baseDir, parentDir, childDir);
     try {
       fs.mkdirSync(curDir);
-    }
-    catch (err) {
+    } catch (err) {
       // console.debug(err);
       if (err.code === 'EEXIST') { // curDir already exists!
         return curDir;
@@ -57,8 +55,7 @@ function writeFileSync(path, buffer, permission) {
   let fileDescriptor;
   try {
     fileDescriptor = fs.openSync(path, 'w', permission);
-  }
-  catch (e) {
+  } catch (e) {
     fs.chmodSync(path, permission);
     fileDescriptor = fs.openSync(path, 'w', permission);
   }
@@ -104,8 +101,7 @@ async function updateTotalStorageUsed() {
   if (verifiedPath !== null) {
     try {
       totalStorageUsed = execSync(`du -hs ${verifiedPath} | awk -F'\t' '{print $1;}'`).toString();
-    }
-    catch (exception) {
+    } catch (exception) {
       totalStorageUsed = 'Unsupported Platform';
       logger.debug('Unable to calculate storage used, only supported on systems with \'du\' available');
     }
@@ -129,6 +125,6 @@ module.exports = (_models, _logger) => {
     writeFileSync,
     moveUploadedFile,
     updateTotalStorageUsed,
-    getTotalStorageUsed
+    getTotalStorageUsed,
   };
 };

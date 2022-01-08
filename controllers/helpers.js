@@ -39,5 +39,5 @@ function formatDate(timestampMs) {
 }
 
 module.exports = {
-  formatDuration, simpleStringify, formatDate
+  formatDuration, simpleStringify, formatDate,
 };

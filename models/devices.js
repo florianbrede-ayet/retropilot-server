@@ -14,6 +14,6 @@ module.exports = (_db) => {
     getAccountFromId,
     getAccountFromVerifyToken,
     verifyAccountEmail,
-    banAccount
+    banAccount,
   };
 };

@@ -36,7 +36,7 @@ function __server() {
 
 function buildResponse(ws, success, msg, data) {
   ws.send(JSON.stringify({
-    success, msg, data, timestamp: Date.now()
+    success, msg, data, timestamp: Date.now(),
   }));
 }
 
@@ -82,7 +82,7 @@ async function manageConnection(ws, res) {
         return realtimeCommands.takeSnapshot(ws, msg);
       default:
         return ws.send(JSON.stringify({
-          error: true, id: msg.id || null, msg: 'VERIFY_DATA', data: { msg }
+          error: true, id: msg.id || null, msg: 'VERIFY_DATA', data: { msg },
         }));
     }
   });
@@ -100,5 +100,5 @@ athenaRealtime.realtimeCallback(controls);
 
 module.exports = {
   controls,
-  websocketServer
+  websocketServer,
 };

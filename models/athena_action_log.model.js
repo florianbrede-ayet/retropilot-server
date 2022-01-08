@@ -6,41 +6,41 @@ module.exports = (sequelize) => {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     account_id: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     device_id: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     action: {
       allowNull: true,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     user_ip: {
       allowNull: true,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     device_ip: {
       allowNull: true,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     meta: {
       allowNull: true,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     created_at: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     dongle_id: {
       allowNull: true,
-      type: DataTypes.TEXT
-    }
+      type: DataTypes.TEXT,
+    },
   }, {
-    timestamps: false
+    timestamps: false,
   });
 };

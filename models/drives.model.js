@@ -8,71 +8,71 @@ module.exports = (sequelize) => {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       identifier: {
         allowNull: false,
-        type: DataTypes.TEXT
+        type: DataTypes.TEXT,
       },
       dongle_id: {
         allowNull: true,
-        type: DataTypes.TEXT
+        type: DataTypes.TEXT,
       },
       max_segment: {
         allowNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       upload_complete: {
         allowedNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       duration: {
         allowNull: true,
-        type: DataTypes.NUMBER
+        type: DataTypes.NUMBER,
       },
       distance_meters: {
         allowNull: true,
-        type: DataTypes.NUMBER
+        type: DataTypes.NUMBER,
       },
       filesize: {
         allowNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       is_processed: {
         allowNull: true,
-        type: DataTypes.BOOLEAN
+        type: DataTypes.BOOLEAN,
       },
       created: {
         allowNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       last_upload: {
         allowNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       is_preserved: {
         allowNull: true,
-        type: DataTypes.BOOLEAN
+        type: DataTypes.BOOLEAN,
       },
       is_deleted: {
         allowNull: true,
-        type: DataTypes.BOOLEAN
+        type: DataTypes.BOOLEAN,
       },
       drive_date: {
         allowNull: true,
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
       },
       is_physically_removed: {
         allowNull: true,
-        type: DataTypes.BOOLEAN
+        type: DataTypes.BOOLEAN,
       },
       metadata: {
         allowNull: true,
-        type: DataTypes.TEXT
-      }
+        type: DataTypes.TEXT,
+      },
     },
     {
-      timestamps: false
-    }
+      timestamps: false,
+    },
   );
 };
