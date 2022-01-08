@@ -8,6 +8,10 @@
     "browser": false // do we need this?
   },
   "rules": {
+    // disallow use of unary operators, ++ and --
+    // http://eslint.org/docs/rules/no-plusplus
+    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+
     // TODO: fix and remove
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
     "no-var": ["off"],
