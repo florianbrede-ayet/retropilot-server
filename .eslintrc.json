@@ -16,6 +16,7 @@
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
     "no-var": "off",
     "one-var": "off",
-    "no-await-in-loop": "off"
+    "no-await-in-loop": "off",
+    "no-console": "off"
   }
 }
