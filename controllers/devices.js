@@ -225,7 +225,7 @@ async function getBootlogs(dongle_id) {
       date: dateObj,
       permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${file.name}`,
     };
-  })
+  });
   bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
   return bootlogFiles;
 }
