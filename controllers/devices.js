@@ -180,8 +180,8 @@ async function getDrives(dongle_id, include_deleted, includeMeta) {
 async function getCrashlogs(dongle_id) {
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
 
-  const crashlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
-  const crashlogFiles = (crashlogDirectoryTree?.children || []).map((file) => {
+  const directoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
+  const crashlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
     let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
     if (timeString.indexOf('_') > 0) {
@@ -208,8 +208,8 @@ async function getCrashlogs(dongle_id) {
 async function getBootlogs(dongle_id) {
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
 
-  const bootlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
-  const bootlogFiles = (bootlogDirectoryTree?.children || []).map((file) => {
+  const directoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
+  const bootlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
     const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
 
