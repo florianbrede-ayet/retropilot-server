@@ -40,33 +40,40 @@ function buildResponse(ws, success, msg, data) {
   }));
 }
 
-async function authenticateUser(ws, res) {
-  console.log('headers:', res.headers);
-
-  let account;
-
-  // if (res.headers.Authorization) {
-  //   account = await authenticationController.getAccountFromJWT(res.headers.Authorization)
-  // } else {
-  const cookies = cookie.parse(res.headers.cookie);
-  account = await authenticationController.getAccountFromJWT(cookies.jwt);
+async function authenticateUser(ws, req) {
+  // if (req.headers.Authorization) {
+  //   account = await authenticationController.getAccountFromJWT(req.headers.Authorization)
   // }
 
-  console.log('THE ACCOUNT FOUND:', account);
-  if (account) {
-    // eslint-disable-next-line no-param-reassign
-    ws.account = account;
-    return true;
+  if (!req.headers.cookie) {
+    // TODO: send error
+    ws.terminate();
+    return false;
   }
 
-  ws.terminate();
-  return false;
+  const cookies = cookie.parse(req.headers.cookie);
+  if (!cookies.jwt) {
+    // TODO: send error
+    ws.terminate();
+    return false;
+  }
+
+  const account = await authenticationController.getAccountFromJWT(cookies.jwt);
+  if (!account) {
+    // TODO: send error
+    ws.terminate();
+    return false;
+  }
+
+  // eslint-disable-next-line no-param-reassign
+  ws.account = account;
+  return true;
 }
 
-async function manageConnection(ws, res) {
+async function manageConnection(ws, req) {
   logger.info(`Web(Websocket) - New Connection ${ws._socket.remoteAddress}`);
 
-  await authenticateUser(ws, res);
+  await authenticateUser(ws, req);
 
   console.log(ws.account);
 
