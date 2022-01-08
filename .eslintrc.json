@@ -4,29 +4,13 @@
   ],
   "env": {
     "es6": true,
-    "browser": false
+    "node": true,
+    "browser": false // do we need this?
   },
   "rules": {
-    "linebreak-style": [
-      "error",
-      "windows"
-    ],
-    "brace-style": [
-      "error",
-      "stroustrup"
-    ],
-    "comma-dangle": [
-      "error",
-      "never"
-    ],
-    "no-unused-vars": [
-      "warn"
-    ],
-    "no-var": [
-      "off"
-    ],
-    "one-var": [
-      "off"
-    ]
+    // TODO: fix and remove
+    "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+    "no-var": ["off"],
+    "one-var": ["off"]
   }
 }

@@ -6,7 +6,9 @@
   "scripts": {
     "test": "mocha",
     "start": "node server.js",
-    "prod": "node server.js && node worker.js"
+    "prod": "node server.js && node worker.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix"
   },
   "author": "",
   "license": "ISC",
