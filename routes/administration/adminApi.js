@@ -51,7 +51,7 @@ router.get('/user/', runAsyncWrapper(async (req, res) => {
 router.get('/device/:dongle_id', runAsyncWrapper(async (req, res) => {
   if (!req.params.dongle_id) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
 
-  return res.status(200).json({ success: true, data: await controllers.devices.getDeviceFromDongle(getDeviceFromDongle) });
+  return res.status(200).json({ success: true, data: await controllers.devices.getDeviceFromDongle(req.params.dongle_id) });
 }));
 
 router.get('/device/:dongle_id/pair/:user_id', runAsyncWrapper(async (req, res) => {
