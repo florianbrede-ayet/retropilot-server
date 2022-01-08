@@ -6,33 +6,33 @@ module.exports = (sequelize) => {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     email: {
       allowNull: false,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     password: {
       allowNull: true,
-      type: DataTypes.INTEGER
+      type: DataTypes.INTEGER,
     },
     created: {
       allowNull: true,
-      type: DataTypes.NUMBER
+      type: DataTypes.NUMBER,
     },
     last_ping: {
       allowNull: true,
-      type: DataTypes.NUMBER
+      type: DataTypes.NUMBER,
     },
     '2fa_token': {
       allowNull: true,
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT,
     },
     admin: {
       allowNull: true,
-      type: DataTypes.INTEGER
-    }
+      type: DataTypes.INTEGER,
+    },
   }, {
-    timestamps: false
+    timestamps: false,
   });
 };

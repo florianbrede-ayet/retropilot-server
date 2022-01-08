@@ -21,14 +21,12 @@ async function pairDevice(account, qr_string) {
   if (qrCodeParts.length > 1) {
     deviceQuery = await models_orm.models.device.findOne({ where: { serial: qrCodeParts[1] } });
     pairJWT = qrCodeParts[2];
-  }
-  else {
+  } else {
     pairJWT = qr_string;
     const data = await authenticationController.readJWT(qr_string);
     if (data.pair === true) {
       deviceQuery = await models_orm.models.device.findOne({ where: { dongle_id: data.identity } });
-    }
-    else {
+    } else {
       return { success: false, noPair: true };
     }
   }
@@ -52,15 +50,15 @@ async function pairDevice(account, qr_string) {
 async function pairDeviceToAccountId(dongle_id, account_id) {
   const update = await models_orm.models.device.update(
     { account_id },
-    { where: { dongle_id } }
+    { where: { dongle_id } },
   );
 
   const check = await models_orm.models.device.findOne(
-    { where: { dongle_id, account_id } }
+    { where: { dongle_id, account_id } },
   );
   if (check.dataValues) {
     return {
-      success: true, paired: true, dongle_id, account_id
+      success: true, paired: true, dongle_id, account_id,
     };
   }
   return { success: false, paired: false };
@@ -68,13 +66,13 @@ async function pairDeviceToAccountId(dongle_id, account_id) {
 
 async function unpairDevice(account, dongleId) {
   const device = await models_orm.models.device.getOne(
-    { where: { account_id: account.id, dongle_id: dongleId } }
+    { where: { account_id: account.id, dongle_id: dongleId } },
   );
 
   if (device && device.dataValues) {
     await models_orm.models.device.update(
       { account_id: 0 },
-      { where: { dongle_id: dongleId } }
+      { where: { dongle_id: dongleId } },
     );
     return { success: true };
   }
@@ -83,7 +81,7 @@ async function unpairDevice(account, dongleId) {
 
 async function setDeviceNickname(account, dongleId, nickname) {
   const device = await models_orm.models.device.getOne(
-    { where: { account_id: account.id, dongle_id: dongleId } }
+    { where: { account_id: account.id, dongle_id: dongleId } },
   );
 
   const cleanNickname = sanitize.value(nickname, 'string');
@@ -91,7 +89,7 @@ async function setDeviceNickname(account, dongleId, nickname) {
   if (device && device.dataValues) {
     await models_orm.models.device.update(
       { nickname: cleanNickname },
-      { where: { dongle_id: dongleId } }
+      { where: { dongle_id: dongleId } },
     );
     return { success: true, data: { nickname: cleanNickname } };
   }
@@ -112,7 +110,7 @@ async function getDeviceFromDongle(dongleId) {
 async function setIgnoredUploads(dongleId, isIgnored) {
   const update = models_orm.models.accounts.update(
     { dongle_id: dongleId },
-    { where: { uploads_ignored: isIgnored } }
+    { where: { uploads_ignored: isIgnored } },
   );
 
   // TODO check this change was processed..
@@ -128,7 +126,7 @@ async function getAllDevicesFiltered() {
 async function updateLastPing(device_id, dongle_id) {
   models_orm.models.device.update(
     { last_ping: Date.now() },
-    { where: { [Op.or]: [{ id: device_id }, { dongle_id }] } }
+    { where: { [Op.or]: [{ id: device_id }, { dongle_id }] } },
   );
 }
 
@@ -150,8 +148,8 @@ async function isUserAuthorised(account_id, dongle_id) {
     return {
       success: true,
       data: {
-        authorised: true, account_id: account.id, dongle_id: device.dongle_id
-      }
+        authorised: true, account_id: account.id, dongle_id: device.dongle_id,
+      },
     };
   }
   return { success: false, msg: 'not_authorised', data: { authorised: false, account_id: account.id, dongle_id: device.dongle_id } };
@@ -199,15 +197,14 @@ async function getCrashlogs(dongle_id) {
       let dateObj = null;
       try {
         dateObj = Date.parse(timeString);
-      }
-      catch (exception) {}
+      } catch (exception) {}
       if (!dateObj) dateObj = new Date(0);
 
       crashlogFiles.push({
         name: crashlogDirectoryTree.children[i].name,
         size: crashlogDirectoryTree.children[i].size,
         date: dateObj,
-        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/crash/${crashlogDirectoryTree.children[i].name}`
+        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/crash/${crashlogDirectoryTree.children[i].name}`,
       });
     }
     crashlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
@@ -228,15 +225,14 @@ async function getBootlogs(dongle_id) {
       let dateObj = null;
       try {
         dateObj = Date.parse(timeString);
-      }
-      catch (exception) {}
+      } catch (exception) {}
       if (!dateObj) dateObj = new Date(0);
 
       bootlogFiles.push({
         name: bootlogDirectoryTree.children[i].name,
         size: bootlogDirectoryTree.children[i].size,
         date: dateObj,
-        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${bootlogDirectoryTree.children[i].name}`
+        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${bootlogDirectoryTree.children[i].name}`,
       });
     }
     bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
@@ -261,5 +257,5 @@ module.exports = {
   // drive stuff, move maybe?
   getDrives,
   getBootlogs,
-  getCrashlogs
+  getCrashlogs,
 };

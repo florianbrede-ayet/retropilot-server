@@ -10,12 +10,12 @@ const transporter = nodemailer.createTransport(
     port: config.smtpPort,
     auth: {
       user: config.smtpUser,
-      pass: config.smtpPassword
+      pass: config.smtpPassword,
     },
     logger: true,
-    debug: false
+    debug: false,
   },
-  { from: config.smtpFrom }
+  { from: config.smtpFrom },
 );
 
 async function sendEmailVerification(token, email) {
@@ -30,12 +30,11 @@ async function sendEmailVerification(token, email) {
       from: config.smtpFrom,
       to: email.trim(),
       subject: 'RetroPilot Registration Token',
-      text: `Your Email Registration Token Is: "${token}"`
+      text: `Your Email Registration Token Is: "${token}"`,
     };
 
     error, info = await transporter.sendMail(message);
-  }
-  catch (exception) {
+  } catch (exception) {
     logger.warn(`Email to ${email} FAILED ${exception} - ${token}`);
   }
 
@@ -52,6 +51,6 @@ module.exports = (_models, _logger) => {
   logger = _logger;
 
   return {
-    sendEmailVerification
+    sendEmailVerification,
   };
 };

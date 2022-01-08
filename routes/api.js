@@ -18,7 +18,7 @@ let logger;
 router.put('/backend/post_upload', bodyParser.raw({
   inflate: true,
   limit: '100000kb',
-  type: '*/*'
+  type: '*/*',
 }), runAsyncWrapper(async (req, res) => {
   // TODO update buffer functions project wide
   var buf = new Buffer(req.body.toString('binary'), 'binary');
@@ -38,23 +38,20 @@ router.put('/backend/post_upload', bodyParser.raw({
       logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
       res.status(400);
       res.send('Malformed request');
-    }
-    else {
+    } else {
       logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
       const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
       if (moveResult === false) {
         logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
         res.status(500);
         res.send('Internal Server Error');
-      }
-      else {
+      } else {
         logger.info(`HTTP.PUT /backend/post_upload succesfully uploaded to ${moveResult}`);
         res.status(200);
         res.json(['OK']);
       }
     }
-  }
-  else { // boot or crash upload
+  } else { // boot or crash upload
     var filename = req.query.file;
     var directory = req.query.dir;
     var token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
@@ -64,16 +61,14 @@ router.put('/backend/post_upload', bodyParser.raw({
       logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
       res.status(400);
       res.send('Malformed request');
-    }
-    else {
+    } else {
       logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
       var moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
       if (moveResult === false) {
         logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
         res.status(500);
         res.send('Internal Server Error');
-      }
-      else {
+      } else {
         logger.info(`HTTP.PUT /backend/post_upload succesfully uploaded to ${moveResult}`);
         res.status(200);
         res.json(['OK']);
@@ -120,13 +115,13 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     all: {
       routes: 0,
       distance: 0,
-      minutes: 0
+      minutes: 0,
     },
     week: {
       routes: 0,
       distance: 0,
-      minutes: 0
-    }
+      minutes: 0,
+    },
 
   };
 
@@ -259,8 +254,7 @@ async function upload(req, res) {
 
     responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
     logger.info(`HTTP.UPLOAD_URL matched '${uploadType}' file upload, constructed responseUrl: ${responseUrl}`);
-  }
-  else {
+  } else {
     // "2021-04-12--01-44-25--0/qlog.bz2" for example
     const subdirPosition = path.split('--', 2).join('--').length;
     const filenamePosition = path.indexOf('/');
@@ -325,7 +319,7 @@ async function upload(req, res) {
 
           false,
 
-          false
+          false,
         );
 
         const driveSegmentResult = await models.__db.run(
@@ -346,12 +340,11 @@ async function upload(req, res) {
 
           false,
 
-          Date.now()
+          Date.now(),
         );
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
-      }
-      else {
+      } else {
         const driveResult = await models.__db.run(
           'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?',
           Date.now(),
@@ -364,7 +357,7 @@ async function upload(req, res) {
 
           driveName,
 
-          dongleId
+          dongleId,
         );
 
         const drive_segment = await models.__db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
@@ -388,10 +381,9 @@ async function upload(req, res) {
 
             false,
 
-            Date.now()
+            Date.now(),
           );
-        }
-        else {
+        } else {
           const driveSegmentResult = await models.__db.run(
             'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
             false,
@@ -402,7 +394,7 @@ async function upload(req, res) {
 
             dongleId,
 
-            segment
+            segment,
           );
         }
 
@@ -414,8 +406,7 @@ async function upload(req, res) {
   if (responseUrl != null) {
     res.status(200);
     res.json({ url: responseUrl, headers: { 'Content-Type': 'application/octet-stream' } });
-  }
-  else {
+  } else {
     logger.error('HTTP.UPLOAD_URL unable to match request, responding with HTTP 400');
     res.status(400);
     res.send('Malformed Request.');
@@ -473,7 +464,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
 
           Date.now(),
 
-          0
+          0,
         );
 
         const device = await models.__db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
@@ -484,15 +475,14 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
         return;
       }
     }
-  }
-  else {
+  } else {
     const result = await models.__db.run(
       'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
       Date.now(),
 
       public_key,
 
-      device.dongle_id
+      device.dongle_id,
     );
 
     logger.info(`HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE (${imei1}, ${serial}) with dongle_id ${device.dongle_id}`);
@@ -545,7 +535,7 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
     driveUrl,
     name: `${drive.dongle_id}|${drive.identifier}`,
     driveIdentifier: drive.identifier,
-    dongleId: drive.dongle_id
+    dongleId: drive.dongle_id,
   });
 }));
 

@@ -12,11 +12,10 @@ async function isAuthenticated(req, res, next) {
     res.json({
       success: true,
       data: {
-        authenticated: false
-      }
+        authenticated: false,
+      },
     });
-  }
-  else {
+  } else {
     req.account = account;
     next();
   }
@@ -30,16 +29,16 @@ router.get('/retropilot/0/useradmin/session', isAuthenticated, async (req, res) 
       success: true,
       data: {
         authenticated: true,
-        user: account.dataValues
-      }
+        user: account.dataValues,
+      },
     });
   }
 
   return res.json({
     success: true,
     data: {
-      authenticated: false
-    }
+      authenticated: false,
+    },
   });
 });
 
@@ -56,16 +55,15 @@ router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({ extended: tr
       data: {
         authenticated: true,
         jwt: signIn.jwt,
-        user: account.dataValues
-      }
+        user: account.dataValues,
+      },
     });
-  }
-  else {
+  } else {
     res.json({
       success: true,
       data: {
-        authenticated: false
-      }
+        authenticated: false,
+      },
     });
   }
 });
@@ -80,8 +78,7 @@ router.get('/session/get', async (req, res) => {
 
   if (!account) {
     res.json({ success: true, hasSession: false, session: {} });
-  }
-  else {
+  } else {
     res.json({ success: true, hasSession: false, session: account });
   }
 });

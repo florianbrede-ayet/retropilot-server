@@ -35,6 +35,6 @@ module.exports = (websocket) => {
   return {
     getDongleOwners,
     dongleStatus,
-    passData
+    passData,
   };
 };

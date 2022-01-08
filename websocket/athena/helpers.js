@@ -25,8 +25,7 @@ function invoke(command, params, dongleId, accountId, id) {
 
   if (!id) {
     uniqueID = uuid();
-  }
-  else {
+  } else {
     uniqueID = id;
   }
 
@@ -36,7 +35,7 @@ function invoke(command, params, dongleId, accountId, id) {
     device_id: websocket.device_id,
     type: command,
     created_at: Date.now(),
-    uuid: uniqueID
+    uuid: uniqueID,
   });
 
   websocket.send(JSON.stringify(wss.retropilotFunc.commandBuilder(command, params, uniqueID)));
@@ -65,6 +64,6 @@ module.exports = (websocketServer) => {
     invoke,
     incoming,
     deviceStatus,
-    realtimeCallback
+    realtimeCallback,
   };
 };

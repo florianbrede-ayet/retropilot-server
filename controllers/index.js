@@ -9,5 +9,5 @@ module.exports = async (models, logger, models_sqli) => ({
   mailing: require('./mailing')(models, logger),
   users: require('./users'),
   admin: require('./admin'),
-  devices: require('./devices')
+  devices: require('./devices'),
 });

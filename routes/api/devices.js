@@ -12,8 +12,7 @@ async function isAuthenticated(req, res, next) {
 
   if (account === null) {
     res.json({ success: false, msg: 'NOT_AUTHENTICATED1' });
-  }
-  else {
+  } else {
     req.account = account;
     next();
   }

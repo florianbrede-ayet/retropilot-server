@@ -27,7 +27,7 @@ const { execSync } = require('child_process');
 
 const Reader = require('@commaai/log_reader');
 var ffprobe = require('ffprobe'),
-    ffprobeStatic = require('ffprobe-static');
+  ffprobeStatic = require('ffprobe-static');
 const { exception } = require('console');
 
 var db = null;
@@ -65,7 +65,7 @@ function validateJWTToken(token, publicKey) {
 }
 
 function formatDate(timestampMs) {
-    return new Date(timestampMs).toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  return new Date(timestampMs).toISOString().replace(/T/, ' ').replace(/\..+/, '');
 }
 
 function formatDuration(durationSeconds) {
@@ -127,7 +127,12 @@ function simpleStringify(object) {
         }
         simpleObject[prop] = object[prop];
     }
-    return JSON.stringify(simpleObject); // returns cleaned up JSON
+    if (typeof (object[prop]) === 'function') {
+      continue;
+    }
+    simpleObject[prop] = object[prop];
+  }
+  return JSON.stringify(simpleObject); // returns cleaned up JSON
 }
 
 function writeFileSync(path, buffer, permission) {
@@ -189,6 +194,11 @@ function deleteFolderRecursive(directoryPath) {
         });
         fs.rmdirSync(directoryPath);
     }
+    logger.error('moveUploadedFile failed to writeFileSync');
+    return false;
+  }
+  logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${config.storagePath + directory}'`);
+  return false;
 }
 
 async function dbProtectedRun() {
@@ -208,6 +218,9 @@ async function dbProtectedRun() {
             continue;
         }
         break;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
     }
     logger.error(`unable to complete dbProtectedRun for ${arguments}`);
     return null;
@@ -230,6 +243,9 @@ async function dbProtectedGet() {
             continue;
         }
         break;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
     }
     logger.error(`unable to complete dbProtectedGet for ${arguments}`);
     return null;
@@ -252,6 +268,9 @@ async function dbProtectedAll() {
             continue;
         }
         break;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
     }
     logger.error(`unable to complete dbProtectedGet for ${arguments}`);
     return null;
@@ -624,6 +643,8 @@ async function updateDrives() {
                 }
             }
         }
+      }
+    }
 
         var { filesize } = drive;
         if (uploadComplete) {
@@ -684,8 +705,9 @@ async function updateDrives() {
             fs.writeFileSync(`${drivePath}/qcamera.m3u8`, playlist);
         }
     }
+  }
 
-    updateDevices();
+  updateDevices();
 
     setTimeout(() => {
         mainWorkerLoop();
@@ -707,6 +729,7 @@ async function deleteExpiredDrives() {
             );
         }
     }
+  }
 }
 
 async function removeDeletedDrivesPhysically() {
@@ -744,6 +767,7 @@ async function removeDeletedDrivesPhysically() {
             logger.error(exception);
         }
     }
+  }
 }
 
 async function deleteOverQuotaDrives() {
@@ -781,6 +805,7 @@ async function deleteOverQuotaDrives() {
             }
         }
     }
+  }
 }
 
 async function deleteBootAndCrashLogs() {
@@ -815,6 +840,8 @@ async function deleteBootAndCrashLogs() {
                 }
             }
         }
+      }
+    }
 
         const crashlogDirectoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
         var crashlogFiles = [];
@@ -838,7 +865,9 @@ async function deleteBootAndCrashLogs() {
                 }
             }
         }
+      }
     }
+  }
 }
 
 async function mainWorkerLoop() {

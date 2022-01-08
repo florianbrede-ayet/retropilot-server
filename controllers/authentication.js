@@ -8,8 +8,7 @@ const config = require('../config');
 async function validateJWT(token, key) {
   try {
     return jsonwebtoken.verify(token.replace('JWT ', ''), key, { algorithms: ['RS256'], ignoreNotBefore: true });
-  }
-  catch (exception) {
+  } catch (exception) {
     console.log(`failed to validate JWT ${exception}`);
   }
   return null;
@@ -18,8 +17,7 @@ async function validateJWT(token, key) {
 async function readJWT(token) {
   try {
     return jsonwebtoken.decode(token);
-  }
-  catch (exception) {
+  } catch (exception) {
     logger.warn(`failed to read JWT ${exception}`);
   }
   return null;
@@ -54,7 +52,7 @@ async function changePassword(account, newPassword, oldPassword) {
 
     const update = models_orm.models.accounts.update(
       { password: newPasswordHash },
-      { where: { id: account.id } }
+      { where: { id: account.id } },
     );
 
     return { success: true, msg: 'PASSWORD CHANGED', changed: true };
@@ -80,8 +78,7 @@ async function getAccountFromJWT(jwt, limitData) {
 
   try {
     token = jsonwebtoken.verify(jwt, config.applicationSalt);
-  }
-  catch (err) {
+  } catch (err) {
     return null;// {success: false, msg: 'BAD_JWT'}
   }
 
@@ -94,7 +91,7 @@ async function getAccountFromJWT(jwt, limitData) {
     if (account.dataValues) {
       const update = models_orm.models.accounts.update(
         { last_ping: Date.now() },
-        { where: { id: account.id } }
+        { where: { id: account.id } },
       );
 
       if (!account || account.banned) {
@@ -113,5 +110,5 @@ module.exports = {
   changePassword,
   signIn,
   readJWT,
-  getAccountFromJWT
+  getAccountFromJWT,
 };

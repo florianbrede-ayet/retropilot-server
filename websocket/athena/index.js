@@ -22,10 +22,9 @@ function __server() {
   if (config.athena.secure) {
     server = httpsServer.createServer({
       cert: readFileSync(config.sslCrt),
-      key: readFileSync(config.sslKey)
+      key: readFileSync(config.sslKey),
     });
-  }
-  else {
+  } else {
     server = httpServer.createServer();
   }
 
@@ -91,7 +90,7 @@ async function manageConnection(ws, res) {
 
     console.log(await models.models.athena_returned_data.update({
       data: JSON.stringify(json),
-      resolved_at: Date.now()
+      resolved_at: Date.now(),
     }, { where: { device_id: ws.device_id, uuid: json.id } }));
 
     wss.retropilotFunc.actionLogger(null, null, 'ATHENA_DEVICE_MESSAGE_UNKNOWN', null, ws._socket.remoteAddress, JSON.stringify([message]), ws.dongleId);
@@ -126,8 +125,7 @@ wss.retropilotFunc = {
   authenticateDongle: async (ws, res, cookies) => {
     try {
       unsafeJwt = jsonwebtoken.decode(cookies.jwt);
-    }
-    catch (e) {
+    } catch (e) {
       logger.info(`Athena(Websocket) - AUTHENTICATION FAILED (INVALID JWT) IP: ${ws._socket.remoteAddress}`);
       wss.retropilotFunc.actionLogger(null, null, 'ATHENA_DEVICE_AUTHENTICATE_INVALID', null, ws._socket.remoteAddress, JSON.stringify({ jwt: cookies.jwt }), null);
       return false;
@@ -139,8 +137,7 @@ wss.retropilotFunc = {
 
     try {
       verifiedJWT = jsonwebtoken.verify(cookies.jwt, device.public_key, { ignoreNotBefore: true });
-    }
-    catch (err) {
+    } catch (err) {
       logger.info(`Athena(Websocket) - AUTHENTICATION FAILED (BAD JWT, CHECK SIGNATURE) IP: ${ws._socket.remoteAddress}`);
       wss.retropilotFunc.actionLogger(null, null, 'ATHENA_DEVICE_AUTHENTICATE_INVALID', null, ws._socket.remoteAddress, JSON.stringify({ jwt: cookies.jwt }), null);
       return false;
@@ -160,14 +157,14 @@ wss.retropilotFunc = {
   },
 
   commandBuilder: (method, params, id) => ({
-    method, params, jsonrpc: '2.0', id
+    method, params, jsonrpc: '2.0', id,
   }),
 
   actionLogger: async (account_id, device_id, action, user_ip, device_ip, meta, dongle_id) => {
     models.models.athena_action_log.create({
-      account_id, device_id, action, user_ip, device_ip, meta, created_at: Date.now(), dongle_id
+      account_id, device_id, action, user_ip, device_ip, meta, created_at: Date.now(), dongle_id,
     });
-  }
+  },
 
 };
 

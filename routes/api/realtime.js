@@ -20,7 +20,7 @@ const whitelistParams = {
   getsiminfo: true,
   getnetworktype: true,
   getnetworks: true,
-  takesnapshot: true
+  takesnapshot: true,
 };
 
 router.get('/dongle/:dongle_id/connected', async (req, res) => {
@@ -42,7 +42,7 @@ router.get('/dongle/:dongle_id/connected', async (req, res) => {
   const deviceConnected = await req.athenaWebsocketTemp.isDeviceConnected(device.id, account.id, device.dongle_id);
 
   return res.status(200).json({
-    success: true, dongle_id: device.dongle_id, data: deviceConnected
+    success: true, dongle_id: device.dongle_id, data: deviceConnected,
   });
 });
 
@@ -69,7 +69,7 @@ router.get('/dongle/:dongle_id/send/:method/', async (req, res) => {
   const data = await req.athenaWebsocketTemp.invoke(req.params.method, null, device.dongle_id, account.id);
 
   return res.status(200).json({
-    success: true, dongle_id: device.dongle_id, method: req.params.method, data
+    success: true, dongle_id: device.dongle_id, method: req.params.method, data,
   });
 });
 
@@ -108,7 +108,7 @@ router.get('/dongle/:dongle_id/temp/nav/:lat/:long', async (req, res) => {
   const data = await req.athenaWebsocketTemp.invoke('setNavDestination', { latitude: req.params.lat, longitude: req.params.long }, device.dongle_id, account.id);
 
   return res.status(200).json({
-    success: true, dongle_id: device.dongle_id, method: req.params.method, data
+    success: true, dongle_id: device.dongle_id, method: req.params.method, data,
   });
 });
 

@@ -25,14 +25,13 @@ async function banAccount(ban, userId) {
   let cleanBan;
   if (ban === 'true' || ban === 'false') {
     cleanBan = ban === 'true';
-  }
-  else {
+  } else {
     return { success: false, status: 400, data: { bad_data: true } };
   }
 
   const update = await models_orm.models.accounts.update(
     { banned: cleanBan ? 1 : 0 },
-    { where: { id: userId } }
+    { where: { id: userId } },
   );
 
   const verify = await models_orm.models.accounts.findOne({ where: { id: userId } });
@@ -45,5 +44,5 @@ async function banAccount(ban, userId) {
 
 module.exports = {
   banAccount,
-  isCurrentUserAdmin
+  isCurrentUserAdmin,
 };

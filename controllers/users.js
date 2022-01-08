@@ -25,7 +25,7 @@ async function createAccount(email, password) {
     password,
     created: Date.now(),
     last_ping: Date.now(),
-    email_verify_token: emailToken
+    email_verify_token: emailToken,
   });
 
   const didAccountRegister = await models_orm.models.accounts.findOne({ where: { email } });
@@ -38,7 +38,7 @@ async function createAccount(email, password) {
 async function verifyEmailToken(token) {
   if (!token) return { success: false, status: 400, data: { missingToken: true } };
   const account = await models_orm.models.accounts.findOne(
-    { where: { email_verify_token: token } }
+    { where: { email_verify_token: token } },
   );
 
   if (account === null) return { success: false, status: 404, data: { badToken: true } };
@@ -48,13 +48,13 @@ async function verifyEmailToken(token) {
 
   const update = models_orm.models.accounts.update(
     {
-      verified: true
+      verified: true,
     },
     {
       where: {
-        id: account.id
-      }
-    }
+        id: account.id,
+      },
+    },
   );
 
   return { success: true, status: 200, data: { successfullyVerified: true } };
@@ -69,5 +69,5 @@ module.exports = {
   createAccount,
   verifyEmailToken,
   getAccountFromId,
-  getAllUsers
+  getAllUsers,
 };

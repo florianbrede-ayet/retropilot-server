@@ -7,5 +7,5 @@ module.exports = (_models, _controllers, _logger) => ({
   realtime: require('./api/realtime'),
 
   deviceApi: require('./api/devices'),
-  authenticationApi: require('./api/authentication')
+  authenticationApi: require('./api/authentication'),
 });
