@@ -1,3 +1,4 @@
+const bodyParser = require('body-parser');
 const router = require('express').Router();
 const config = require('../../config');
 
@@ -5,9 +6,9 @@ const userController = require('../../controllers/users');
 
 router.post('/retropilot/0/register/email', bodyParser.urlencoded({ extended: true }), async (req, res) => {
   if (!req.body.hasOwnProperty('email') || req.body.email === '' || !req.body.hasOwnProperty('password') || req.body.password === '') {
-    res.json({ success: false, msg: 'malformed request' }).status(400);
-    logger.warn('/useradmin/register/token - Malformed Request!');
-    return;
+    // FIXME: use logger.warn
+    console.error('/useradmin/register/token - Malformed Request!');
+    return res.json({ success: false, msg: 'malformed request' }).status(400);
   }
 
   const accountStatus = await userController.createAccount(req.body.email, req.body.password);

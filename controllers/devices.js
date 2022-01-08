@@ -161,14 +161,15 @@ async function getOwnersFromDongle(dongle_id) {
 }
 
 async function getDrives(dongle_id, include_deleted, includeMeta) {
-  let drives;
   let query = { where: { dongle_id } };
 
   if (!include_deleted) {
     query = { ...query, where: { ...query.where, is_deleted: false } };
   }
 
-  if (!includeMeta) query = { ...query, attributes: { exclude: ['metadata'] } };
+  if (!includeMeta) {
+    query = { ...query, attributes: { exclude: ['metadata'] } };
+  }
 
   return await models_orm.models.drives.findAll(query);
 }

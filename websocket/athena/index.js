@@ -37,7 +37,8 @@ function __server() {
           helpers.deviceStatus(ws.dongleId, false);
         }
 
-        return ws.terminate();
+        ws.terminate();
+        return;
       }
 
       ws.isAlive = false;
@@ -78,7 +79,7 @@ async function manageConnection(ws, res) {
     if (!ws.dongleId) {
       wss.retropilotFunc.actionLogger(null, null, 'ATHENA_DEVICE_UNATHENTICATED_MESSAGE', null, ws._socket.remoteAddress, JSON.stringify([message]), ws.dongleId);
       console.log('unauthenticated message, discarded');
-      return null;
+      return;
     }
 
     const json = JSON.parse(message.toString('utf8'));
@@ -160,12 +161,13 @@ wss.retropilotFunc = {
     method, params, jsonrpc: '2.0', id,
   }),
 
-  // eslint-disable-next-line camelcase
+  /* eslint-disable camelcase */
   actionLogger: async (account_id, device_id, action, user_ip, device_ip, meta, dongle_id) => {
     models.models.athena_action_log.create({
       account_id, device_id, action, user_ip, device_ip, meta, created_at: Date.now(), dongle_id,
     });
   },
+  /* eslint-enable camelcase */
 
 };
 

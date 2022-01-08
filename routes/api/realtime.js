@@ -26,17 +26,30 @@ const whitelistParams = {
 router.get('/dongle/:dongle_id/connected', async (req, res) => {
   const account = await authenticationController.getAuthenticatedAccount(req, res);
   if (account == null) {
-    return res.status(403).json({ error: true, errorMsg: 'Unauthenticated', errorObject: { authenticated: false } });
-  }
-  const device = await deviceController.getDeviceFromDongle(req.params.dongle_id);
-  if (!device) {
-    return res.status(400).json({ error: true, errorMsg: 'no_dongle', errorObject: { authenticated: true, dongle_exists: false } });
+    return res.status(403).json({
+      error: true,
+      errorMsg: 'Unauthenticated',
+      errorObject: { authenticated: false },
+    });
   }
 
-  // TODO support delgation of access
+  const device = await deviceController.getDeviceFromDongle(req.params.dongle_id);
+  if (!device) {
+    return res.status(400).json({
+      error: true,
+      errorMsg: 'no_dongle',
+      errorObject: { authenticated: true, dongle_exists: false },
+    });
+  }
+
+  // TODO support delegation of access
   // TODO remove indication of dongle existing
   if (device.account_id !== account.id) {
-    return res.status(403).json({ error: true, errorMsg: 'unauthorised', errorObject: { authenticated: true, dongle_exists: true, authorised_user: false } });
+    return res.status(403).json({
+      error: true,
+      errorMsg: 'unauthorised',
+      errorObject: { authenticated: true, dongle_exists: true, authorised_user: false },
+    });
   }
 
   const deviceConnected = await req.athenaWebsocketTemp.isDeviceConnected(device.id, account.id, device.dongle_id);
@@ -86,7 +99,7 @@ router.get('/dongle/:dongle_id/get', async (req, res) => {
     return res.status(403).json({ error: true, errorMsg: 'unauthorised', errorObject: { authenticated: true, dongle_exists: true, authorised_user: false } });
   }
 
-  res.json(await models.models.athena_returned_data.findAll({ where: { device_id: device.id } }));
+  return res.json(await models.models.athena_returned_data.findAll({ where: { device_id: device.id } }));
 });
 
 router.get('/dongle/:dongle_id/temp/nav/:lat/:long', async (req, res) => {

@@ -1,4 +1,3 @@
-const config = require('./config');
 const fs = require('fs');
 const log4js = require('log4js');
 const lockfile = require('proper-lockfile');
@@ -8,10 +7,11 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
+const config = require('./config');
+
 log4js.configure({
   appenders: { logfile: { type: 'file', filename: 'server.log' }, out: { type: 'console' } /* {type: "file", filename: "server1.log"} */ },
   categories: { default: { appenders: ['out', 'logfile'], level: 'info' } },
-
 });
 
 const logger = log4js.getLogger('default');

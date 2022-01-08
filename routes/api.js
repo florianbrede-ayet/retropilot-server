@@ -92,9 +92,11 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
     return;
   }
 
-  const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+  const decoded = device.public_key
+    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    : null;
 
-  if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+  if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.DEVICES JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
     return res.send('Unauthorized.').status(400);
   }
@@ -133,9 +135,11 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     return;
   }
 
-  const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+  const decoded = device.public_key
+    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    : null;
 
-  if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+  if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.STATS JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
     return res.send('Unauthorized.').status(400);
   }
@@ -150,7 +154,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
   // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO" week)
   const d = new Date();
   const day = d.getDay();
-  const diff = d.getDate() - day + (day == 0 ? -6 : 1);
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const lastMonday = new Date(d.setDate(diff));
   lastMonday.setHours(0, 0, 0, 0);
 
@@ -183,7 +187,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
 
   const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
 
-  if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+  if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.OWNER JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
     return res.send('Unauthorized.').status(400);
   }
@@ -222,7 +226,7 @@ async function upload(req, res) {
 
   const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
 
-  if ((decoded == undefined || decoded.identity !== req.params.dongleId)) {
+  if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.UPLOAD_URL JWT authorization failed, token: ${auth} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
     return res.send('Unauthorized.').status(400);
   }
@@ -432,7 +436,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
   }
   const decoded = await controllers.authentication.validateJWT(req.query.register_token, public_key);
 
-  if (decoded == null || decoded.register == undefined) {
+  if (!decoded || !decoded.register) {
     logger.error(`HTTP.V2.PILOTAUTH JWT token is invalid (${JSON.stringify(decoded)})`);
     res.status(400);
     res.send('Malformed Request.');
@@ -511,7 +515,7 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
   const driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
-  if (dongleIdHash != dongleIdHashReq || driveIdentifierHash != driveIdentifierHashReq) {
+  if (dongleIdHash !== dongleIdHashReq || driveIdentifierHash !== driveIdentifierHashReq) {
     res.status(200);
     res.json({ status: 'hashes not matching' });
     return;
