@@ -14,6 +14,9 @@ const athenaRealtime = require('../athena/index');
 
 const realtimeCommands = require('./commands');
 
+let server;
+let wss;
+
 // eslint-disable-next-line no-underscore-dangle
 function __server() {
   server = httpServer.createServer();
@@ -27,7 +30,6 @@ function __server() {
   wss.on('connection', manageConnection);
   wss.on('close', () => {
     logger.info('Web(Websocket) - DOWN');
-    clearInterval(interval);
   });
   return wss;
 }
@@ -52,6 +54,7 @@ async function authenticateUser(ws, res) {
 
   console.log('THE ACCOUNT FOUND:', account);
   if (account) {
+    // eslint-disable-next-line no-param-reassign
     ws.account = account;
     return true;
   }

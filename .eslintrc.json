@@ -18,12 +18,21 @@
     // retropilot: we allow use of the continue statement
     "no-continue": "off",
 
+    // disallow use of variables before they are defined
+    // http://eslint.org/docs/rules/no-use-before-define
+    // retropilot: permit referencing functions before they're defined
+    "no-use-before-define": ["error", { "functions": false }],
+
     // TODO: fix and remove
+    // retropilot: we are in the process of removing all of these
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+    // retropilot: we are in the process of moving to es6 let and const
     "no-var": "off",
     "one-var": "off",
     "no-await-in-loop": "off",
     "no-console": "off",
-    "no-underscore-dangle": "off"
+    "no-underscore-dangle": "off",
+    // retropilot: we use this for websocket connection properties
+    "no-param-reassign": "off"
   }
 }

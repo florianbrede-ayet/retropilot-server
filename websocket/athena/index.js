@@ -10,7 +10,6 @@ const config = require('../../config');
 
 const authenticationController = require('../../controllers/authentication');
 const deviceController = require('../../controllers/devices');
-const { ws } = require('../../routes/api/realtime');
 
 const logger = log4js.getLogger('default');
 
@@ -72,7 +71,7 @@ async function manageConnection(ws, res) {
   ws.heartbeat = Date.now();
   ws.on('pong', heartbeat);
 
-  var cookies = cookie.parse(res.headers.cookie);
+  const cookies = cookie.parse(res.headers.cookie);
 
   ws.on('message', async (message) => {
     heartbeat.call(ws);
@@ -122,6 +121,8 @@ wss.retropilotFunc = {
   },
 
   authenticateDongle: async (ws, res, cookies) => {
+    let unsafeJwt;
+
     try {
       unsafeJwt = jsonwebtoken.decode(cookies.jwt);
     } catch (e) {
@@ -159,6 +160,7 @@ wss.retropilotFunc = {
     method, params, jsonrpc: '2.0', id,
   }),
 
+  // eslint-disable-next-line camelcase
   actionLogger: async (account_id, device_id, action, user_ip, device_ip, meta, dongle_id) => {
     models.models.athena_action_log.create({
       account_id, device_id, action, user_ip, device_ip, meta, created_at: Date.now(), dongle_id,
