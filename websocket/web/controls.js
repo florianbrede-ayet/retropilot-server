@@ -2,30 +2,45 @@ const deviceController = require('../../controllers/devices');
 
 let wss;
 
-async function getDongleOwners(dongle_id) {
-  const owners = await deviceController.getOwnersFromDongle(dongle_id);
+async function getDongleOwners(dongleId) {
+  const owners = await deviceController.getOwnersFromDongle(dongleId);
   console.log('dongle owners', owners);
   return owners;
 }
 
 async function broadcastToAccounts(owners, data) {
   wss.clients.forEach((ws) => {
-    owners.data.forEach((account_id) => {
-      if (account_id === ws.account.id) {
+    owners.data.forEach((accountId) => {
+      if (accountId === ws.account.id) {
         ws.send(JSON.stringify(data));
       }
     });
   });
 }
 
-async function dongleStatus(dongle_id, status) {
-  const owners = await getDongleOwners(dongle_id);
-  await broadcastToAccounts(owners, { command: 'dongle_status', id: Date.now(), data: { dongle_id, online: status, time: Date.now() } });
+async function dongleStatus(dongleId, status) {
+  const owners = await getDongleOwners(dongleId);
+  await broadcastToAccounts(owners, {
+    command: 'dongle_status',
+    id: Date.now(),
+    data: {
+      dongle_id: dongleId,
+      online: status,
+      time: Date.now(),
+    },
+  });
 }
 
-async function passData(dongle_id, msg) {
-  const owners = await getDongleOwners(dongle_id);
-  await broadcastToAccounts(owners, { command: 'data_return', id: msg.id, data: { dongle_id, return: msg } });
+async function passData(dongleId, msg) {
+  const owners = await getDongleOwners(dongleId);
+  await broadcastToAccounts(owners, {
+    command: 'data_return',
+    id: msg.id,
+    data: {
+      dongle_id: dongleId,
+      return: msg,
+    },
+  });
   return true;
 }
 

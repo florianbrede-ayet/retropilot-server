@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 const authenticationController = require('../../controllers/authentication');
 const deviceController = require('../../controllers/devices');
 const athenaRealtime = require('../athena/index');

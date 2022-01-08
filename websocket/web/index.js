@@ -6,6 +6,7 @@ const config = require('../../config');
 let controls = require('./controls');
 
 const authenticationController = require('../../controllers/authentication');
+// eslint-disable-next-line no-unused-vars
 const deviceController = require('../../controllers/devices');
 
 const logger = log4js.getLogger('default');
@@ -34,6 +35,7 @@ function __server() {
   return wss;
 }
 
+// eslint-disable-next-line no-unused-vars
 function buildResponse(ws, success, msg, data) {
   ws.send(JSON.stringify({
     success, msg, data, timestamp: Date.now(),

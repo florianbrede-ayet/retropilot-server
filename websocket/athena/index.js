@@ -8,12 +8,15 @@ const log4js = require('log4js');
 const models = require('../../models/index.model');
 const config = require('../../config');
 
+// eslint-disable-next-line no-unused-vars
 const authenticationController = require('../../controllers/authentication');
 const deviceController = require('../../controllers/devices');
 
 const logger = log4js.getLogger('default');
 
+let helpers;
 let wss;
+
 function __server() {
   let server;
 
@@ -171,6 +174,6 @@ wss.retropilotFunc = {
 
 };
 
-const helpers = require('./helpers')(wss);
+helpers = require('./helpers')(wss);
 
 module.exports = helpers;
