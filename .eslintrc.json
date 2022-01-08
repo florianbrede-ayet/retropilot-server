@@ -11,6 +11,7 @@
     // disallow use of unary operators, ++ and --
     // http://eslint.org/docs/rules/no-plusplus
     "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+    "no-continue": "off",
 
     // TODO: fix and remove
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
