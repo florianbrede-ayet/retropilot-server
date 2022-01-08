@@ -10,7 +10,12 @@
   "rules": {
     // disallow use of unary operators, ++ and --
     // http://eslint.org/docs/rules/no-plusplus
+    // retropilot: we allow them in the for loop
     "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+
+    // disallow use of the continue statement
+    // https://eslint.org/docs/rules/no-continue
+    // retropilot: we allow use of the continue statement
     "no-continue": "off",
 
     // TODO: fix and remove
@@ -18,6 +23,7 @@
     "no-var": "off",
     "one-var": "off",
     "no-await-in-loop": "off",
-    "no-console": "off"
+    "no-console": "off",
+    "no-underscore-dangle": "off"
   }
 }
