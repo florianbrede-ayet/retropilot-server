@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
-const crypto = require('crypto');
-var cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const config = require('../config');
 
 // TODO Remove this, pending on removing all auth logic from routes
@@ -443,7 +442,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     var directorySegments = {};
     for (var i in directoryTree.children) {
         // skip any non-directory entries (for example m3u8 file in the drive directory)
-        if (directoryTree.children[i].type != 'directory') continue;
+        if (directoryTree.children[i].type !== 'directory') continue;
 
         var segment = directoryTree.children[i].name;
 

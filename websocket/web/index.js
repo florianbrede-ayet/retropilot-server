@@ -1,8 +1,5 @@
 const WebSocket = require('ws');
-const fs = require('fs');
 const cookie = require('cookie');
-const jsonwebtoken = require('jsonwebtoken');
-const httpsServer = require('https');
 const httpServer = require('http');
 const log4js = require('log4js');
 const config = require('../../config');
@@ -17,6 +14,7 @@ const athenaRealtime = require('../athena/index');
 
 const realtimeCommands = require('./commands');
 
+// eslint-disable-next-line no-underscore-dangle
 function __server() {
   server = httpServer.createServer();
 

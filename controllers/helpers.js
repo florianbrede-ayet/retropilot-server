@@ -19,7 +19,7 @@ function formatDuration(durationSeconds) {
 // TODO remove this - looks like its used in old server.js
 function simpleStringify(object) {
   const simpleObject = {};
-  for (var prop in object) {
+  for (const prop in object) {
     if (!object.hasOwnProperty(prop)) {
       continue;
     }

@@ -4,8 +4,7 @@ const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require('directory-tree');
-const cookie = require('cookie');
-var cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const config = require('../config');
 
 // TODO Remove this, pending on removing all auth logic from routes
@@ -30,8 +29,7 @@ router.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsy
   if (signIn.success) {
     res.cookie('jwt', signIn.jwt);
     res.redirect('/useradmin/overview');
-  }
-  else {
+  } else {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid credentials or banned account')}`);
   }
 }));
@@ -106,24 +104,21 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
     const emailStatus = await controllers.mailing.sendEmailVerification(token, email);
-  }
-  else { // final registration form filled
-    if (req.body.token != token) {
+  } else { // final registration form filled
+    if (req.body.token !== token) {
       infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
-    }
-    else if (req.body.password != req.body.password2 || req.body.password.length < 3) {
-      infoText = 'The passwords you entered did not or were shorter than 3 characters, please try again.<br><br>';
-    }
-    else {
+    } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
+      infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
+    } else {
       const result = await models.__db.run(
         'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
         email,
         crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
         Date.now(),
-        false
+        false,
       );
 
-      if (result.lastID != undefined) {
+      if (result.lastID) {
         logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
 
         res.redirect(`/useradmin?status=${encodeURIComponent('Successfully registered')}`);
@@ -226,7 +221,7 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
   }
 
   res.redirect('/useradmin/overview');
-})),
+}))
 
 router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req, res);
@@ -239,20 +234,15 @@ router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }),
 
   if (pairDevice.success === true) {
     res.redirect('/useradmin/overview');
-  }
-  else if (pairDevice.registered === true) {
+  } else if (pairDevice.registered === true) {
     res.redirect(`/useradmin/overview?linkstatus=${encodeURIComponent('Device not registered on Server')}`);
-  }
-  else if (pairDevice.badToken === true) {
+  } else if (pairDevice.badToken === true) {
     res.redirect(`/useradmin/overview?linkstatus=${encodeURIComponent('Device QR Token is invalid or has expired')}`);
-  }
-  else if (pairDevice.alreadyPaired) {
+  } else if (pairDevice.alreadyPaired) {
     res.redirect(`/useradmin/overview?linkstatus=${encodeURIComponent('Device is already paired, unpair in that account first')}`);
-  }
-  else if (pairDevice.badQr) {
+  } else if (pairDevice.badQr) {
     res.redirect(`/useradmin/overview?linkstatus=${encodeURIComponent('Bad QR')}`);
-  }
-  else {
+  } else {
     res.redirect(`/useradmin/overview?linkstatus=${encodeURIComponent(`Unspecified Error ${JSON.stringify(pairDevice)}`)}`);
   }
 }));
@@ -420,20 +410,19 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrappe
     return;
   }
 
-  if (req.params.action == 'delete') {
+  if (req.params.action === 'delete') {
     const result = await models.__db.run(
       'UPDATE drives SET is_deleted = ? WHERE id = ?',
       true,
 
-      drive.id
+      drive.id,
     );
-  }
-  else if (req.params.action == 'preserve') {
+  } else if (req.params.action === 'preserve') {
     const result = await models.__db.run(
       'UPDATE drives SET is_preserved = ? WHERE id = ?',
       true,
 
-      drive.id
+      drive.id,
     );
   }
 
@@ -464,12 +453,12 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     return;
   }
 
-  var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
-  var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
+  const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
 
-  var driveUrl = `${config.baseDriveDownloadUrl + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}/`;
+  const driveUrl = `${config.baseDriveDownloadUrl + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}/`;
 
-  var cabanaUrl = null;
+  let cabanaUrl = null;
   if (drive.is_processed) {
     cabanaUrl = `${config.cabanaUrl}?retropilotIdentifier=${device.dongle_id}|${dongleIdHash}|${drive.identifier}|${driveIdentifierHash}&retropilotHost=${encodeURIComponent(config.baseUrl)}&demo=1"`;
   }

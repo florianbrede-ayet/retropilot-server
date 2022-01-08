@@ -1,6 +1,5 @@
 const sanitize = require('sanitize')();
 const { Op } = require('sequelize');
-const { Logger } = require('log4js');
 const crypto = require('crypto');
 const dirTree = require('directory-tree');
 const config = require('../config');
@@ -37,11 +36,11 @@ async function pairDevice(account, qr_string) {
 
   const device = deviceQuery.dataValues;
   const decoded = await authenticationController.validateJWT(pairJWT, device.public_key);
-  if (decoded == null || decoded.pair == undefined) {
+  if (decoded == null || !decoded.pair) {
     return { success: false, badToken: true };
   }
 
-  if (device.account_id != 0) {
+  if (device.account_id !== 0) {
     return { success: false, alreadyPaired: true, dongle_id: device.dongle_id };
   }
   return await pairDeviceToAccountId(device.dongle_id, account.id);
@@ -97,8 +96,7 @@ async function setDeviceNickname(account, dongleId, nickname) {
 }
 
 async function getDevices(accountId) {
-  const devices = await models_orm.models.device.findAll({ where: { account_id: accountId } });
-  return devices;
+  return await models_orm.models.device.findAll({ where: { account_id: accountId } });
 }
 
 async function getDeviceFromDongle(dongleId) {
@@ -118,9 +116,7 @@ async function setIgnoredUploads(dongleId, isIgnored) {
 }
 
 async function getAllDevicesFiltered() {
-  const devices = await models_orm.models.device.findAll();
-
-  return devices;
+  return await models_orm.models.device.findAll();
 }
 
 async function updateLastPing(device_id, dongle_id) {
@@ -185,30 +181,27 @@ async function getCrashlogs(dongle_id) {
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
 
   const crashlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
-  var crashlogFiles = [];
-  if (crashlogDirectoryTree != undefined) {
-    for (let i = 0; i < crashlogDirectoryTree.children.length; i++) {
-      const timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-      let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
-      if (timeString.indexOf('_') > 0) {
-        timeString = timeString.split('_')[0];
-      }
-
-      let dateObj = null;
-      try {
-        dateObj = Date.parse(timeString);
-      } catch (exception) {}
-      if (!dateObj) dateObj = new Date(0);
-
-      crashlogFiles.push({
-        name: crashlogDirectoryTree.children[i].name,
-        size: crashlogDirectoryTree.children[i].size,
-        date: dateObj,
-        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/crash/${crashlogDirectoryTree.children[i].name}`,
-      });
+  const crashlogFiles = (crashlogDirectoryTree?.children || []).map((file) => {
+    const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
+    let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
+    if (timeString.indexOf('_') > 0) {
+      timeString = timeString.split('_')[0];
     }
-    crashlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
-  }
+
+    let dateObj = null;
+    try {
+      dateObj = Date.parse(timeString);
+    } catch (exception) {}
+    if (!dateObj) dateObj = new Date(0);
+
+    return {
+      name: file.name,
+      size: file.size,
+      date: dateObj,
+      permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/crash/${file.name}`,
+    };
+  });
+  crashlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
   return crashlogFiles;
 }
 
@@ -216,28 +209,24 @@ async function getBootlogs(dongle_id) {
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongle_id).digest('hex');
 
   const bootlogDirectoryTree = dirTree(`${config.storagePath}${dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
-  var bootlogFiles = [];
-  if (bootlogDirectoryTree !== undefined) {
-    for (let i = 0; i < bootlogDirectoryTree.children.length; i++) {
-      const timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
-      const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
+  const bootlogFiles = (bootlogDirectoryTree?.children || []).map((file) => {
+    const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('\.bz2', '').split('--');
+    const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
 
-      let dateObj = null;
-      try {
-        dateObj = Date.parse(timeString);
-      } catch (exception) {}
-      if (!dateObj) dateObj = new Date(0);
+    let dateObj = null;
+    try {
+      dateObj = Date.parse(timeString);
+    } catch (exception) {}
+    if (!dateObj) dateObj = new Date(0);
 
-      bootlogFiles.push({
-        name: bootlogDirectoryTree.children[i].name,
-        size: bootlogDirectoryTree.children[i].size,
-        date: dateObj,
-        permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${bootlogDirectoryTree.children[i].name}`,
-      });
-    }
-    bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
-  }
-
+    return {
+      name: file.name,
+      size: file.size,
+      date: dateObj,
+      permalink: `${config.baseDriveDownloadUrl}${dongle_id}/${dongleIdHash}/boot/${file.name}`,
+    };
+  })
+  bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
   return bootlogFiles;
 }
 

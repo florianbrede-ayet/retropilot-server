@@ -419,10 +419,10 @@ router.get('/v1.4/:dongleId/upload_url/', upload);
 
 // DEVICE REGISTRATION OR RE-ACTIVATION
 router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (req, res) => {
-  var imei1 = req.query.imei;
-  var { serial } = req.query;
-  var { public_key } = req.query;
-  var { register_token } = req.query;
+  const imei1 = req.query.imei;
+  const { serial } = req.query;
+  const { public_key } = req.query;
+  const { register_token } = req.query;
 
   if (serial == null || serial.length < 5 || public_key == null || public_key.length < 5 || register_token == null || register_token.length < 5) {
     logger.error(`HTTP.V2.PILOTAUTH a required parameter is missing or empty ${JSON.stringify(req.query)}`);
@@ -430,7 +430,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     res.send('Malformed Request.');
     return;
   }
-  var decoded = await controllers.authentication.validateJWT(req.query.register_token, public_key);
+  const decoded = await controllers.authentication.validateJWT(req.query.register_token, public_key);
 
   if (decoded == null || decoded.register == undefined) {
     logger.error(`HTTP.V2.PILOTAUTH JWT token is invalid (${JSON.stringify(decoded)})`);
@@ -443,7 +443,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
   if (device == null) {
     logger.info(`HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (${imei1}, ${serial})`);
     while (true) {
-      var dongleId = crypto.randomBytes(4).toString('hex');
+      const dongleId = crypto.randomBytes(4).toString('hex');
       const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
       if (isDongleIdTaken == null) {
         const resultingDevice = await models.__db.run(
@@ -493,11 +493,11 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
 
 // RETRIEVES DATASET FOR OUR MODIFIED CABANA - THIS RESPONSE IS USED TO FAKE A DEMO ROUTE
 router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(async (req, res) => {
-  var params = req.params.extendedRouteIdentifier.split('|');
-  var dongleId = params[0];
-  var dongleIdHashReq = params[1];
-  var driveIdentifier = params[2];
-  var driveIdentifierHashReq = params[3];
+  const params = req.params.extendedRouteIdentifier.split('|');
+  const dongleId = params[0];
+  const dongleIdHashReq = params[1];
+  const driveIdentifier = params[2];
+  const driveIdentifierHashReq = params[3];
 
   const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
 
@@ -507,9 +507,9 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
     return;
   }
 
-  var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
-  var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
-  var driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
+  const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
+  const driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
   if (dongleIdHash != dongleIdHashReq || driveIdentifierHash != driveIdentifierHashReq) {
     res.status(200);
@@ -523,9 +523,9 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
     return;
   }
 
-  var logUrls = [];
+  const logUrls = [];
 
-  for (var i = 0; i <= drive.max_segment; i++) {
+  for (let i = 0; i <= drive.max_segment; i++) {
     logUrls.push(`${driveUrl}/${i}/rlog.bz2`);
   }
 

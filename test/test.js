@@ -1,5 +1,5 @@
-var request = require('supertest');
-var server = require('../server');
+const request = require('supertest');
+const server = require('../server');
 const config = require('../config');
 
 // TODO better way to only run tests once server is up

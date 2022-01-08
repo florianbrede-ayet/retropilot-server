@@ -1,4 +1,4 @@
-var config = {
+const config = {
   applicationSalt: 'RANDOM_SEED',
 
   databaseFile: 'database.sqlite',

@@ -1,5 +1,4 @@
 const WebSocket = require('ws');
-const fs = require('fs');
 const cookie = require('cookie');
 const jsonwebtoken = require('jsonwebtoken');
 const httpsServer = require('https');

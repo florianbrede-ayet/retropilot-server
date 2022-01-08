@@ -1,9 +1,4 @@
 const router = require('express').Router();
-const bodyParser = require('body-parser');
-const crypto = require('crypto');
-const { route } = require('../../server');
-const config = require('../../config');
-const deviceController = require('../../controllers/devices');
 
 function runAsyncWrapper(callback) {
   return function (req, res, next) {
@@ -86,10 +81,7 @@ router.get('/admin/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(as
       break;
     default:
       return res.json({ error: true, msg: 'MISSING DATA' });
-      break;
   }
-
-  if (ignore === null) { return; }
 
   await controllers.devices.setIgnoredUploads(req.params.dongle_id);
   return res.status(200).json({ success: true });
