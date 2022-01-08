@@ -1,69 +1,65 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const config = require('./../config');
+var cookieParser = require('cookie-parser');
+const config = require('../config');
 
 // TODO Remove this, pending on removing all auth logic from routes
-var cookieParser = require('cookie-parser')
-router.use(cookieParser())
+router.use(cookieParser());
 
 function runAsyncWrapper(callback) {
-    return function (req, res, next) {
-        callback(req, res, next)
-            .catch(next)
-    }
+  return function (req, res, next) {
+    callback(req, res, next)
+      .catch(next);
+  };
 }
 
 let models;
 let controllers;
 let logger;
 
+router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
+  const signIn = await controllers.authentication.signIn(req.body.email, req.body.password);
 
-router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    const signIn = await controllers.authentication.signIn(req.body.email, req.body.password)
-
-    if (signIn.success) {
-        res.cookie('jwt', signIn.jwt);
-        res.redirect('/useradmin/overview');
-    } else {
-        res.redirect('/useradmin?status=' + encodeURIComponent('Invalid credentials or banned account'));
-    }
-}))
-
+  if (signIn.success) {
+    res.cookie('jwt', signIn.jwt);
+    res.redirect('/useradmin/overview');
+  }
+  else {
+    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid credentials or banned account')}`);
+  }
+}));
 
 router.get('/retropilot/0/useradmin/signout', runAsyncWrapper(async (req, res) => {
-    res.clearCookie('session');
-    return res.json({success: true});
-}))
-
+  res.clearCookie('session');
+  return res.json({ success: true });
+}));
 
 router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
-    const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
-    const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
-    const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
+  const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
+  const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
+  const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
 
-    res.send({
-        success: true,
-        data: {
-            serverStats: {
-                config: {
-                    registerAllowed: config.allowAccountRegistration,
-                    welcomeMessage: config.welcomeMessage,
-                },
-                accounts: accounts.num,
-                devices: devices.num,
-                drives: drives.num,
-                storageUsed: await controllers.storage.getTotalStorageUsed()
-            }
-        }
-    }).status(200);
-}))
-
+  res.send({
+    success: true,
+    data: {
+      serverStats: {
+        config: {
+          registerAllowed: config.allowAccountRegistration,
+          welcomeMessage: config.welcomeMessage
+        },
+        accounts: accounts.num,
+        devices: devices.num,
+        drives: drives.num,
+        storageUsed: await controllers.storage.getTotalStorageUsed()
+      }
+    }
+  }).status(200);
+}));
 
 /*
     Requires username and password to register
  */
-
 
 /*
 router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
@@ -167,78 +163,80 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 */
 
 router.get('/retropilot/0/overview', runAsyncWrapper(async (req, res) => {
-    let account = await controllers.authentication.getAuthenticatedAccount(req, res);
-    if (account == null) {
-        res.send({success: false, data: {session: false}})
+  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  if (account == null) {
+    res.send({ success: false, data: { session: false } });
 
-        return;
+    return;
+  }
+
+  const devices = await models.__db.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id);
+
+  // TODO implement a _safe_ get account for these use cases to allow for data to be stripped prior to sending to the client.
+  delete (account.email_verify_token);
+  res.json({
+    success: true,
+    data: {
+      account,
+      devices
     }
 
-    const devices = await models.__db.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id)
-
-    // TODO implement a _safe_ get account for these use cases to allow for data to be stripped prior to sending to the client.
-    delete(account.email_verify_token);
-    res.json({
-        success: true,
-        data: {
-            account: account,
-            devices: devices,
-        }
-
-    }).status(200)
-}))
-
+  }).status(200);
+}));
 
 router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
-    if (account == null) {
-        return res.json({success: false, data: {session: false}}).status(403)
-    }
+  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  if (account == null) {
+    return res.json({ success: false, data: { session: false } }).status(403);
+  }
 
-    const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
+  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
 
-    if (device == null) {
-        return res.json({success: false}).status(400);
-    }
+  if (device == null) {
+    return res.json({ success: false }).status(400);
+  }
 
-    const result = await models.__db.run(
-        'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-        0,
-        req.params.dongleId
-    );
+  const result = await models.__db.run(
+    'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
+    0,
+    req.params.dongleId
+  );
 
-    res.json({success: true, data: {unlink: true}})
-}))
+  res.json({ success: true, data: { unlink: true } });
+}));
 
-router.post('/retropilot/0/pair_device', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
-    if (account == null) {
-        res.json({success: false, msg: 'UNAUTHORISED', status: 403})
-    }
+router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
+  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  if (account == null) {
+    res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
+  }
 
-    const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
+  const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
 
-    if (pairDevice.success === true) {
-        res.json({success: true, msg: 'Paired', status: 200, data: pairDevice})
-    } else {
-        res.json({success: false, msg:'error', data: pairDevice})
-    }
-}))
+  if (pairDevice.success === true) {
+    res.json({
+      success: true, msg: 'Paired', status: 200, data: pairDevice
+    });
+  }
+  else {
+    res.json({ success: false, msg: 'error', data: pairDevice });
+  }
+}));
 
+router.post('/retropilot/0/password/change', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
+  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  if (account == null) {
+    res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
+  }
 
-router.post('/retropilot/0/password/change', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
-    if (account == null) {
-        res.json({success: false, msg: 'UNAUTHORISED', status: 403})
-    }
+  const pwChange = await controllers.authentication.changePassword(account, req.body.newPassword, req.body.oldPassword);
 
-    const pwChange = await controllers.authentication.changePassword(account, req.body.newPassword, req.body.oldPassword);
-
-    if (pwChange.success === true) {
-        res.json({success: true})
-    } else {
-        res.json({success: false, data: pwChange});
-    }
+  if (pwChange.success === true) {
+    res.json({ success: true });
+  }
+  else {
+    res.json({ success: false, data: pwChange });
+  }
 }));
 
 /*
@@ -257,7 +255,6 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
         res.send('Unauthorized.');
         return;
     }
-
 
     const drives = await models.__db.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
 
@@ -295,7 +292,6 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
         crashlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
     }
 
-
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
 
         `
@@ -331,7 +327,6 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     }
     response += `</table><br><br>`;
 
-
     response += `<b>Drives (non-preserved drives expire ` + config.deviceDriveExpirationDays + ` days after upload):</b><br>
         <table border=1 cellpadding=2 cellspacing=2>
         <tr><th>identifier</th><th>filesize</th><th>duration</th><th>distance_meters</th><th>upload_complete</th><th>is_processed</th><th>upload_date</th><th>actions</th></tr>
@@ -352,7 +347,6 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     res.send(response);
 
 }))
-
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
     const account = await controllers.authentication.getAuthenticatedAccount(req, res);
@@ -429,7 +423,6 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
 
     const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
 
-
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
         `
                 <a href="/useradmin/device/` + device.dongle_id + `">< < < Back To Device ` + device.dongle_id + `</a>
@@ -450,14 +443,12 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                     <tr><th>segment</th><th>qcamera</th><th>qlog</th><th>fcamera</th><th>rlog</th><th>dcamera</th><th>processed</th><th>stalled</th></tr>
                 `;
 
-
     var directorySegments = {};
     for (var i in directoryTree.children) {
         // skip any non-directory entries (for example m3u8 file in the drive directory)
         if (directoryTree.children[i].type != 'directory') continue;
 
         var segment = directoryTree.children[i].name;
-
 
         var qcamera = '--';
         var fcamera = '--';
@@ -512,9 +503,9 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
 */
 
 module.exports = (_models, _controllers, _logger) => {
-    models = _models;
-    controllers = _controllers;
-    logger = _logger;
+  models = _models;
+  controllers = _controllers;
+  logger = _logger;
 
-    return router;
-}
+  return router;
+};

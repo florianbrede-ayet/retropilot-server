@@ -1,29 +1,26 @@
-function log() {
-return true;
-}
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable global-require */
 
 const { Sequelize } = require('sequelize');
+
 const sequelize = new Sequelize({
-	dialect: 'sqlite',
-	storage: 'database.sqlite',
-	logging: () => {console.log("FUCK OFF")}
-	
-	
+  dialect: 'sqlite',
+  storage: 'database.sqlite'
 });
 
-sequelize.options.logging = (eee) => {console.log("EEEEE")}
+sequelize.options.logging = () => {};
 
 const modelDefiners = [
-	require('./devices.model'),
-	require('./drives.model'),
-	require('./users.model'),
-	require('./athena_action_log.model'),
-	require('./athena_returned_data.model'),
-	require('./device_authorised_users.model'),
+  require('./devices.model'),
+  require('./drives.model'),
+  require('./users.model'),
+  require('./athena_action_log.model'),
+  require('./athena_returned_data.model'),
+  require('./device_authorised_users.model')
 ];
 
 for (const modelDefiner of modelDefiners) {
-	modelDefiner(sequelize);
+  modelDefiner(sequelize);
 }
 
 module.exports = sequelize;

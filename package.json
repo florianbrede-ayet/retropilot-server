@@ -13,6 +13,7 @@
   "dependencies": {
     "@commaai/log_reader": "^0.9.0",
     "@sendgrid/client": "^7.4.3",
+    "body-parser": "^1.19.1",
     "chai": "^4.3.4",
     "chai-http": "^4.3.0",
     "cookie": "^0.4.1",
@@ -45,5 +46,40 @@
     "uuid": "^8.3.2",
     "websocket": "^1.0.34",
     "ws": "^8.2.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.6.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25.4"
+  },
+  "eslintConfig": {
+    "extends": "airbnb-base",
+    "env": {
+      "es6": true,
+      "browser": false
+    },
+    "rules": {
+      "linebreak-style": [
+        "error",
+        "windows"
+      ],
+      "brace-style": [
+        "error",
+        "stroustrup"
+      ],
+      "comma-dangle": [
+        "error",
+        "never"
+      ],
+      "no-unused-vars": [
+        "warn"
+      ],
+      "no-var": [
+        "off"
+      ],
+      "one-var": [
+        "off"
+      ]
+    }
   }
 }
