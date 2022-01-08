@@ -14,7 +14,8 @@
 
     // TODO: fix and remove
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
-    "no-var": ["off"],
-    "one-var": ["off"]
+    "no-var": "off",
+    "one-var": "off",
+    "no-await-in-loop": "off"
   }
 }
