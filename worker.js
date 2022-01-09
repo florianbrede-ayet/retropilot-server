@@ -149,7 +149,6 @@ async function dbProtectedRun() {
         break;
       }
       await new Promise((r) => setTimeout(r, 1000));
-      continue;
     }
   }
   logger.error(`unable to complete dbProtectedRun for ${arguments}`);
@@ -168,7 +167,6 @@ async function dbProtectedGet() {
         break;
       }
       await new Promise((r) => setTimeout(r, 1000));
-      continue;
     }
   }
   logger.error(`unable to complete dbProtectedGet for ${arguments}`);
@@ -187,7 +185,6 @@ async function dbProtectedAll() {
         break;
       }
       await new Promise((r) => setTimeout(r, 1000));
-      continue;
     }
   }
   logger.error(`unable to complete dbProtectedGet for ${arguments}`);

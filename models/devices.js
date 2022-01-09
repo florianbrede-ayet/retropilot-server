@@ -1,7 +1,7 @@
 let db;
 
 async function getDeviceFromDongleId(email) {
-  return await db.run('SELECT * FROM devices WHERE dongle_id', Date.now(), email);
+  return db.run('SELECT * FROM devices WHERE dongle_id', Date.now(), email);
 }
 
 module.exports = (_db) => {

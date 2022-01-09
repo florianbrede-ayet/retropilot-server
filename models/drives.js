@@ -5,11 +5,11 @@ function getDrives(dongleId) {
 }
 
 async function getDevice(dongleId) {
-  return await db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+  return db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
 }
 
 async function deviceCheckIn(dongleId) {
-  return await db.run(
+  return db.run(
     'UPDATE devices SET last_ping = ? WHERE dongle_id = ?',
     Date.now(),
     dongleId,
