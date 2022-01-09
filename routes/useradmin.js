@@ -1,4 +1,3 @@
-/* eslint-disable */
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
@@ -11,7 +10,7 @@ const config = require('../config');
 router.use(cookieParser());
 
 function runAsyncWrapper(callback) {
-  return function wrapper (req, res, next) {
+  return function wrapper(req, res, next) {
     callback(req, res, next)
       .catch(next);
   };
@@ -76,30 +75,24 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
 }));
 
 router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  if (!req.body.hasOwnProperty('email') || req.body.email === '') {
-    res.status(400);
-    res.send('Malformed Request');
+  const { email } = req.body;
+  if (!email) {
     logger.warn('/useradmin/register/token - Malformed Request!');
-    return;
+    return res.status(400).send('Malformed Request');
   }
 
-  const { email } = req.body;
-
   if (!config.allowAccountRegistration) {
-    res.send('Unauthorized.').status(401);
-    return;
+    return res.status(401).send('Unauthorized.');
   }
 
   const authAccount = await controllers.authentication.getAuthenticatedAccount(req);
   if (authAccount != null) {
-    res.redirect('/useradmin/overview');
-    return;
+    return res.redirect('/useradmin/overview');
   }
 
   const account = await models.__db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', email.trim().toLowerCase());
   if (account != null) {
-    res.redirect(`/useradmin/register?status=${encodeURIComponent('Email is already registered')}`);
-    return;
+    return res.redirect(`/useradmin/register?status=${encodeURIComponent('Email is already registered')}`);
   }
 
   const token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
@@ -110,33 +103,28 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
     const emailStatus = await controllers.mailing.sendEmailVerification(token, email);
-  } else { // final registration form filled
-    if (req.body.token !== token) {
-      infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
-    } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
-      infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
-    } else {
-      const result = await models.__db.run(
-        'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
-        email,
-        crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
-        Date.now(),
-        false,
-      );
+  } else if (req.body.token !== token) {
+    infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
+  } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
+    infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
+  } else {
+    const result = await models.__db.run(
+      'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
+      email,
+      crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
+      Date.now(),
+      false,
+    );
 
-      if (result.lastID) {
-        logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
-
-        res.redirect(`/useradmin?status=${encodeURIComponent('Successfully registered')}`);
-        return;
-      }
-      logger.error(`USERADMIN REGISTRATION - account creation failed, resulting account data for email ${email} is: ${result}`);
-      infoText = 'Unable to complete account registration (database error).<br><br>';
+    if (result.lastID) {
+      logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
+      return res.redirect(`/useradmin?status=${encodeURIComponent('Successfully registered')}`);
     }
+    logger.error(`USERADMIN REGISTRATION - account creation failed, resulting account data for email ${email} is: ${result}`);
+    infoText = 'Unable to complete account registration (database error).<br><br>';
   }
 
-  res.status(200);
-  res.send(`<html style="font-family: monospace">
+  return res.status(200).send(`<html style="font-family: monospace">
     <h2>Welcome To The RetroPilot Server Dashboard!</h2>
     <a href="/useradmin">< < < Back To Login</a>
     <br><br>
@@ -154,19 +142,15 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
 
 router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
   if (!config.allowAccountRegistration) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account != null) {
-    res.redirect('/useradmin/overview');
-    return;
+    return res.redirect('/useradmin/overview');
   }
 
-  res.status(200);
-  res.send(`<html style="font-family: monospace">
+  return res.status(200).send(`<html style="font-family: monospace">
     <h2>Welcome To The RetroPilot Server Dashboard!</h2>
     <a href="/useradmin">< < < Back To Login</a>
     <br><br>
@@ -182,8 +166,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
-    return;
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
   const devices = await models.__db.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id);
@@ -200,15 +183,17 @@ router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
         <tr><th>dongle_id</th><th>device_type</th><th>created</th><th>last_ping</th><th>storage_used</th></tr>
 `;
 
-  for (const i in devices) {
+  // add each device to the table of dongles
+  devices.forEach((device) => {
     response += `<tr>
-    <td><a href="/useradmin/device/${devices[i].dongle_id}">${devices[i].dongle_id}</a></td>
-    <td>${devices[i].device_type}</td>
-    <td>${controllers.helpers.formatDate(devices[i].created)}</td>
-    <td>${controllers.helpers.formatDate(devices[i].last_ping)}</td>
-    <td>${devices[i].storage_used} MB</td>
+    <td><a href="/useradmin/device/${device.dongle_id}">${device.dongle_id}</a></td>
+    <td>${device.device_type}</td>
+    <td>${controllers.helpers.formatDate(device.created)}</td>
+    <td>${controllers.helpers.formatDate(device.last_ping)}</td>
+    <td>${device.storage_used} MB</td>
 </tr>`;
-  }
+  });
+
   response += `</table>
 <br>
 <hr/>
@@ -225,19 +210,17 @@ ${req.query.linkstatus !== undefined ? `<br><u>${htmlspecialchars(req.query.link
 
   response += `<br>${config.welcomeMessage}</html>`;
 
-  res.status(200);
-  res.send(response);
+  return res.status(200).send(response);
 }));
 
 router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
-    return;
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  res.redirect('/useradmin/overview');
-}))
+  return res.redirect('/useradmin/overview');
+}));
 
 router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
@@ -247,7 +230,6 @@ router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }),
   }
 
   const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
-
   if (pairDevice.success === true) {
     res.redirect('/useradmin/overview');
   } else if (pairDevice.registered === true) {
@@ -264,18 +246,16 @@ router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }),
 }));
 
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
+  const { dongleId } = req.params;
+
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
-    return;
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
-
+  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, dongleId);
   if (device == null) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
   const drives = await models.__db.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
@@ -338,12 +318,13 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
             <th>actions</th>
           </tr>`;
 
-  for (const i in drives) {
+  // add each drive to the table
+  drives.forEach((drive) => {
     let vehicle = '';
     let version = '';
     let metadata = {};
     try {
-      metadata = JSON.parse(drives[i].metadata);
+      metadata = JSON.parse(drive.metadata);
       if (metadata.InitData && metadata.InitData.Version) {
         version = htmlspecialchars(metadata.InitData.Version);
       }
@@ -355,10 +336,27 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
           vehicle += htmlspecialchars(metadata.CarParams.CarFingerprint.toUpperCase());
         }
       }
-    } catch (exception) {}
+    } catch (exception) {
+      // do nothing
+    }
 
-    response += `<tr><td><a href="/useradmin/drive/${drives[i].dongle_id}/${drives[i].identifier}">${drives[i].is_preserved ? '<b>' : ''}${drives[i].identifier}${drives[i].is_preserved ? '</b>' : ''}</a></td><td>${vehicle}</td><td>${version}</td><td>${Math.round(drives[i].filesize / 1024)} MiB</td><td>${controllers.helpers.formatDuration(drives[i].duration)}</td><td>${Math.round(drives[i].distance_meters / 1000)} km</td><td>${drives[i].upload_complete}</td><td>${drives[i].is_processed}</td><td>${controllers.helpers.formatDate(drives[i].created)}</td><td>` + `[<a href="/useradmin/drive/${drives[i].dongle_id}/${drives[i].identifier}/delete" onclick="return confirm('Permanently delete this drive?')">delete</a>]${drives[i].is_preserved ? '' : `&nbsp;&nbsp;[<a href="/useradmin/drive/${drives[i].dongle_id}/${drives[i].identifier}/preserve">preserve</a>]`}</tr>`;
-  }
+    response += `<tr>
+    <td><a href="/useradmin/drive/${drive.dongle_id}/${drive.identifier}">${drive.is_preserved ? '<b>' : ''}${drive.identifier}${drive.is_preserved ? '</b>' : ''}</a></td>
+    <td>${vehicle}</td>
+    <td>${version}</td>
+    <td>${Math.round(drive.filesize / 1024)} MiB</td>
+    <td>${controllers.helpers.formatDuration(drive.duration)}</td>
+    <td>${Math.round(drive.distance_meters / 1000)} km</td>
+    <td>${drive.upload_complete}</td>
+    <td>${drive.is_processed}</td>
+    <td>${controllers.helpers.formatDate(drive.created)}</td>
+    <td>
+        [<a href="/useradmin/drive/${drive.dongle_id}/${drive.identifier}/delete" onclick="return confirm('Permanently delete this drive?')">delete</a>]
+        ${drive.is_preserved ? '' : `[<a href="/useradmin/drive/${drive.dongle_id}/${drive.identifier}/preserve">preserve</a>]`}
+    </td>
+</tr>`;
+  });
+
   response += `    </table>
     <br>
     <hr/>
@@ -368,74 +366,57 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <a href="/useradmin/signout">Sign Out</a>
 </html>`;
 
-  res.status(200);
-  res.send(response);
+  return res.status(200).send(response);
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
-    return;
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
   const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
-
   if (device == null) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
   const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
-
   if (drive == null) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
-  if (req.params.action === 'delete') {
-    const result = await models.__db.run(
+  const { action } = req.params;
+  if (action === 'delete') {
+    await models.__db.run(
       'UPDATE drives SET is_deleted = ? WHERE id = ?',
       true,
-
       drive.id,
     );
-  } else if (req.params.action === 'preserve') {
-    const result = await models.__db.run(
+  } else if (action === 'preserve') {
+    await models.__db.run(
       'UPDATE drives SET is_preserved = ? WHERE id = ?',
       true,
-
       drive.id,
     );
   }
 
-  res.redirect(`/useradmin/device/${device.dongle_id}`);
+  return res.redirect(`/useradmin/device/${device.dongle_id}`);
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
-
   if (account == null) {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
-    return;
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
   const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
-
   if (device == null) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
   const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
-
   if (drive == null) {
-    res.status(400);
-    res.send('Unauthorized.');
-    return;
+    return res.status(400).send('Unauthorized.');
   }
 
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
@@ -454,6 +435,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
   let gitBranch = '';
   let gitCommit = '';
   let metadata = {};
+  let carParams = '';
   try {
     metadata = JSON.parse(drive.metadata);
     if (metadata.InitData) {
@@ -478,10 +460,12 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
       if (metadata.CarParams.CarFingerprint) {
         vehicle += htmlspecialchars(metadata.CarParams.CarFingerprint.toUpperCase());
       }
-    }
-  } catch (exception) {}
 
-  const directoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`);
+      carParams = JSON.stringify(metadata.CarParams, null, 2).replace(/\r?\n|\r/g, '<br>');
+    }
+  } catch (exception) {
+    // do nothing
+  }
 
   let response = `<html style="font-family: monospace">
     <head>
@@ -526,7 +510,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
             document.getElementById('car-parameter-div').style.display = 'none'; 
             return false;">Hide</a>
             
-            <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">${JSON.stringify(metadata && metadata.CarParams || {}, null, 2).replace(/\r?\n|\r/g, '<br>')}</pre>
+            <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">${carParams}</pre>
         <br>
 
         <b>Preview <span id="current_preview_segment"></span>:</b>
@@ -585,56 +569,60 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <table border=1 cellpadding=2 cellspacing=2>
             <tr><th>segment</th><th>qcamera</th><th>qlog</th><th>fcamera</th><th>rlog</th><th>dcamera</th><th>processed</th><th>stalled</th></tr>`;
 
+  const directoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`);
+
   const directorySegments = {};
-  for (const i in directoryTree.children) {
+  await Promise.all(directoryTree.children
     // skip any non-directory entries (for example m3u8 file in the drive directory)
-    if (directoryTree.children[i].type !== 'directory') continue;
+    .filter((file) => file.type === 'directory')
+    .map(async (directory) => {
+      const segment = directory.name;
 
-    const segment = directoryTree.children[i].name;
+      // generate file links
+      const files = {
+        qcamera: '--',
+        fcamera: '--',
+        dcamera: '--',
+        qlog: '--',
+        rlog: '--',
+      };
+      directory.children
+        .filter((file) => file.name in files)
+        .forEach((file) => {
+          files[file.name] = `<a target="_blank" href="${driveUrl}${segment}/${file.name}">${file.name}</a>`;
+        });
 
-    let qcamera = '--';
-    let fcamera = '--';
-    let dcamera = '--';
-    let qlog = '--';
-    let rlog = '--';
-    for (const c in directoryTree.children[i].children) {
-      if (directoryTree.children[i].children[c].name === 'fcamera.hevc') fcamera = `<a target="_blank" href="${driveUrl}${segment}/${directoryTree.children[i].children[c].name}">${directoryTree.children[i].children[c].name}</a>`;
-      if (directoryTree.children[i].children[c].name === 'dcamera.hevc') dcamera = `<a target="_blank" href="${driveUrl}${segment}/${directoryTree.children[i].children[c].name}">${directoryTree.children[i].children[c].name}</a>`;
-      if (directoryTree.children[i].children[c].name === 'qcamera.ts') qcamera = `<a target="_blank" href="${driveUrl}${segment}/${directoryTree.children[i].children[c].name}">${directoryTree.children[i].children[c].name}</a>`;
-      if (directoryTree.children[i].children[c].name === 'qlog.bz2') qlog = `<a target="_blank" href="${driveUrl}${segment}/${directoryTree.children[i].children[c].name}">${directoryTree.children[i].children[c].name}</a>`;
-      if (directoryTree.children[i].children[c].name === 'rlog.bz2') rlog = `<a target="_blank" href="${driveUrl}${segment}/${directoryTree.children[i].children[c].name}">${directoryTree.children[i].children[c].name}</a>`;
-    }
+      // get processed/stalled status
+      let isProcessed = '?';
+      let isStalled = '?';
+      const driveSegment = await models.__db.get(
+        'SELECT * FROM drive_segments WHERE segment_id = ? AND drive_identifier = ? AND dongle_id = ?',
+        parseInt(segment, 10),
+        drive.identifier,
+        device.dongle_id,
+      );
+      if (driveSegment) {
+        isProcessed = driveSegment.is_processed;
+        isStalled = driveSegment.is_stalled;
+      }
 
-    let isProcessed = '?';
-    let isStalled = '?';
-
-    const drive_segment = await models.__db.get(
-      'SELECT * FROM drive_segments WHERE segment_id = ? AND drive_identifier = ? AND dongle_id = ?',
-      parseInt(segment, 10),
-      drive.identifier,
-      device.dongle_id,
-    );
-
-    if (drive_segment) {
-      isProcessed = drive_segment.is_processed;
-      isStalled = drive_segment.is_stalled;
-    }
-
-    directorySegments[`seg-${segment}`] = `<tr><td>${segment}</td><td>${qcamera}</td><td>${qlog}</td><td>${fcamera}</td><td>${rlog}</td><td>${dcamera}</td><td>${isProcessed}</td><td>${isStalled}</td></tr>`;
-  }
+      directorySegments[`seg-${segment}`] = `<tr>
+    <td>${segment}</td>
+    <td>${files.qcamera}</td>
+    <td>${files.qlog}</td>
+    <td>${files.fcamera}</td>
+    <td>${files.rlog}</td>
+    <td>${files.dcamera}</td>
+    <td>${isProcessed}</td>
+    <td>${isStalled}</td>
+</tr>`;
+    }));
 
   for (let i = 0; i <= drive.max_segment; i++) {
-    if (!directorySegments[`seg-${i}`]) {
-      const qcamera = '--';
-      const fcamera = '--';
-      const dcamera = '--';
-      const qlog = '--';
-      const rlog = '--';
-      const isProcessed = '?';
-      const isStalled = '?';
-      response += `<tr><td>${i}</td><td>${qcamera}</td><td>${qlog}</td><td>${fcamera}</td><td>${rlog}</td><td>${dcamera}</td><td>${isProcessed}</td><td>${isStalled}</td></tr>`;
-    } else {
+    if (directorySegments[`seg-${i}`]) {
       response += directorySegments[`seg-${i}`];
+    } else {
+      response += `<tr><td>${i}</td><td>--</td><td>--</td><td>--</td><td>--</td><td>--</td><td>?</td><td>?</td></tr>`;
     }
   }
 
@@ -643,8 +631,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
                 <hr/>
                 <a href="/useradmin/signout">Sign Out</a></body></html>`;
 
-  res.status(200);
-  res.send(response);
+  return res.status(200).send(response);
 }));
 
 module.exports = (_models, _controllers, _logger) => {
