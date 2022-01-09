@@ -52,7 +52,7 @@ router.get('/dongle/:dongle_id/connected', async (req, res) => {
     });
   }
 
-  const deviceConnected = await req.athenaWebsocketTemp.isDeviceConnected(device.id, account.id, device.dongle_id);
+  const deviceConnected = await req.athenaWebsocketTemp.isDeviceConnected(account.id, device.id, device.dongle_id);
 
   return res.status(200).json({
     success: true, dongle_id: device.dongle_id, data: deviceConnected,
