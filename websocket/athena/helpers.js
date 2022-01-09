@@ -6,11 +6,11 @@ const orm = require('../../models/index.model');
 let realtime;
 
 async function incoming(ws, res, msg) {
-  realtime.passData(ws.dongleId, msg);
+  return realtime.passData(ws.dongleId, msg);
 }
 
 async function deviceStatus(dongleId, status) {
-  realtime.dongleStatus(dongleId, status);
+  return realtime.dongleStatus(dongleId, status);
 }
 
 function invoke(command, params, dongleId, accountId, id) {

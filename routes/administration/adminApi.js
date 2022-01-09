@@ -1,40 +1,50 @@
 const router = require('express').Router();
 
 function runAsyncWrapper(callback) {
-  return function (req, res, next) {
+  return function wrapper(req, res, next) {
     callback(req, res, next)
       .catch(next);
   };
 }
 
+/* eslint-disable no-unused-vars */
 let models;
 let controllers;
 let logger;
+/* eslint-enable no-unused-vars */
 
 // probs should put middleware somewhere else
 router.use(async (req, res, next) => {
   const currentAdmin = await controllers.admin.isCurrentUserAdmin(true, req);
-  if (currentAdmin.isAdmin === false) {
-    return res.status(402).json({ error: true, msg: 'NOT AUTHORISED', status: 403 }).end();
+  if (!currentAdmin.account) {
+    return res.status(401).json({ error: true, msg: 'UNAUTHORISED', status: 401 }).end();
   }
-  next();
+  if (!currentAdmin.isAdmin) {
+    return res.status(403).json({ error: true, msg: 'FORBIDDEN', status: 403 }).end();
+  }
+  return next();
 });
 
 // TODO
 
 router.get('/user/:userId/ban/:ban', runAsyncWrapper(async (req, res) => {
   const banResult = await controllers.admin.banAccount(req.params.ban, req.params.userId);
-  if (banResult.hasOwnProperty('success') && banResult.success === true) {
-    res.status(200).json(banResult);
-  } else {
-    res.status(500).json(banResult);
+  if (!banResult.success) {
+    return res.status(500).json(banResult);
   }
+
+  return res.status(200).json(banResult);
 }));
 
 router.get('/user/:userId/get/devices', runAsyncWrapper(async (req, res) => {
-  if (!req.params.userId) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
+  if (!req.params.userId) {
+    return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 });
+  }
 
-  return res.status(200).json({ success: true, data: controllers.devices.getDevices(req.params.userId) });
+  return res.status(200).json({
+    success: true,
+    data: controllers.devices.getDevices(req.params.userId),
+  });
 }));
 
 router.get('/user/', runAsyncWrapper(async (req, res) => {
@@ -44,16 +54,22 @@ router.get('/user/', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/device/:dongle_id', runAsyncWrapper(async (req, res) => {
-  if (!req.params.dongle_id) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
+  const { dongle_id: dongleId } = req.params;
+  if (!dongleId) {
+    return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 });
+  }
 
-  return res.status(200).json({ success: true, data: await controllers.devices.getDeviceFromDongle(req.params.dongle_id) });
+  const device = await controllers.devices.getDeviceFromDongle(dongleId);
+  return res.status(200).json({ success: true, data: device });
 }));
 
 router.get('/device/:dongle_id/pair/:user_id', runAsyncWrapper(async (req, res) => {
-  if (!req.params.dongle_id || !req.params.user_id) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
+  const { dongle_id: dongleId, user_id: userId } = req.params;
+  if (!dongleId || !userId) {
+    return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 });
+  }
 
-  const pairDeviceToAccountId = await controllers.devices.pairDeviceToAccountId(req.params.dongle_id, req.params.user_id);
-
+  const pairDeviceToAccountId = await controllers.devices.pairDeviceToAccountId(dongleId, userId);
   return res.status(200).json(pairDeviceToAccountId);
 }));
 
@@ -64,31 +80,30 @@ router.get('/device', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(async (req, res) => {
-  if (!req.params.dongle_id || !req.params.ignore_uploads) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
-}));
+  const { dongle_id: dongleId, ignore_uploads: ignoreUploads } = req.params;
+  if (!dongleId || !ignoreUploads) {
+    return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 });
+  }
 
-router.get('/admin/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(async (req, res) => {
-  if (!req.params.dongle_id || !req.params.ignore_uploads) { return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 }); }
-
-  let ignore = null;
-
-  switch (req.params.ignore_uploads) {
+  let isIgnored = null;
+  switch (ignoreUploads) {
     case 'true':
-      ignore = true;
+      isIgnored = true;
       break;
     case 'false':
-      ignore = false;
+      isIgnored = false;
       break;
     default:
       return res.json({ error: true, msg: 'MISSING DATA' });
   }
 
-  await controllers.devices.setIgnoredUploads(req.params.dongle_id);
+  await controllers.devices.setIgnoredUploads(req.params.dongle_id, isIgnored);
   return res.status(200).json({ success: true });
 }));
 
 router.get('/device/:dongle_id/athena/reboot', runAsyncWrapper(async (req, res) => {
-  req.athenaWebsocketTemp.rebootDevice(req.params.dongle_id);
+  const { dongle_id: dongleId } = req.params;
+  req.athenaWebsocketTemp.rebootDevice(dongleId);
   res.send('ok');
 }));
 
