@@ -7,6 +7,8 @@ const https = require('https');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const storageController = require('./controllers/storage');
 
 log4js.configure({
   appenders: { logfile: { type: 'file', filename: 'server.log' }, out: { type: 'console' } /* {type: "file", filename: "server1.log"} */ },
@@ -18,13 +20,11 @@ const logger = log4js.getLogger('default');
 global.__basedir = __dirname;
 
 /* eslint-disable no-unused-vars */
-const cookieParser = require('cookie-parser');
 const webWebsocket = require('./websocket/web');
 const athena = require('./websocket/athena');
-let routers = require('./routes');
+const routers = require('./routes');
 const orm = require('./models/index.model');
-let controllers = require('./controllers');
-let models = require('./models/index');
+const controllers = require('./controllers');
 const router = require('./routes/api/realtime');
 /* eslint-enable no-unused-vars */
 
@@ -40,8 +40,6 @@ function runAsyncWrapper(callback) {
 const web = async () => {
   const app = express();
 
-  models = await models(logger).models;
-
   app.use((req, res, next) => {
     // TODO: can we use config.baseUrl here?
     res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
@@ -50,12 +48,9 @@ const web = async () => {
     next();
   });
 
-  controllers = await controllers(models, logger);
+  storageController.initializeStorage();
+  await storageController.updateTotalStorageUsed();
 
-  controllers.storage.initializeStorage();
-  await controllers.storage.updateTotalStorageUsed();
-
-  routers = routers(models, controllers, logger);
   app.use(routers.api);
   app.use(routers.useradmin);
   app.use(routers.authenticationApi);
@@ -107,6 +102,8 @@ const web = async () => {
     res.status(404);
     res.send('Not Implemented');
   }));
+
+  return app;
 };
 
 lockfile.lock('retropilot_server', { realpath: false, stale: 30000, update: 2000 })

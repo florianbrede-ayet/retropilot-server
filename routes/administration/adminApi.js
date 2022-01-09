@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const controllers = require('../../controllers');
 
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {
@@ -6,12 +7,6 @@ function runAsyncWrapper(callback) {
       .catch(next);
   };
 }
-
-/* eslint-disable no-unused-vars */
-let models;
-let controllers;
-let logger;
-/* eslint-enable no-unused-vars */
 
 // probs should put middleware somewhere else
 router.use(async (req, res, next) => {
@@ -85,6 +80,7 @@ router.get('/device/:dongle_id/ignore/:ignore_uploads', runAsyncWrapper(async (r
     return req.status(400).json({ error: true, msg: 'MISSING DATA', status: 400 });
   }
 
+  // TODO make this cleaner
   let isIgnored = null;
   switch (ignoreUploads) {
     case 'true':
@@ -107,10 +103,4 @@ router.get('/device/:dongle_id/athena/reboot', runAsyncWrapper(async (req, res) 
   res.send('ok');
 }));
 
-module.exports = (_models, _controllers, _logger) => {
-  models = _models;
-  controllers = _controllers;
-  logger = _logger;
-
-  return router;
-};
+module.exports = router;

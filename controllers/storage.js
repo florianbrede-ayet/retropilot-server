@@ -1,11 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const log4js = require('log4js');
 const config = require('../config');
 
-// eslint-disable-next-line no-unused-vars
-let models;
-let logger;
+const logger = log4js.getLogger('default');
 
 let totalStorageUsed;
 
@@ -120,19 +119,13 @@ async function getTotalStorageUsed() {
   return totalStorageUsed;
 }
 
-module.exports = (_models, _logger) => {
-  models = _models;
-  logger = _logger;
+setInterval(updateTotalStorageUsed, 120000);
 
-  // Update the used storage every 120 seconds
-  setInterval(updateTotalStorageUsed, 120000);
-
-  return {
-    initializeStorage,
-    mkDirByPathSync,
-    writeFileSync,
-    moveUploadedFile,
-    updateTotalStorageUsed,
-    getTotalStorageUsed,
-  };
+module.exports = {
+  initializeStorage,
+  mkDirByPathSync,
+  writeFileSync,
+  moveUploadedFile,
+  updateTotalStorageUsed,
+  getTotalStorageUsed,
 };

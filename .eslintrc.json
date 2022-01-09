@@ -5,7 +5,7 @@
   "env": {
     "es6": true,
     "node": true,
-    "browser": false // do we need this?
+    "browser": false // do we need this? none of this code will ever run on a browswer 
   },
   "rules": {
     // disallow use of unary operators, ++ and --

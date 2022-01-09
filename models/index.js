@@ -20,32 +20,7 @@ async function validateDatabase(db, logger) {
   }
 }
 
-module.exports = async (logger) => {
-  let db;
+module.exports = async () => ({
+  models: {},
 
-  try {
-    db = await open({
-      filename: config.databaseFile,
-      driver: sqlite3.Database,
-      mode: sqlite3.OPEN_READWRITE,
-    });
-  } catch (exception) {
-    logger.error(exception);
-    process.exit();
-  }
-
-  // I'm not sure we _really_ need to wait for this, since it'll exit the application if it's
-  // invalid anyway.
-
-  await validateDatabase(db, logger);
-
-  return {
-    models: {
-      drivesModel: require('./drives')(db),
-      users: require('./users')(db),
-
-      // TODO remove access to DB queries from non models
-      __db: db, // to be removed when db queries are removed from outside models.
-    },
-  };
-};
+});

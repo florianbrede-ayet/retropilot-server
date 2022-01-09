@@ -3,6 +3,7 @@ const router = require('express').Router();
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const config = require('../config');
+const controllers = require('../controllers');
 
 // TODO Remove this, pending on removing all auth logic from routes
 router.use(cookieParser());
@@ -16,7 +17,6 @@ function runAsyncWrapper(callback) {
 
 /* eslint-disable no-unused-vars */
 let models;
-let controllers;
 let logger;
 /* eslint-enable no-unused-vars */
 
@@ -35,9 +35,10 @@ router.get('/retropilot/0/useradmin/signout', runAsyncWrapper(async (req, res) =
 }));
 
 router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
-  const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
-  const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
-  const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
+  // TODO pull these values from db
+  const accounts = 0;
+  const devices = 0;
+  const drives = 0;
 
   return res.status(200).send({
     success: true,
