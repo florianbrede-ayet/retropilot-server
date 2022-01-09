@@ -20,54 +20,38 @@ router.put('/backend/post_upload', bodyParser.raw({
   limit: '100000kb',
   type: '*/*',
 }), runAsyncWrapper(async (req, res) => {
-  // TODO update buffer functions project wide
-  var buf = new Buffer(req.body.toString('binary'), 'binary');
+  const buf = Buffer.from(req.body.toString('binary'), 'binary');
   logger.info(`HTTP.PUT /backend/post_upload for dongle ${req.query.dongleId} with body length: ${buf.length}`);
 
-  const { dongleId } = req.query;
-  const { ts } = req.query;
+  const {
+    dir: directory,
+    dongleId,
+    file: filename,
+    ts,
+  } = req.query;
 
-  if (req.query.file.indexOf('boot') !== 0 && req.query.file.indexOf('crash') !== 0) { // drive file upload
-    const filename = req.query.file;
-    const directory = req.query.dir;
-    const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
-
+  const isDriveFile = filename.indexOf('boot') !== 0 && filename.indexOf('crash') !== 0;
+  if (isDriveFile) {
     logger.info(`HTTP.PUT /backend/post_upload DRIVE upload with filename: ${filename}, directory: ${directory}, token: ${req.query.token}`);
-
-    if (token !== req.query.token) {
-      logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
-      return res.status(400).send('Malformed request');
-    } else {
-      logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
-      const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
-      if (!moveResult) {
-        logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
-        return res.status(500).send('Internal Server Error');
-      }
-      logger.info(`HTTP.PUT /backend/post_upload successfully uploaded to ${moveResult}`);
-      return res.status(200).json(['OK']);
-    }
-  } else { // boot or crash upload
-    const filename = req.query.file;
-    const directory = req.query.dir;
-    const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
-
+  } else {
     logger.info(`HTTP.PUT /backend/post_upload BOOT or CRASH upload with filename: ${filename}, token: ${req.query.token}`);
-
-    if (token !== req.query.token) {
-      logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
-      return res.status(400).send('Malformed request');
-    } else {
-      logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
-      const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
-      if (!moveResult) {
-        logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
-        return res.status(500).send('Internal Server Error');
-      }
-      logger.info(`HTTP.PUT /backend/post_upload successfully uploaded to ${moveResult}`);
-      return res.status(200).json(['OK']);
-    }
   }
+
+  const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
+  if (token !== req.query.token) {
+    logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
+    return res.status(400).send('Malformed request');
+  }
+
+  logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
+  const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
+  if (!moveResult) {
+    logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
+    return res.status(500).send('Internal Server Error');
+  }
+
+  logger.info(`HTTP.PUT /backend/post_upload successfully uploaded to ${moveResult}`);
+  return res.status(200).json(['OK']);
 }));
 
 // RETURN THE PAIRING STATUS
@@ -195,19 +179,20 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
 }));
 
 async function upload(req, res) {
-  var { path } = req.query;
+  let { path } = req.query;
   const { dongleId } = req.params;
   const auth = req.headers.authorization;
   logger.info(`HTTP.UPLOAD_URL called for ${req.params.dongleId} and file ${path}: ${JSON.stringify(req.headers)}`);
 
   const device = await models.drivesModel.getDevice(dongleId);
-
   if (!device) {
     logger.info(`HTTP.UPLOAD_URL device ${dongleId} not found or not linked to an account / refusing uploads`);
     return res.send('Unauthorized.').status(400);
   }
 
-  const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+  const decoded = device.public_key
+    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.UPLOAD_URL JWT authorization failed, token: ${auth} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
@@ -247,14 +232,14 @@ async function upload(req, res) {
     const filenamePosition = path.indexOf('/');
     if (subdirPosition > 0 && filenamePosition > subdirPosition) {
       const driveName = `${path.split('--')[0]}--${path.split('--')[1]}`;
-      const segment = parseInt(path.split('--')[2].substr(0, path.split('--')[2].indexOf('/')));
+      const segment = parseInt(path.split('--')[2].substr(0, path.split('--')[2].indexOf('/')), 10);
       let directory = `${path.split('--')[0]}--${path.split('--')[1]}/${segment}`;
       const filename = path.split('/')[1];
 
       let validRequest = false;
 
       if ((filename === 'fcamera.hevc' || filename === 'qcamera.ts' || filename === 'dcamera.hevc' || filename === 'rlog.bz2' || filename === 'qlog.bz2' || filename === 'ecamera.hevc')
-                && (!isNaN(segment) || (segment > 0 && segment < 1000))) {
+                && (!Number.isNaN(segment) || (segment > 0 && segment < 1000))) {
         validRequest = true;
       }
 
@@ -296,7 +281,7 @@ async function upload(req, res) {
           false,
         );
 
-        const driveSegmentResult = await models.__db.run(
+        await models.__db.run(
           'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           segment,
           driveName,
@@ -311,7 +296,7 @@ async function upload(req, res) {
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
       } else {
-        const driveResult = await models.__db.run(
+        await models.__db.run(
           'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?',
           Date.now(),
           Math.max(drive.max_segment, segment),
@@ -324,7 +309,7 @@ async function upload(req, res) {
         const driveSegment = await models.__db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
 
         if (driveSegment == null) {
-          const driveSegmentResult = await models.__db.run(
+          await models.__db.run(
             'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             segment,
             driveName,
@@ -337,7 +322,7 @@ async function upload(req, res) {
             Date.now(),
           );
         } else {
-          const driveSegmentResult = await models.__db.run(
+          await models.__db.run(
             'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
             false,
             false,
@@ -352,14 +337,11 @@ async function upload(req, res) {
     }
   }
 
-  if (responseUrl != null) {
-    res.status(200);
-    res.json({ url: responseUrl, headers: { 'Content-Type': 'application/octet-stream' } });
-  } else {
+  if (responseUrl == null) {
     logger.error('HTTP.UPLOAD_URL unable to match request, responding with HTTP 400');
-    res.status(400);
-    res.send('Malformed Request.');
+    return res.status(400).send('Malformed Request.');
   }
+  return res.status(200).json({ url: responseUrl, headers: { 'Content-Type': 'application/octet-stream' } });
 }
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
@@ -370,66 +352,64 @@ router.get('/v1.4/:dongleId/upload_url/', upload);
 router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (req, res) => {
   const imei1 = req.query.imei;
   const { serial } = req.query;
-  const { public_key } = req.query;
-  const { register_token } = req.query;
+  const { public_key: publicKey } = req.query;
+  const { register_token: registerToken } = req.query;
 
-  if (serial == null || serial.length < 5 || public_key == null || public_key.length < 5 || register_token == null || register_token.length < 5) {
+  if (
+    serial == null || serial.length < 5
+    || publicKey == null || publicKey.length < 5
+    || registerToken == null || registerToken.length < 5
+  ) {
     logger.error(`HTTP.V2.PILOTAUTH a required parameter is missing or empty ${JSON.stringify(req.query)}`);
-    res.status(400);
-    res.send('Malformed Request.');
-    return;
+    return res.status(400).send('Malformed Request.');
   }
-  const decoded = await controllers.authentication.validateJWT(req.query.register_token, public_key);
 
+  const decoded = await controllers.authentication.validateJWT(registerToken, publicKey);
   if (!decoded || !decoded.register) {
     logger.error(`HTTP.V2.PILOTAUTH JWT token is invalid (${JSON.stringify(decoded)})`);
-    res.status(400);
-    res.send('Malformed Request.');
-    return;
+    return res.status(400).send('Malformed Request.');
   }
 
   const device = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
   if (device == null) {
     logger.info(`HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (${imei1}, ${serial})`);
+
+    // TODO: rewrite without while (true) loop
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const dongleId = crypto.randomBytes(4).toString('hex');
       const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
       if (isDongleIdTaken == null) {
-        const resultingDevice = await models.__db.run(
+        await models.__db.run(
           'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           dongleId,
           0,
           imei1,
           serial,
           'freon',
-          public_key,
+          publicKey,
           Date.now(),
           Date.now(),
           0,
         );
 
-        const device = await models.__db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+        const newDevice = await models.__db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
 
-        logger.info(`HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: ${JSON.stringify(device)}`);
-        res.status(200);
-        res.json({ dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
-        return;
+        logger.info(`HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: ${JSON.stringify(newDevice)}`);
+        return res.status(200).json({ dongle_id: newDevice.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
       }
     }
-  } else {
-    const result = await models.__db.run(
-      'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
-      Date.now(),
-
-      public_key,
-
-      device.dongle_id,
-    );
-
-    logger.info(`HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE (${imei1}, ${serial}) with dongle_id ${device.dongle_id}`);
-    res.status(200);
-    res.json({ dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
   }
+
+  await models.__db.run(
+    'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
+    Date.now(),
+    publicKey,
+    device.dongle_id,
+  );
+
+  logger.info(`HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE (${imei1}, ${serial}) with dongle_id ${device.dongle_id}`);
+  return res.status(200).json({ dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
 });
 
 // RETRIEVES DATASET FOR OUR MODIFIED CABANA - THIS RESPONSE IS USED TO FAKE A DEMO ROUTE
@@ -441,11 +421,8 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   const driveIdentifierHashReq = params[3];
 
   const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
-
   if (!drive) {
-    res.status(200);
-    res.json({ status: 'drive not found' });
-    return;
+    return res.status(200).json({ status: 'drive not found' });
   }
 
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
@@ -453,25 +430,19 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   const driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
   if (dongleIdHash !== dongleIdHashReq || driveIdentifierHash !== driveIdentifierHashReq) {
-    res.status(200);
-    res.json({ status: 'hashes not matching' });
-    return;
+    return res.status(200).json({ status: 'hashes not matching' });
   }
 
   if (!drive.is_processed) {
-    res.status(200);
-    res.json({ status: 'drive is not processed yet' });
-    return;
+    return res.status(200).json({ status: 'drive is not processed yet' });
   }
 
   const logUrls = [];
-
   for (let i = 0; i <= drive.max_segment; i++) {
     logUrls.push(`${driveUrl}/${i}/rlog.bz2`);
   }
 
-  res.status(200);
-  res.json({
+  return res.status(200).json({
     logUrls,
     driveUrl,
     name: `${drive.dongle_id}|${drive.identifier}`,

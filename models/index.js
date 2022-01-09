@@ -1,3 +1,4 @@
+/* eslint-disable global-require */
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const config = require('../config');
@@ -33,7 +34,8 @@ module.exports = async (logger) => {
     process.exit();
   }
 
-  // I'm not sure we _really_ need to wait for this, since it'll exit the application if it's invalid anyway.
+  // I'm not sure we _really_ need to wait for this, since it'll exit the application if it's
+  // invalid anyway.
 
   await validateDatabase(db, logger);
 

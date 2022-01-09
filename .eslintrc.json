@@ -23,6 +23,17 @@
     // retropilot: permit referencing functions before they're defined
     "no-use-before-define": ["error", { "functions": false }],
 
+    // specify the maximum length of a line in your program
+    // https://eslint.org/docs/rules/max-len
+    // retropilot: ignore comments
+    "max-len": ["error", 100, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": true,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true
+    }],
+
     // TODO: fix and remove
     // retropilot: we are in the process of removing all of these
     "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],

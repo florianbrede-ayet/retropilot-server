@@ -1,9 +1,11 @@
-const router = require('express').Router();
 const bodyParser = require('body-parser');
-const config = require('../../config');
+const router = require('express').Router();
 
 const authenticationController = require('../../controllers/authentication');
+/* eslint-disable no-unused-vars */
 const userController = require('../../controllers/users');
+const config = require('../../config');
+/* eslint-enable no-unused-vars */
 
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
