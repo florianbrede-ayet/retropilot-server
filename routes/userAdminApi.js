@@ -1,4 +1,4 @@
-/* eslint-disable max-len, no-unused-vars */
+/* eslint-disable max-len */
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -8,25 +8,25 @@ const config = require('../config');
 router.use(cookieParser());
 
 function runAsyncWrapper(callback) {
-  return function (req, res, next) {
+  return function wrapper(req, res, next) {
     callback(req, res, next)
       .catch(next);
   };
 }
 
+/* eslint-disable no-unused-vars */
 let models;
 let controllers;
 let logger;
+/* eslint-enable no-unused-vars */
 
 router.post('/retropilot/0/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const signIn = await controllers.authentication.signIn(req.body.email, req.body.password);
-
-  if (signIn.success) {
-    res.cookie('jwt', signIn.jwt);
-    res.redirect('/useradmin/overview');
-  } else {
-    res.redirect(`/useradmin?status=${encodeURIComponent('Invalid credentials or banned account')}`);
+  if (!signIn.success) {
+    return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid credentials or banned account')}`);
   }
+
+  return res.cookie('jwt', signIn.jwt).redirect('/useradmin/overview');
 }));
 
 router.get('/retropilot/0/useradmin/signout', runAsyncWrapper(async (req, res) => {
@@ -39,7 +39,7 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
   const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
   const drives = await models.__db.get('SELECT COUNT(*) AS num FROM drives');
 
-  res.send({
+  return res.status(200).send({
     success: true,
     data: {
       serverStats: {
@@ -53,7 +53,7 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
         storageUsed: await controllers.storage.getTotalStorageUsed(),
       },
     },
-  }).status(200);
+  });
 }));
 
 /*
@@ -195,45 +195,51 @@ router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, 
     return res.json({ success: false }).status(400);
   }
 
-  const result = await models.__db.run(
+  await models.__db.run(
     'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
     0,
     req.params.dongleId,
   );
 
-  res.json({ success: true, data: { unlink: true } });
+  return res.json({ success: true, data: { unlink: true } });
 }));
 
 router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
+    return res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
   }
 
-  const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
-
-  if (pairDevice.success === true) {
-    res.json({
-      success: true, msg: 'Paired', status: 200, data: pairDevice,
-    });
-  } else {
-    res.json({ success: false, msg: 'error', data: pairDevice });
+  const { qr_string: qrString } = req.body;
+  if (!qrString) {
+    return res.json({ success: false, msg: 'BAD_REQUEST', status: 400 });
   }
+
+  const pairDevice = await controllers.devices.pairDevice(account, qrString);
+  if (!pairDevice.success) {
+    return res.json({ success: false, msg: 'error', data: pairDevice });
+  }
+
+  return res.json({
+    success: true,
+    msg: 'Paired',
+    status: 200,
+    data: pairDevice,
+  });
 }));
 
 router.post('/retropilot/0/password/change', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
-    res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
+    return res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
   }
 
   const pwChange = await controllers.authentication.changePassword(account, req.body.newPassword, req.body.oldPassword);
-
-  if (pwChange.success === true) {
-    res.json({ success: true });
-  } else {
-    res.json({ success: false, data: pwChange });
+  if (!pwChange.success) {
+    return res.json({ success: false, data: pwChange });
   }
+
+  return res.json({ success: true });
 }));
 
 /*
