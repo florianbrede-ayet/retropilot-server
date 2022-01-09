@@ -20,7 +20,7 @@ function formatDuration(durationSeconds) {
 function simpleStringify(object) {
   const simpleObject = {};
   for (const prop in object) {
-    if (!object.hasOwnProperty(prop)) {
+    if (!Object.prototype.hasOwnProperty.call(object, prop)) {
       continue;
     }
     if (typeof (object[prop]) === 'object') {

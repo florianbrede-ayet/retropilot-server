@@ -1,15 +1,16 @@
+const crypto = require('crypto');
 const jsonwebtoken = require('jsonwebtoken');
 
-let logger;
-const crypto = require('crypto');
-const models_orm = require('../models/index.model');
 const config = require('../config');
+const orm = require('../models/index.model');
+
+let logger;
 
 async function validateJWT(token, key) {
   try {
     return jsonwebtoken.verify(token.replace('JWT ', ''), key, { algorithms: ['RS256'], ignoreNotBefore: true });
   } catch (exception) {
-    console.log(`failed to validate JWT ${exception}`);
+    logger.warn(`failed to validate JWT ${exception}`);
   }
   return null;
 }
@@ -24,7 +25,7 @@ async function readJWT(token) {
 }
 
 async function signIn(email, password) {
-  let account = await models_orm.models.accounts.findOne({ where: { email } });
+  let account = await orm.models.accounts.findOne({ where: { email } });
 
   if (account.dataValues) {
     account = account.dataValues;
@@ -50,7 +51,7 @@ async function changePassword(account, newPassword, oldPassword) {
   if (account.password === oldPasswordHash) {
     const newPasswordHash = crypto.createHash('sha256').update(newPassword + config.applicationSalt).digest('hex');
 
-    const update = models_orm.models.accounts.update(
+    await orm.models.accounts.update(
       { password: newPasswordHash },
       { where: { id: account.id } },
     );
@@ -64,13 +65,13 @@ async function changePassword(account, newPassword, oldPassword) {
  TODO: update rest of the code to support authentication rejection reasons
 */
 
-async function getAuthenticatedAccount(req, res) {
+async function getAuthenticatedAccount(req) {
   const sessionJWT = req.cookies.jwt;
   if ((!sessionJWT || sessionJWT.expires <= Date.now())) {
     return null;
   }
 
-  return await getAccountFromJWT(sessionJWT);
+  return getAccountFromJWT(sessionJWT);
 }
 
 async function getAccountFromJWT(jwt, limitData) {
@@ -82,26 +83,29 @@ async function getAccountFromJWT(jwt, limitData) {
     return null;// {success: false, msg: 'BAD_JWT'}
   }
 
-  if (token && token.accountId) {
-    let query = { where: { id: token.accountId } };
-    if (limitData) query = { ...query, attributes: { exclude: ['password', '2fa_token', 'session_seed'] } };
+  if (!token || !token.accountId) {
+    return null; // {success: false, badToken: true}
+  }
 
-    const account = await models_orm.models.accounts.findOne(query);
+  let query = { where: { id: token.accountId } };
+  if (limitData) {
+    query = { ...query, attributes: { exclude: ['password', '2fa_token', 'session_seed'] } };
+  }
 
-    if (account.dataValues) {
-      const update = models_orm.models.accounts.update(
-        { last_ping: Date.now() },
-        { where: { id: account.id } },
-      );
-
-      if (!account || account.banned) {
-        return null; // {success: false, isBanned: true}
-      }
-      return account;
-    }
+  const account = await orm.models.accounts.findOne(query);
+  if (!account.dataValues) {
     return null; // {success: false, isInvalid: true}
   }
-  return null; // {success: false, badToken: true}
+
+  await orm.models.accounts.update(
+    { last_ping: Date.now() },
+    { where: { id: account.id } },
+  );
+
+  if (!account || account.banned) {
+    return null; // {success: false, isBanned: true}
+  }
+  return account;
 }
 
 module.exports = {

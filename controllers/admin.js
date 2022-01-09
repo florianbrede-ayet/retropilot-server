@@ -1,12 +1,8 @@
-const crypto = require('crypto');
-const config = require('../config');
-const models_orm = require('../models/index.model');
-
-let models;
-let logger;
+const orm = require('../models/index.model');
 
 // TODO move everythijng away from this dumb intertwined style
 
+// eslint-disable-next-line no-unused-vars
 const devices = require('./devices');
 const authentication = require('./authentication');
 
@@ -21,7 +17,10 @@ async function isCurrentUserAdmin(hardFail, req) {
 }
 
 async function banAccount(ban, userId) {
-  if (!userId || !ban) return { success: false, status: 400, data: { bad_data: true } };
+  if (!userId || !ban) {
+    return { success: false, status: 400, data: { bad_data: true } };
+  }
+
   let cleanBan;
   if (ban === 'true' || ban === 'false') {
     cleanBan = ban === 'true';
@@ -29,13 +28,12 @@ async function banAccount(ban, userId) {
     return { success: false, status: 400, data: { bad_data: true } };
   }
 
-  const update = await models_orm.models.accounts.update(
+  await orm.models.accounts.update(
     { banned: cleanBan ? 1 : 0 },
     { where: { id: userId } },
   );
 
-  const verify = await models_orm.models.accounts.findOne({ where: { id: userId } });
-
+  const verify = await orm.models.accounts.findOne({ where: { id: userId } });
   if (verify.dataValues && verify.dataValues.banned === cleanBan ? 1 : 0) {
     return { success: true, status: 200, data: { banned: ban } };
   }

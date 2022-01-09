@@ -1,10 +1,9 @@
-/* eslint-disable global-require */
-const config = require('../config');
+/* eslint-disable global-require, no-unused-vars */
 
 // TO DO, finish up removing this callback stuff
-module.exports = async (models, logger, models_sqli) => ({
+module.exports = async (models, logger, modelsSql) => ({
   authentication: require('./authentication'),
-  helpers: require('./helpers')(models, logger),
+  helpers: require('./helpers'),
   storage: require('./storage')(models, logger),
   mailing: require('./mailing')(models, logger),
   users: require('./users'),

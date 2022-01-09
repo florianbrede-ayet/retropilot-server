@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const config = require('../config');
 
+// eslint-disable-next-line no-unused-vars
 let models;
 let logger;
 
@@ -19,7 +20,9 @@ const transporter = nodemailer.createTransport(
 );
 
 async function sendEmailVerification(token, email) {
-  if (!config.canSendMail) return logger.warn(`Mailing disabled. ${email} - ${token}`);
+  if (!config.canSendMail) {
+    return logger.warn(`Mailing disabled. ${email} - ${token}`);
+  }
 
   let message,
     error,
@@ -33,9 +36,9 @@ async function sendEmailVerification(token, email) {
       text: `Your Email Registration Token Is: "${token}"`,
     };
 
-    error, info = await transporter.sendMail(message);
+    info = await transporter.sendMail(message);
   } catch (exception) {
-    logger.warn(`Email to ${email} FAILED ${exception} - ${token}`);
+    error = exception;
   }
 
   if (error) {

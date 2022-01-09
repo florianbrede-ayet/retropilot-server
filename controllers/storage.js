@@ -3,13 +3,14 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const config = require('../config');
 
+// eslint-disable-next-line no-unused-vars
 let models;
 let logger;
 
 let totalStorageUsed;
 
 function initializeStorage() {
-  var verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  const verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
   if (verifiedPath != null) {
     logger.info(`Verified storage path ${verifiedPath}`);
   } else {
@@ -22,7 +23,7 @@ function mkDirByPathSync(targetDir, { isRelativeToScript = false } = {}) {
   const { sep } = path;
   const initDir = path.isAbsolute(targetDir) ? sep : '';
 
-  const baseDir = isRelativeToScript ? __basedir : '.';
+  const baseDir = isRelativeToScript ? global.__basedir : '.';
 
   return targetDir.split(sep).reduce((parentDir, childDir) => {
     const curDir = path.resolve(baseDir, parentDir, childDir);
@@ -51,23 +52,24 @@ function mkDirByPathSync(targetDir, { isRelativeToScript = false } = {}) {
   }, initDir);
 }
 
-function writeFileSync(path, buffer, permission) {
+function writeFileSync(filePath, buffer, permission) {
   let fileDescriptor;
   try {
-    fileDescriptor = fs.openSync(path, 'w', permission);
+    fileDescriptor = fs.openSync(filePath, 'w', permission);
   } catch (e) {
-    fs.chmodSync(path, permission);
-    fileDescriptor = fs.openSync(path, 'w', permission);
+    fs.chmodSync(filePath, permission);
+    fileDescriptor = fs.openSync(filePath, 'w', permission);
   }
 
-  if (fileDescriptor) {
-    fs.writeSync(fileDescriptor, buffer, 0, buffer.length, 0);
-    fs.closeSync(fileDescriptor);
-    logger.info(`writeFileSync wiriting to '${path}' successful`);
-    return true;
+  if (!fileDescriptor) {
+    logger.error(`writeFileSync writing to '${filePath}' failed`);
+    return false;
   }
-  logger.error(`writeFileSync writing to '${path}' failed`);
-  return false;
+
+  fs.writeSync(fileDescriptor, buffer, 0, buffer.length, 0);
+  fs.closeSync(fileDescriptor);
+  logger.info(`writeFileSync wiriting to '${filePath}' successful`);
+  return true;
 }
 
 function moveUploadedFile(buffer, directory, filename) {
@@ -81,34 +83,37 @@ function moveUploadedFile(buffer, directory, filename) {
   if (config.storagePath.lastIndexOf('/') !== config.storagePath.length - 1) {
     directory = `/${directory}`;
   }
-  if (directory.lastIndexOf('/') !== directory.length - 1) directory += '/';
+  if (directory.lastIndexOf('/') !== directory.length - 1) {
+    directory += '/';
+  }
 
   const finalPath = mkDirByPathSync(config.storagePath + directory, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
-  if (finalPath && finalPath.length > 0) {
-    if (writeFileSync(`${finalPath}/${filename}`, buffer, 0o660)) {
-      logger.info(`moveUploadedFile successfully written '${finalPath}/${filename}'`);
-      return `${finalPath}/${filename}`;
-    }
+  if (!finalPath || finalPath.length === 0) {
+    logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${config.storagePath + directory}'`);
+    return false;
+  }
+
+  if (!writeFileSync(`${finalPath}/${filename}`, buffer, 0o660)) {
     logger.error('moveUploadedFile failed to writeFileSync');
     return false;
   }
-  logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${config.storagePath + directory}'`);
-  return false;
+
+  logger.info(`moveUploadedFile successfully written '${finalPath}/${filename}'`);
+  return `${finalPath}/${filename}`;
 }
 
 async function updateTotalStorageUsed() {
   const verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
-  if (verifiedPath !== null) {
-    try {
-      totalStorageUsed = execSync(`du -hs ${verifiedPath} | awk -F'\t' '{print $1;}'`).toString();
-    } catch (exception) {
-      totalStorageUsed = 'Unsupported Platform';
-      logger.debug('Unable to calculate storage used, only supported on systems with \'du\' available');
-    }
+  if (!verifiedPath) {
+    return;
   }
-  setTimeout(() => {
-    updateTotalStorageUsed();
-  }, 120000); // update the used storage each 120 seconds
+
+  try {
+    totalStorageUsed = execSync(`du -hs ${verifiedPath} | awk -F'\t' '{print $1;}'`).toString();
+  } catch (exception) {
+    totalStorageUsed = 'Unsupported Platform';
+    logger.debug('Unable to calculate storage used, only supported on systems with \'du\' available');
+  }
 }
 
 async function getTotalStorageUsed() {
@@ -118,6 +123,9 @@ async function getTotalStorageUsed() {
 module.exports = (_models, _logger) => {
   models = _models;
   logger = _logger;
+
+  // Update the used storage every 120 seconds
+  setInterval(updateTotalStorageUsed, 120000);
 
   return {
     initializeStorage,
