@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const config = require('../config');
 
 function runAsyncWrapper(callback) {
-  return function (req, res, next) {
+  return function wrapper(req, res, next) {
     callback(req, res, next)
       .catch(next);
   };
@@ -27,7 +27,7 @@ router.put('/backend/post_upload', bodyParser.raw({
   const { dongleId } = req.query;
   const { ts } = req.query;
 
-  if (req.query.file.indexOf('boot') != 0 && req.query.file.indexOf('crash') != 0) { // drive file upload
+  if (req.query.file.indexOf('boot') !== 0 && req.query.file.indexOf('crash') !== 0) { // drive file upload
     const filename = req.query.file;
     const directory = req.query.dir;
     const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
@@ -36,43 +36,36 @@ router.put('/backend/post_upload', bodyParser.raw({
 
     if (token !== req.query.token) {
       logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
-      res.status(400);
-      res.send('Malformed request');
+      return res.status(400).send('Malformed request');
     } else {
       logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
       const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
-      if (moveResult === false) {
+      if (!moveResult) {
         logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
-        res.status(500);
-        res.send('Internal Server Error');
-      } else {
-        logger.info(`HTTP.PUT /backend/post_upload succesfully uploaded to ${moveResult}`);
-        res.status(200);
-        res.json(['OK']);
+        return res.status(500).send('Internal Server Error');
       }
+      logger.info(`HTTP.PUT /backend/post_upload successfully uploaded to ${moveResult}`);
+      return res.status(200).json(['OK']);
     }
   } else { // boot or crash upload
-    var filename = req.query.file;
-    var directory = req.query.dir;
-    var token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
+    const filename = req.query.file;
+    const directory = req.query.dir;
+    const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
 
     logger.info(`HTTP.PUT /backend/post_upload BOOT or CRASH upload with filename: ${filename}, token: ${req.query.token}`);
+
     if (token !== req.query.token) {
       logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
-      res.status(400);
-      res.send('Malformed request');
+      return res.status(400).send('Malformed request');
     } else {
       logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
-      var moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
-      if (moveResult === false) {
+      const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
+      if (!moveResult) {
         logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
-        res.status(500);
-        res.send('Internal Server Error');
-      } else {
-        logger.info(`HTTP.PUT /backend/post_upload succesfully uploaded to ${moveResult}`);
-        res.status(200);
-        res.json(['OK']);
+        return res.status(500).send('Internal Server Error');
       }
+      logger.info(`HTTP.PUT /backend/post_upload successfully uploaded to ${moveResult}`);
+      return res.status(200).json(['OK']);
     }
   }
 }));
@@ -86,10 +79,7 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
 
   if (!device) {
     logger.info(`HTTP.DEVICES device ${dongleId} not found`);
-    const response = { is_paired: false, prime: false };
-    res.status(200);
-    res.json(response);
-    return;
+    return res.status(404).json({ is_paired: false, prime: false });
   }
 
   const decoded = device.public_key
@@ -98,14 +88,13 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.DEVICES JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
-    return res.send('Unauthorized.').status(400);
+    return res.status(400).send('Unauthorized.');
   }
 
   const response = { is_paired: (device.account_id !== 0), prime: (device.account_id > 0) };
   logger.info(`HTTP.DEVICES for ${req.params.dongleId} returning: ${JSON.stringify(response)}`);
 
-  res.status(200);
-  res.json(response);
+  return res.status(200).json(response);
 }));
 
 // RETURN STATS FOR DASHBOARD
@@ -124,15 +113,12 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
       distance: 0,
       minutes: 0,
     },
-
   };
 
   const device = await models.drivesModel.getDevice(dongleId);
   if (!device) {
     logger.info(`HTTP.STATS device ${dongleId} not found`);
-    res.status(200);
-    res.json(stats);
-    return;
+    return res.status(404).json('Not found.');
   }
 
   const decoded = device.public_key
@@ -141,7 +127,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.STATS JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
-    return res.send('Unauthorized.').status(400);
+    return res.status(400).send('Unauthorized.');
   }
 
   const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id);
@@ -151,7 +137,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     stats.all.minutes = statresult.duration != null ? statresult.duration : 0;
   }
 
-  // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO" week)
+  // this determines the date at 00:00:00 UTC of last monday (== beginning of the current "ISO"week)
   const d = new Date();
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -166,9 +152,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
   }
 
   logger.info(`HTTP.STATS for ${req.params.dongleId} returning: ${JSON.stringify(stats)}`);
-
-  res.status(200);
-  res.json(stats);
+  return res.status(200).json(stats);
 }));
 
 // RETURN USERNAME & POINTS FOR DASHBOARD
@@ -180,12 +164,12 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
 
   if (!device) {
     logger.info(`HTTP.OWNER device ${dongleId} not found`);
-    const response = { username: 'unregisteredDevice', points: 0 };
-    res.status(200);
-    return;
+    return res.status(200).json({ username: 'unregisteredDevice', points: 0 });
   }
 
-  const decoded = device.public_key ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key) : null;
+  const decoded = device.public_key
+    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
     logger.info(`HTTP.OWNER JWT authorization failed, token: ${req.headers.authorization} device: ${JSON.stringify(device)}, decoded: ${JSON.stringify(decoded)}`);
@@ -197,7 +181,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
 
   const account = await models.__db.get('SELECT * FROM accounts WHERE id = ?', device.account_id);
   if (account != null) {
-    owner = account.email.split('@')[0];
+    [owner] = account.email.split('@');
     const stats = await models.__db.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id);
     if (stats != null && stats.points != null) {
       points = stats.points;
@@ -207,8 +191,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
   const response = { username: owner, points };
   logger.info(`HTTP.OWNER for ${req.params.dongleId} returning: ${JSON.stringify(response)}`);
 
-  res.status(200);
-  res.json(response);
+  return res.status(200).json(response);
 }));
 
 async function upload(req, res) {
@@ -298,52 +281,31 @@ async function upload(req, res) {
         const driveResult = await models.__db.run(
           'INSERT INTO drives (identifier, dongle_id, max_segment, duration, distance_meters, filesize, upload_complete, is_processed, drive_date, created, last_upload, is_preserved, is_deleted, is_physically_removed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           driveName,
-
           dongleId,
-
           segment,
-
           0,
-
           0,
-
           0,
-
           false,
-
           false,
-
           Date.parse(timeString),
-
           Date.now(),
-
           Date.now(),
-
           false,
-
           false,
-
           false,
         );
 
         const driveSegmentResult = await models.__db.run(
           'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           segment,
-
           driveName,
-
           dongleId,
-
           0,
-
           0,
-
           false,
-
           false,
-
           false,
-
           Date.now(),
         );
 
@@ -352,52 +314,35 @@ async function upload(req, res) {
         const driveResult = await models.__db.run(
           'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?',
           Date.now(),
-
           Math.max(drive.max_segment, segment),
-
           false,
-
           false,
-
           driveName,
-
           dongleId,
         );
 
-        const drive_segment = await models.__db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
+        const driveSegment = await models.__db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
 
-        if (drive_segment == null) {
+        if (driveSegment == null) {
           const driveSegmentResult = await models.__db.run(
             'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             segment,
-
             driveName,
-
             dongleId,
-
             0,
-
             0,
-
             false,
-
             false,
-
             false,
-
             Date.now(),
           );
         } else {
           const driveSegmentResult = await models.__db.run(
             'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
             false,
-
             false,
-
             driveName,
-
             dongleId,
-
             segment,
           );
         }
@@ -453,21 +398,13 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
         const resultingDevice = await models.__db.run(
           'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           dongleId,
-
           0,
-
           imei1,
-
           serial,
-
           'freon',
-
           public_key,
-
           Date.now(),
-
           Date.now(),
-
           0,
         );
 

@@ -41,7 +41,7 @@ router.get('/useradmin/signout', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account != null) {
     res.redirect('/useradmin/overview');
     return;
@@ -90,7 +90,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     return;
   }
 
-  const authAccount = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const authAccount = await controllers.authentication.getAuthenticatedAccount(req);
   if (authAccount != null) {
     res.redirect('/useradmin/overview');
     return;
@@ -159,7 +159,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
     return;
   }
 
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account != null) {
     res.redirect('/useradmin/overview');
     return;
@@ -180,7 +180,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
@@ -230,7 +230,7 @@ ${req.query.linkstatus !== undefined ? `<br><u>${htmlspecialchars(req.query.link
 }));
 
 router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
@@ -240,7 +240,7 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
 }))
 
 router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
@@ -264,7 +264,7 @@ router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }),
 }));
 
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
@@ -373,7 +373,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
@@ -415,7 +415,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrappe
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
 
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);

@@ -24,7 +24,7 @@ const whitelistParams = {
 };
 
 router.get('/dongle/:dongle_id/connected', async (req, res) => {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.status(403).json({
       error: true,
@@ -60,7 +60,7 @@ router.get('/dongle/:dongle_id/connected', async (req, res) => {
 });
 
 router.get('/dongle/:dongle_id/send/:method/', async (req, res) => {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.status(403).json({ error: true, errorMsg: 'Unauthenticated', errorObject: { authenticated: false } });
   }
@@ -87,7 +87,7 @@ router.get('/dongle/:dongle_id/send/:method/', async (req, res) => {
 });
 
 router.get('/dongle/:dongle_id/get', async (req, res) => {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.status(403).json({ error: true, errorMsg: 'Unauthenticated', errorObject: { authenticated: false } });
   }
@@ -106,7 +106,7 @@ router.get('/dongle/:dongle_id/temp/nav/:lat/:long', async (req, res) => {
   if (!req.params.lat || !req.params.long) {
     return res.status(403).json({ error: true, errorMsg: 'Malformed_Request', errorObject: { malformed: true } });
   }
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.status(403).json({ error: true, errorMsg: 'Unauthenticated', errorObject: { authenticated: false } });
   }

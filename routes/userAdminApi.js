@@ -69,7 +69,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
         return;
     }
 
-    const authAccount = await controllers.authentication.getAuthenticatedAccount(req, res);
+    const authAccount = await controllers.authentication.getAuthenticatedAccount(req);
     if (authAccount != null) {
         res.redirect('/useradmin/overview');
         return;
@@ -141,7 +141,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
         return;
     }
 
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    const account = await controllers.authentication.getAuthenticatedAccount(req);
     if (account != null) {
         res.redirect('/useradmin/overview');
         return;
@@ -162,7 +162,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 */
 
 router.get('/retropilot/0/overview', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.send({ success: false, data: { session: false } });
 
@@ -184,7 +184,7 @@ router.get('/retropilot/0/overview', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     return res.json({ success: false, data: { session: false } }).status(403);
   }
@@ -205,7 +205,7 @@ router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, 
 }));
 
 router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
   }
@@ -222,7 +222,7 @@ router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true 
 }));
 
 router.post('/retropilot/0/password/change', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+  const account = await controllers.authentication.getAuthenticatedAccount(req);
   if (account == null) {
     res.json({ success: false, msg: 'UNAUTHORISED', status: 403 });
   }
@@ -239,7 +239,7 @@ router.post('/retropilot/0/password/change', bodyParser.urlencoded({ extended: t
 /*
 
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    const account = await controllers.authentication.getAuthenticatedAccount(req);
     if (account == null) {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
         return;
@@ -346,7 +346,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 }))
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    const account = await controllers.authentication.getAuthenticatedAccount(req);
     if (account == null) {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));
         return;
@@ -385,7 +385,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrappe
 }))
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
-    const account = await controllers.authentication.getAuthenticatedAccount(req, res);
+    const account = await controllers.authentication.getAuthenticatedAccount(req);
 
     if (account == null) {
         res.redirect('/useradmin?status=' + encodeURIComponent('Invalid or expired session'));

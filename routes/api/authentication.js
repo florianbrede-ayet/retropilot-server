@@ -6,7 +6,7 @@ const authenticationController = require('../../controllers/authentication');
 const userController = require('../../controllers/users');
 
 async function isAuthenticated(req, res, next) {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
 
   if (account === null) {
     res.json({
@@ -74,7 +74,7 @@ router.get('/retropilot/0/useradmin/signout', async (req, res) => {
 });
 
 router.get('/session/get', async (req, res) => {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
 
   if (!account) {
     res.json({ success: true, hasSession: false, session: {} });

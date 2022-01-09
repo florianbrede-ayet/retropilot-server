@@ -8,7 +8,7 @@ const deviceController = require('../../controllers/devices');
 const authenticationController = require('../../controllers/authentication');
 
 async function isAuthenticated(req, res, next) {
-  const account = await authenticationController.getAuthenticatedAccount(req, res);
+  const account = await authenticationController.getAuthenticatedAccount(req);
 
   if (account === null) {
     res.json({ success: false, msg: 'NOT_AUTHENTICATED1' });
