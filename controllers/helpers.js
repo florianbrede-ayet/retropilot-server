@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax */
 function formatDuration(durationSeconds) {
   const durationSecondsRound = Math.round(durationSeconds);
   const secs = durationSecondsRound % 60;
@@ -19,6 +18,7 @@ function formatDuration(durationSeconds) {
 // TODO remove this - looks like its used in old server.js
 function simpleStringify(object) {
   const simpleObject = {};
+  // eslint-disable-next-line no-restricted-syntax
   for (const prop in object) {
     if (!Object.prototype.hasOwnProperty.call(object, prop)) {
       continue;
@@ -39,5 +39,7 @@ function formatDate(timestampMs) {
 }
 
 module.exports = {
-  formatDuration, simpleStringify, formatDate,
+  formatDuration,
+  simpleStringify,
+  formatDate,
 };

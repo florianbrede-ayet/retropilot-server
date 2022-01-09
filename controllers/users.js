@@ -53,18 +53,12 @@ async function verifyEmailToken(token) {
     return { success: false, status: 404, data: { badToken: true } };
   }
   if (account.verified === 1) {
-    return { success: true, status: 404, data: { alreadyVerified: true } };
+    return { success: true, status: 409, data: { alreadyVerified: true } };
   }
 
   await orm.models.accounts.update(
-    {
-      verified: true,
-    },
-    {
-      where: {
-        id: account.id,
-      },
-    },
+    { verified: true },
+    { where: { id: account.id } },
   );
 
   return { success: true, status: 200, data: { successfullyVerified: true } };

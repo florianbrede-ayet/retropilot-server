@@ -3,9 +3,11 @@ const crypto = require('crypto');
 const dirTree = require('directory-tree');
 const config = require('../../config');
 
+/* eslint-disable no-unused-vars */
 const userController = require('../../controllers/users');
 const deviceController = require('../../controllers/devices');
 const authenticationController = require('../../controllers/authentication');
+/* eslint-enable no-unused-vars */
 
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
