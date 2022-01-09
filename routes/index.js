@@ -1,6 +1,6 @@
 /* eslint-disable global-require */
 module.exports = {
-  useradmin: require('./useradmin')(_models, _controllers, _logger),
+  useradmin: require('./useradmin'),
   api: require('./api'),
   useradminapi: require('./userAdminApi'),
   admin: require('./administration/adminApi'),

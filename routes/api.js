@@ -5,7 +5,10 @@ const crypto = require('crypto');
 const config = require('../config');
 const deviceController = require('./../controllers/devices')
 const userController = require('./../controllers/users');
-const authenticationController = require('./../controllers/authentication')
+const authenticationController = require('./../controllers/authentication');
+const log4js = require('log4js');
+
+const logger = log4js.getLogger('default');
 
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {
@@ -15,8 +18,13 @@ function runAsyncWrapper(callback) {
 }
 
 let models;
-let controllers;
-let logger;
+
+async function dbConnect() {
+  models = await require('../models/index')();
+}
+
+dbConnect();
+
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
 router.put('/backend/post_upload', bodyParser.raw({
@@ -123,7 +131,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
 
   // TODO reimplement weekly stats
 
-  /*const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id);
+  /*const statresult = await models.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id);
   if (statresult != null && statresult.routes != null) {
     stats.all.routes = statresult.routes;
     stats.all.distance = statresult.distance != null ? statresult.distance : 0;
@@ -137,7 +145,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
   const lastMonday = new Date(d.setDate(diff));
   lastMonday.setHours(0, 0, 0, 0);
 
-  const statresultweek = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=? AND drive_date >= ?', device.dongle_id, lastMonday.getTime());
+  const statresultweek = await models.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=? AND drive_date >= ?', device.dongle_id, lastMonday.getTime());
   if (statresultweek != null && statresultweek.routes != null) {
     stats.week.routes = statresultweek.routes;
     stats.week.distance = statresultweek.distance != null ? statresultweek.distance : 0;
@@ -177,7 +185,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
     account = account.dataValues
     [owner] = account.email.split('@');
     // TODO reimplement "points"
-    /*const stats = await models.__db.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id);
+    /*const stats = await models.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id);
     if (stats != null && stats.points != null) {
       points = stats.points;
     }*/
@@ -274,7 +282,7 @@ async function upload(req, res) {
         const timeSplit = driveName.split('--');
         const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
 
-        const driveResult = await models.__db.run(
+        const driveResult = await models.run(
           'INSERT INTO drives (identifier, dongle_id, max_segment, duration, distance_meters, filesize, upload_complete, is_processed, drive_date, created, last_upload, is_preserved, is_deleted, is_physically_removed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           driveName,
           dongleId,
@@ -292,7 +300,7 @@ async function upload(req, res) {
           false,
         );
 
-        await models.__db.run(
+        await models.run(
           'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           segment,
           driveName,
@@ -307,7 +315,7 @@ async function upload(req, res) {
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
       } else {
-        await models.__db.run(
+        await models.run(
           'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?',
           Date.now(),
           Math.max(drive.max_segment, segment),
@@ -317,10 +325,10 @@ async function upload(req, res) {
           dongleId,
         );
 
-        const driveSegment = await models.__db.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
+        const driveSegment = await models.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
 
         if (driveSegment == null) {
-          await models.__db.run(
+          await models.run(
             'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             segment,
             driveName,
@@ -333,7 +341,7 @@ async function upload(req, res) {
             Date.now(),
           );
         } else {
-          await models.__db.run(
+          await models.run(
             'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
             false,
             false,
@@ -381,7 +389,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     return res.status(400).send('Malformed Request.');
   }
 
-  const device = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
+  const device = await models.get('SELECT * FROM devices WHERE serial = ?', serial);
   if (device == null) {
     logger.info(`HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (${imei1}, ${serial})`);
 
@@ -389,9 +397,9 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const dongleId = crypto.randomBytes(4).toString('hex');
-      const isDongleIdTaken = await models.__db.get('SELECT * FROM devices WHERE serial = ?', serial);
+      const isDongleIdTaken = await models.get('SELECT * FROM devices WHERE serial = ?', serial);
       if (isDongleIdTaken == null) {
-        await models.__db.run(
+        await models.run(
           'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           dongleId,
           0,
@@ -404,7 +412,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
           0,
         );
 
-        const newDevice = await models.__db.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+        const newDevice = await models.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
 
         logger.info(`HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: ${JSON.stringify(newDevice)}`);
         return res.status(200).json({ dongle_id: newDevice.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
@@ -412,7 +420,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     }
   }
 
-  await models.__db.run(
+  await models.run(
     'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
     Date.now(),
     publicKey,
@@ -431,7 +439,7 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   const driveIdentifier = params[2];
   const driveIdentifierHashReq = params[3];
 
-  const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
+  const drive = await models.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
   if (!drive) {
     return res.status(200).json({ status: 'drive not found' });
   }
@@ -462,10 +470,4 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   });
 }));
 
-module.exports = (_models, _controllers, _logger) => {
-  models = _models;
-  controllers = _controllers;
-  logger = _logger;
-
-  return router;
-};
+module.exports = router;

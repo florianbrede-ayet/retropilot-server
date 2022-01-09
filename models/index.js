@@ -20,7 +20,20 @@ async function validateDatabase(db, logger) {
   }
 }
 
-module.exports = async () => ({
-  models: {},
+async function connect() {
+  let db;
 
-});
+  try {
+    db = await open({
+      filename: config.databaseFile,
+      driver: sqlite3.Database,
+      mode: sqlite3.OPEN_READWRITE,
+    });
+  } catch (exception) {
+    process.exit();
+  }
+
+  return db;
+}
+
+module.exports = connect;

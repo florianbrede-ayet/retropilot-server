@@ -4,7 +4,22 @@ const crypto = require('crypto');
 const htmlspecialchars = require('htmlspecialchars');
 const dirTree = require('directory-tree');
 const cookieParser = require('cookie-parser');
+const log4js = require('log4js');
 const config = require('../config');
+const authenticationController = require('../controllers/authentication');
+const storageController = require('../controllers/storage');
+const helperController = require('../controllers/helpers');
+const mailingController = require('../controllers/mailing');
+const deviceController = require('../controllers/devices');
+
+const logger = log4js.getLogger('default');
+let models;
+
+async function dbConnect() {
+  models = await require('../models/index')();
+}
+
+dbConnect();
 
 // TODO Remove this, pending on removing all auth logic from routes
 router.use(cookieParser());
@@ -16,12 +31,8 @@ function runAsyncWrapper(callback) {
   };
 }
 
-let models;
-let controllers;
-let logger;
-
 router.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  const signIn = await controllers.authentication.signIn(req.body.email, req.body.password);
+  const signIn = await authenticationController.signIn(req.body.email, req.body.password);
 
   console.log(signIn);
 
@@ -40,15 +51,15 @@ router.get('/useradmin/signout', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account != null) {
     res.redirect('/useradmin/overview');
     return;
   }
 
-  const accounts = await models.__db.get('SELECT COUNT(*) AS num FROM accounts');
-  const devices = await models.__db.get('SELECT COUNT(*) AS num FROM devices');
-  const drives = await models.__db.get('SELECT COUNT(*) AS num, SUM(distance_meters) as distance, SUM(duration) as duration FROM drives');
+  const accounts = await models.get('SELECT COUNT(*) AS num FROM accounts');
+  const devices = await models.get('SELECT COUNT(*) AS num FROM devices');
+  const drives = await models.get('SELECT COUNT(*) AS num, SUM(distance_meters) as distance, SUM(duration) as duration FROM drives');
 
   res.status(200);
   res.send(`<html style="font-family: monospace">
@@ -68,8 +79,8 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
     Devices: ${devices.num}  |  
     Drives: ${drives.num}  |  
     Distance Traveled: ${Math.round(drives.distance / 1000)} km  |  
-    Time Traveled: ${controllers.helpers.formatDuration(drives.duration)}  |  
-    Storage Used: ${await controllers.storage.getTotalStorageUsed() !== null ? await controllers.storage.getTotalStorageUsed() : '--'}
+    Time Traveled: ${helperController.formatDuration(drives.duration)}  |  
+    Storage Used: ${await storageController.getTotalStorageUsed() !== null ? await storageController.getTotalStorageUsed() : '--'}
     <br><br>${config.welcomeMessage}
 </html>`);
 }));
@@ -85,12 +96,12 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     return res.status(401).send('Unauthorized.');
   }
 
-  const authAccount = await controllers.authentication.getAuthenticatedAccount(req);
+  const authAccount = await authenticationController.getAuthenticatedAccount(req);
   if (authAccount != null) {
     return res.redirect('/useradmin/overview');
   }
 
-  const account = await models.__db.get('SELECT * FROM accounts WHERE LOWER(email) = ?', email.trim().toLowerCase());
+  const account = await models.get('SELECT * FROM accounts WHERE LOWER(email) = ?', email.trim().toLowerCase());
   if (account != null) {
     return res.redirect(`/useradmin/register?status=${encodeURIComponent('Email is already registered')}`);
   }
@@ -102,13 +113,13 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
   if (req.body.token === undefined) { // email entered, token request
     infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
-    const emailStatus = await controllers.mailing.sendEmailVerification(token, email);
+    const emailStatus = await mailingController.sendEmailVerification(token, email);
   } else if (req.body.token !== token) {
     infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
   } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
     infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
   } else {
-    const result = await models.__db.run(
+    const result = await models.run(
       'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
       email,
       crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
@@ -145,7 +156,7 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
     return res.status(400).send('Unauthorized.');
   }
 
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account != null) {
     return res.redirect('/useradmin/overview');
   }
@@ -164,12 +175,12 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  const devices = await models.__db.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id);
+  const devices = await models.all('SELECT * FROM devices WHERE account_id = ? ORDER BY dongle_id ASC', account.id);
 
   let response = `<html style="font-family: monospace">
     <h2>Welcome To The RetroPilot Server Dashboard!</h2>
@@ -177,7 +188,7 @@ router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
     <h3>Account Overview</h3>
     <b>Account:</b> #${account.id}<br>
     <b>Email:</b> ${account.email}<br>
-    <b>Created:</b> ${controllers.helpers.formatDate(account.created)}<br><br>
+    <b>Created:</b> ${helperController.formatDate(account.created)}<br><br>
     <b>Devices:</b><br>
     <table border=1 cellpadding=2 cellspacing=2>
         <tr><th>dongle_id</th><th>device_type</th><th>created</th><th>last_ping</th><th>storage_used</th></tr>
@@ -188,8 +199,8 @@ router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
     response += `<tr>
     <td><a href="/useradmin/device/${device.dongle_id}">${device.dongle_id}</a></td>
     <td>${device.device_type}</td>
-    <td>${controllers.helpers.formatDate(device.created)}</td>
-    <td>${controllers.helpers.formatDate(device.last_ping)}</td>
+    <td>${helperController.formatDate(device.created)}</td>
+    <td>${helperController.formatDate(device.last_ping)}</td>
     <td>${device.storage_used} MB</td>
 </tr>`;
   });
@@ -214,7 +225,7 @@ ${req.query.linkstatus !== undefined ? `<br><u>${htmlspecialchars(req.query.link
 }));
 
 router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
@@ -223,13 +234,13 @@ router.get('/useradmin/unpair_device/:dongleId', runAsyncWrapper(async (req, res
 }));
 
 router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
     return;
   }
 
-  const pairDevice = await controllers.devices.pairDevice(account, req.body.qr_string);
+  const pairDevice = await deviceController.pairDevice(account, req.body.qr_string);
   if (pairDevice.success === true) {
     res.redirect('/useradmin/overview');
   } else if (pairDevice.registered === true) {
@@ -248,22 +259,22 @@ router.post('/useradmin/pair_device', bodyParser.urlencoded({ extended: true }),
 router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
   const { dongleId } = req.params;
 
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, dongleId);
+  const device = await models.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, dongleId);
   if (device == null) {
     return res.status(400).send('Unauthorized.');
   }
 
-  const drives = await models.__db.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
+  const drives = await models.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
 
   const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
 
-  const bootlogFiles = await controllers.devices.getBootlogs(device.dongle_id);
-  const crashlogFiles = await controllers.devices.getCrashlogs(device.dongle_id);
+  const bootlogFiles = await deviceController.getBootlogs(device.dongle_id);
+  const crashlogFiles = await deviceController.getCrashlogs(device.dongle_id);
 
   let response = `<html style="font-family: monospace">
     <h2>Welcome To The RetroPilot Server Dashboard!</h2>
@@ -273,8 +284,8 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <b>Type:</b> ${device.device_type}<br>
     <b>Serial:</b> ${device.serial}<br>
     <b>IMEI:</b> ${device.imei}<br>
-    <b>Registered:</b> ${controllers.helpers.formatDate(device.created)}<br>
-    <b>Last Ping:</b> ${controllers.helpers.formatDate(device.last_ping)}<br>
+    <b>Registered:</b> ${helperController.formatDate(device.created)}<br>
+    <b>Last Ping:</b> ${helperController.formatDate(device.last_ping)}<br>
     <b>Public Key:</b><br>
     <span style="font-size: 0.8em">${device.public_key.replace(/\r?\n|\r/g, '<br>')}</span><br>
     <b>Stored Drives:</b> ${drives.length}<br>
@@ -287,7 +298,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <tr><th>date</th><th>file</th><th>size</th></tr>
 `;
   for (let i = 0; i < Math.min(5, bootlogFiles.length); i++) {
-    response += `<tr><td>${controllers.helpers.formatDate(bootlogFiles[i].date)}</td><td><a href="${config.baseDriveDownloadUrl}${device.dongle_id}/${dongleIdHash}/boot/${bootlogFiles[i].name}" target=_blank>${bootlogFiles[i].name}</a></td><td>${bootlogFiles[i].size}</td></tr>`;
+    response += `<tr><td>${helperController.formatDate(bootlogFiles[i].date)}</td><td><a href="${config.baseDriveDownloadUrl}${device.dongle_id}/${dongleIdHash}/boot/${bootlogFiles[i].name}" target=_blank>${bootlogFiles[i].name}</a></td><td>${bootlogFiles[i].size}</td></tr>`;
   }
   response += '</table><br><br>';
 
@@ -296,7 +307,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
             <tr><th>date</th><th>file</th><th>size</th></tr>`;
   for (let i = 0; i < Math.min(5, crashlogFiles.length); i++) {
     response += `<tr>
-    <td>${controllers.helpers.formatDate(crashlogFiles[i].date)}</td>.
+    <td>${helperController.formatDate(crashlogFiles[i].date)}</td>.
     <td><a href="${config.baseDriveDownloadUrl}${device.dongle_id}/${dongleIdHash}/crash/${crashlogFiles[i].name}" target=_blank>${crashlogFiles[i].name}</a></td>
     <td>${crashlogFiles[i].size}</td>
 </tr>`;
@@ -345,11 +356,11 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <td>${vehicle}</td>
     <td>${version}</td>
     <td>${Math.round(drive.filesize / 1024)} MiB</td>
-    <td>${controllers.helpers.formatDuration(drive.duration)}</td>
+    <td>${helperController.formatDuration(drive.duration)}</td>
     <td>${Math.round(drive.distance_meters / 1000)} km</td>
     <td>${drive.upload_complete}</td>
     <td>${drive.is_processed}</td>
-    <td>${controllers.helpers.formatDate(drive.created)}</td>
+    <td>${helperController.formatDate(drive.created)}</td>
     <td>
         [<a href="/useradmin/drive/${drive.dongle_id}/${drive.identifier}/delete" onclick="return confirm('Permanently delete this drive?')">delete</a>]
         ${drive.is_preserved ? '' : `[<a href="/useradmin/drive/${drive.dongle_id}/${drive.identifier}/preserve">preserve</a>]`}
@@ -370,30 +381,30 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
+  const device = await models.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
   if (device == null) {
     return res.status(400).send('Unauthorized.');
   }
 
-  const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
+  const drive = await models.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
   if (drive == null) {
     return res.status(400).send('Unauthorized.');
   }
 
   const { action } = req.params;
   if (action === 'delete') {
-    await models.__db.run(
+    await models.run(
       'UPDATE drives SET is_deleted = ? WHERE id = ?',
       true,
       drive.id,
     );
   } else if (action === 'preserve') {
-    await models.__db.run(
+    await models.run(
       'UPDATE drives SET is_preserved = ? WHERE id = ?',
       true,
       drive.id,
@@ -404,17 +415,17 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier/:action', runAsyncWrappe
 }));
 
 router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async (req, res) => {
-  const account = await controllers.authentication.getAuthenticatedAccount(req);
+  const account = await authenticationController.getAuthenticatedAccount(req);
   if (account == null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
 
-  const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
+  const device = await models.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
   if (device == null) {
     return res.status(400).send('Unauthorized.');
   }
 
-  const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
+  const drive = await models.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', req.params.driveIdentifier, req.params.dongleId);
   if (drive == null) {
     return res.status(400).send('Unauthorized.');
   }
@@ -483,8 +494,8 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <h2>Welcome To The RetroPilot Server Dashboard!</h2>
         <a href="/useradmin/device/${device.dongle_id}">< < < Back To Device ${device.dongle_id}</a>
         <br><br><h3>Drive ${drive.identifier} on ${drive.dongle_id}</h3>
-        <b>Drive Date:</b> ${controllers.helpers.formatDate(drive.drive_date)}<br>
-        <b>Upload Date:</b> ${controllers.helpers.formatDate(drive.created)}<br><br>
+        <b>Drive Date:</b> ${helperController.formatDate(drive.drive_date)}<br>
+        <b>Upload Date:</b> ${helperController.formatDate(drive.created)}<br><br>
         <b>Vehicle:</b> ${vehicle}<br>
         <b>Openpilot Version:</b> ${version}<br><br>
         <b>GIT Remote:</b> ${gitRemote}<br>
@@ -492,7 +503,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <b>GIT Commit:</b> ${gitCommit}<br><br>
         <b>Num Segments:</b> ${drive.max_segment + 1}<br>
         <b>Storage:</b> ${Math.round(drive.filesize / 1024)} MiB<br>
-        <b>Duration:</b> ${controllers.helpers.formatDuration(drive.duration)}<br>
+        <b>Duration:</b> ${helperController.formatDuration(drive.duration)}<br>
         <b>Distance:</b> ${Math.round(drive.distance_meters / 1000)} km<br>
         <b>Is Preserved:</b> ${drive.is_preserved}<br>
         <b>Upload Complete:</b> ${drive.upload_complete}<br>
@@ -595,7 +606,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
       // get processed/stalled status
       let isProcessed = '?';
       let isStalled = '?';
-      const driveSegment = await models.__db.get(
+      const driveSegment = await models.get(
         'SELECT * FROM drive_segments WHERE segment_id = ? AND drive_identifier = ? AND dongle_id = ?',
         parseInt(segment, 10),
         drive.identifier,
@@ -634,10 +645,4 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
   return res.status(200).send(response);
 }));
 
-module.exports = (_models, _controllers, _logger) => {
-  models = _models;
-  controllers = _controllers;
-  logger = _logger;
-
-  return router;
-};
+module.exports = router;

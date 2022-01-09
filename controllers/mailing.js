@@ -1,10 +1,8 @@
 const nodemailer = require('nodemailer');
+const log4js = require('log4js');
 const config = require('../config');
 
-// eslint-disable-next-line no-unused-vars
-let models;
-let logger;
-
+const logger = log4js.getLogger('default');
 const transporter = nodemailer.createTransport(
   {
     host: config.smtpHost,
@@ -49,11 +47,6 @@ async function sendEmailVerification(token, email) {
   return info;
 }
 
-module.exports = (_models, _logger) => {
-  models = _models;
-  logger = _logger;
-
-  return {
-    sendEmailVerification,
-  };
+module.exports = {
+  sendEmailVerification,
 };
