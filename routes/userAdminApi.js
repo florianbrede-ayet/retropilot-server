@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const config = require('../config');
 const controllers = require('../controllers');
+const deviceController = require('../controllers/devices');
 
 // TODO Remove this, pending on removing all auth logic from routes
 router.use(cookieParser());
@@ -189,20 +190,18 @@ router.get('/retropilot/0/unpair_device/:dongleId', runAsyncWrapper(async (req, 
   if (account == null) {
     return res.json({ success: false, data: { session: false } }).status(403);
   }
-
   const device = await models.__db.get('SELECT * FROM devices WHERE account_id = ? AND dongle_id = ?', account.id, req.params.dongleId);
 
   if (device == null) {
     return res.json({ success: false }).status(400);
   }
 
-  await models.__db.run(
-    'UPDATE devices SET account_id = ? WHERE dongle_id = ?',
-    0,
-    req.params.dongleId,
-  );
+  const pairDeviceToAccountId = await deviceController.pairDeviceToAccountId(req.prams.dongleId, 0);
 
-  return res.json({ success: true, data: { unlink: true } });
+  if (pairDeviceToAccountId.success && pairDeviceToAccountId.paired) {
+    return res.json({ success: true, data: { unlink: true } });
+  }
+  return res.json({ success: true, data: { unlink: false } });
 }));
 
 router.post('/retropilot/0/pair_device', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
@@ -506,10 +505,4 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
 }))
 */
 
-module.exports = (_models, _controllers, _logger) => {
-  models = _models;
-  controllers = _controllers;
-  logger = _logger;
-
-  return router;
-};
+module.exports = router;

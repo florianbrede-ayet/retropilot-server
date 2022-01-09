@@ -1,7 +1,11 @@
+/* eslint-disable */
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const config = require('../config');
+const deviceController = require('./../controllers/devices')
+const userController = require('./../controllers/users');
+const authenticationController = require('./../controllers/authentication')
 
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {
@@ -59,7 +63,10 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
   const { dongleId } = req.params;
   logger.info(`HTTP.DEVICES called for ${req.params.dongleId}`);
 
-  const device = await models.drivesModel.getDevice(dongleId);
+
+  
+
+  const device = deviceController.getDeviceFromDongle(dongleId);
 
   if (!device) {
     logger.info(`HTTP.DEVICES device ${dongleId} not found`);
@@ -99,7 +106,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     },
   };
 
-  const device = await models.drivesModel.getDevice(dongleId);
+  const device = await deviceController.getDeviceFromDongle(dongleId);
   if (!device) {
     logger.info(`HTTP.STATS device ${dongleId} not found`);
     return res.status(404).json('Not found.');
@@ -114,7 +121,9 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     return res.status(400).send('Unauthorized.');
   }
 
-  const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id);
+  // TODO reimplement weekly stats
+
+  /*const statresult = await models.__db.get('SELECT COUNT(*) as routes, ROUND(SUM(distance_meters)/1609.34) as distance, ROUND(SUM(duration)/60) as duration FROM drives WHERE dongle_id=?', device.dongle_id);
   if (statresult != null && statresult.routes != null) {
     stats.all.routes = statresult.routes;
     stats.all.distance = statresult.distance != null ? statresult.distance : 0;
@@ -133,7 +142,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
     stats.week.routes = statresultweek.routes;
     stats.week.distance = statresultweek.distance != null ? statresultweek.distance : 0;
     stats.week.minutes = statresultweek.duration != null ? statresultweek.duration : 0;
-  }
+  }*/
 
   logger.info(`HTTP.STATS for ${req.params.dongleId} returning: ${JSON.stringify(stats)}`);
   return res.status(200).json(stats);
@@ -144,7 +153,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
   const { dongleId } = req.params;
   logger.info(`HTTP.OWNER called for ${req.params.dongleId}`);
 
-  const device = await models.drivesModel.getDevice(dongleId);
+  const device = await deviceController.getDeviceFromDongle(dongleId);
 
   if (!device) {
     logger.info(`HTTP.OWNER device ${dongleId} not found`);
@@ -163,13 +172,15 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
   let owner = '';
   let points = 0;
 
-  const account = await models.__db.get('SELECT * FROM accounts WHERE id = ?', device.account_id);
-  if (account != null) {
+  let account = await userController.getAccountFromId(device.account_id);
+  if (account != null && account.dataValues != null) {
+    account = account.dataValues
     [owner] = account.email.split('@');
-    const stats = await models.__db.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id);
+    // TODO reimplement "points"
+    /*const stats = await models.__db.all('SELECT SUM(distance_meters) as points FROM drives WHERE dongle_id IN (SELECT dongle_id FROM devices WHERE account_id=?)', account.id);
     if (stats != null && stats.points != null) {
       points = stats.points;
-    }
+    }*/
   }
 
   const response = { username: owner, points };
@@ -184,14 +195,14 @@ async function upload(req, res) {
   const auth = req.headers.authorization;
   logger.info(`HTTP.UPLOAD_URL called for ${req.params.dongleId} and file ${path}: ${JSON.stringify(req.headers)}`);
 
-  const device = await models.drivesModel.getDevice(dongleId);
+  const device = await deviceController.getDeviceFromDongle(dongleId);
   if (!device) {
     logger.info(`HTTP.UPLOAD_URL device ${dongleId} not found or not linked to an account / refusing uploads`);
     return res.send('Unauthorized.').status(400);
   }
 
   const decoded = device.public_key
-    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key)
     : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
@@ -199,7 +210,7 @@ async function upload(req, res) {
     return res.send('Unauthorized.').status(400);
   }
 
-  await models.drivesModel.deviceCheckIn(dongleId);
+  deviceController.updateLastPing(dongleId);
 
   let responseUrl = null;
   const ts = Date.now(); // we use this to make sure old URLs cannot be reused (timeout after 60min)
@@ -256,7 +267,7 @@ async function upload(req, res) {
       responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
       logger.info(`HTTP.UPLOAD_URL matched 'drive' file upload, constructed responseUrl: ${responseUrl}`);
 
-      const drive = await models.__db.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveName, dongleId);
+      const drive = await deviceController.getDriveFromidentifier(dongleId, driveName);
 
       if (drive == null) {
         // create a new drive

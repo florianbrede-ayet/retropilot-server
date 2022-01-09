@@ -175,6 +175,10 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
   return orm.models.drives.findAll(query);
 }
 
+async function getDriveFromidentifier(dongleId, identifier) {
+  return orm.models.drives.findAll({ where: { dongle_id: dongleId, identifier } });
+}
+
 /*
     TODO: ADD AUTHENTICATION TO ENDPOINTS
 */
