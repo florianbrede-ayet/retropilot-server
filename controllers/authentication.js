@@ -33,8 +33,6 @@ async function signIn(email, password) {
     if (account.password === inputPassword) {
       const token = jsonwebtoken.sign({ accountId: account.id }, config.applicationSalt);
 
-      // TODO: INSECURE, DEBUG
-      console.log('jwt: ', token);
       return { success: true, jwt: token };
     }
     return { success: false, msg: 'BAD PASSWORD', invalidPassword: true };

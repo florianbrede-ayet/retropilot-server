@@ -6,6 +6,21 @@ async function getAccountFromId(id) {
   return orm.models.accounts.findByPk(id);
 }
 
+async function getAccountFromEmail(email) {
+  if (!email) return null;
+
+  const account = orm.models.accounts.findOne({ where: { email } });
+
+  if (account.dataValues) return account.dataValues;
+  return null;
+}
+
+async function _dirtyCreateAccount(email, password, created, banned) {
+  return orm.models.accounts.create({
+    email, password, created, banned,
+  });
+}
+
 async function createAccount(email, password) {
   if (!email || !password) {
     return { success: false, status: 400, data: { missingData: true } };
@@ -73,4 +88,6 @@ module.exports = {
   verifyEmailToken,
   getAccountFromId,
   getAllUsers,
+  getAccountFromEmail,
+  _dirtyCreateAccount,
 };

@@ -65,9 +65,6 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
   const { dongleId } = req.params;
   logger.info(`HTTP.DEVICES called for ${req.params.dongleId}`);
 
-
-  
-
   const device = deviceController.getDeviceFromDongle(dongleId);
 
   if (!device) {

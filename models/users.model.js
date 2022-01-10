@@ -32,6 +32,10 @@ module.exports = (sequelize) => {
       allowNull: true,
       type: DataTypes.INTEGER,
     },
+    email_verify_token: {
+      allowNull: true,
+      type: DataTypes.TEXT,
+    },
   }, {
     timestamps: false,
   });

@@ -277,7 +277,10 @@ async function updateOrCreateDrive(dongleId, identifier, data) {
   return orm.models.drives.create({
     ...data,
     dongle_Id: dongleId,
-    identifier,
+    [Op.or]: [
+      { identifier: dongleId },
+      { id: dongleId },
+    ],
   });
 }
 
@@ -348,4 +351,5 @@ module.exports = {
   getDriveFromidentifier,
   updateOrCreateDrive,
   updateOrCreateDriveSegment,
+  getDriveSegment,
 };
