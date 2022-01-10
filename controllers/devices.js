@@ -100,6 +100,7 @@ async function getDevices(accountId) {
 }
 
 async function getDeviceFromDongle(dongleId) {
+  if (!dongleId) return null;
   const devices = await orm.models.device.findOne({ where: { dongle_id: dongleId } });
   if (!devices || !devices.dataValues) {
     return null;
@@ -121,10 +122,10 @@ async function getAllDevicesFiltered() {
   return orm.models.device.findAll();
 }
 
-async function updateLastPing(deviceId, dongleId) {
-  await orm.models.device.update(
+async function updateLastPing(deviceId) {
+  return orm.models.device.update(
     { last_ping: Date.now() },
-    { where: { [Op.or]: [{ id: deviceId }, { dongle_id: dongleId }] } },
+    { where: { [Op.or]: [{ id: deviceId }, { dongle_id: deviceId }] } },
   );
 }
 
@@ -176,6 +177,7 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
 }
 
 async function getDriveFromidentifier(dongleId, identifier) {
+  console.log('WAAAA', dongleId);
   return orm.models.drives.findAll({ where: { dongle_id: dongleId, identifier } });
 }
 
@@ -260,4 +262,5 @@ module.exports = {
   getDrives,
   getBootlogs,
   getCrashlogs,
+  getDriveFromidentifier,
 };

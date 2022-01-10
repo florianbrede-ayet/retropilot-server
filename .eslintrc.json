@@ -7,6 +7,9 @@
     "node": true,
     "browser": false // do we need this? none of this code will ever run on a browswer 
   },
+  "plugins": [
+    "no-floating-promise"
+],
   "rules": {
     // disallow use of unary operators, ++ and --
     // http://eslint.org/docs/rules/no-plusplus
@@ -44,6 +47,8 @@
     "no-console": "off",
     "no-underscore-dangle": "off",
     // retropilot: we use this for websocket connection properties
-    "no-param-reassign": "off"
+    "no-param-reassign": "off",
+    // retropilot: require promises to be handled correctly
+    "no-floating-promise/no-floating-promise": 2
   }
 }

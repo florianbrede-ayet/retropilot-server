@@ -2,11 +2,13 @@
 const router = require('express').Router();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const config = require('../config');
-const deviceController = require('./../controllers/devices')
-const userController = require('./../controllers/users');
-const authenticationController = require('./../controllers/authentication');
 const log4js = require('log4js');
+const storageController = require('../controllers/storage');
+const helperController = require('../controllers/helpers');
+const mailingController = require('../controllers/mailing');
+const deviceController = require('../controllers/devices');
+const config = require('../config');
+const authenticationController = require('./../controllers/authentication');
 
 const logger = log4js.getLogger('default');
 
@@ -56,7 +58,7 @@ router.put('/backend/post_upload', bodyParser.raw({
   }
 
   logger.info('HTTP.PUT /backend/post_upload permissions checked, calling moveUploadedFile');
-  const moveResult = controllers.storage.moveUploadedFile(buf, directory, filename);
+  const moveResult = storageController.moveUploadedFile(buf, directory, filename);
   if (!moveResult) {
     logger.error('HTTP.PUT /backend/post_upload moveUploadedFile failed');
     return res.status(500).send('Internal Server Error');
@@ -82,7 +84,7 @@ router.get('/v1.1/devices/:dongleId/', runAsyncWrapper(async (req, res) => {
   }
 
   const decoded = device.public_key
-    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key)
     : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
@@ -121,7 +123,7 @@ router.get('/v1.1/devices/:dongleId/stats', runAsyncWrapper(async (req, res) => 
   }
 
   const decoded = device.public_key
-    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key)
     : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
@@ -169,7 +171,7 @@ router.get('/v1/devices/:dongleId/owner', runAsyncWrapper(async (req, res) => {
   }
 
   const decoded = device.public_key
-    ? await controllers.authentication.validateJWT(req.headers.authorization, device.public_key)
+    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key)
     : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
@@ -210,7 +212,7 @@ async function upload(req, res) {
   }
 
   const decoded = device.public_key
-    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key)
+    ? await authenticationController.validateJWT(req.headers.authorization, device.public_key).catch(logger.error)
     : null;
 
   if ((!decoded || decoded.identity !== req.params.dongleId)) {
@@ -218,7 +220,7 @@ async function upload(req, res) {
     return res.send('Unauthorized.').status(400);
   }
 
-  deviceController.updateLastPing(dongleId);
+  deviceController.updateLastPing(dongleId).catch(logger.error);
 
   let responseUrl = null;
   const ts = Date.now(); // we use this to make sure old URLs cannot be reused (timeout after 60min)
@@ -275,7 +277,7 @@ async function upload(req, res) {
       responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
       logger.info(`HTTP.UPLOAD_URL matched 'drive' file upload, constructed responseUrl: ${responseUrl}`);
 
-      const drive = await deviceController.getDriveFromidentifier(dongleId, driveName);
+      const drive = await deviceController.getDriveFromidentifier(dongleId, driveName).catch(logger.error)
 
       if (drive == null) {
         // create a new drive
@@ -298,7 +300,7 @@ async function upload(req, res) {
           false,
           false,
           false,
-        );
+        ).catch((err) => {logger.warn("303", err)})
 
         await models.run(
           'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -311,7 +313,7 @@ async function upload(req, res) {
           false,
           false,
           Date.now(),
-        );
+        ).catch((err) => {logger.warn("316", err)})
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
       } else {
@@ -323,7 +325,7 @@ async function upload(req, res) {
           false,
           driveName,
           dongleId,
-        );
+        ).catch((err) => {logger.warn("328", err)})
 
         const driveSegment = await models.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
 
@@ -339,7 +341,7 @@ async function upload(req, res) {
             false,
             false,
             Date.now(),
-          );
+          ).catch((err) => {logger.warn("344", err)})
         } else {
           await models.run(
             'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
@@ -348,7 +350,7 @@ async function upload(req, res) {
             driveName,
             dongleId,
             segment,
-          );
+          ).catch((err) => {logger.warn("353", err)})
         }
 
         logger.info(`HTTP.UPLOAD_URL updated existing drive: ${JSON.stringify(drive)}`);
@@ -383,7 +385,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     return res.status(400).send('Malformed Request.');
   }
 
-  const decoded = await controllers.authentication.validateJWT(registerToken, publicKey);
+  const decoded = await authenticationController.validateJWT(registerToken, publicKey);
   if (!decoded || !decoded.register) {
     logger.error(`HTTP.V2.PILOTAUTH JWT token is invalid (${JSON.stringify(decoded)})`);
     return res.status(400).send('Malformed Request.');

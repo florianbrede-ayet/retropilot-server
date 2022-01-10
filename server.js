@@ -10,6 +10,11 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const storageController = require('./controllers/storage');
 
+process.on('unhandledRejection', (error, p) => {
+  console.log('=== UNHANDLED REJECTION ===');
+  console.log(error.promise, p);
+  console.dir(error.stack);
+});
 log4js.configure({
   appenders: { logfile: { type: 'file', filename: 'server.log' }, out: { type: 'console' } /* {type: "file", filename: "server1.log"} */ },
   categories: { default: { appenders: ['out', 'logfile'], level: 'info' } },
