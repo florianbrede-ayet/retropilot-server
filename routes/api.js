@@ -19,15 +19,6 @@ function runAsyncWrapper(callback) {
   };
 }
 
-let models;
-
-async function dbConnect() {
-  models = await require('../models/index')();
-}
-
-dbConnect();
-
-
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
 router.put('/backend/post_upload', bodyParser.raw({
@@ -320,19 +311,6 @@ async function upload(req, res) {
 
         const driveSegment = await driveController.getDriveSegment(dongleId, driveName, segment);
         if (driveSegment == null) {
-          await models.run(
-            'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            segment,
-            driveName,
-            dongleId,
-            0,
-            0,
-            false,
-            false,
-            false,
-            Date.now(),
-          ).catch((err) => {logger.warn("344", err)})
-
           await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
             duration: 0, 
             distance_meters: 0, 
@@ -394,7 +372,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const dongleId = crypto.randomBytes(4).toString('hex');
-      const isDongleIdTaken = await models.get('SELECT * FROM devices WHERE serial = ?', serial);
+      const isDongleIdTaken = await deviceController.getDeviceFromDongle(dongleId);
       if (isDongleIdTaken == null) {
         await deviceController.createDongle(dongleId, 0, imei1, serial, publicKey)
 
@@ -421,7 +399,8 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   const driveIdentifier = params[2];
   const driveIdentifierHashReq = params[3];
 
-  const drive = await models.get('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
+  const drive = await deviceController.getDrive(dongleId, driveIdentifier)
+
   if (!drive) {
     return res.status(200).json({ status: 'drive not found' });
   }

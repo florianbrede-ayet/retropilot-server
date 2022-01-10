@@ -191,6 +191,13 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
   return orm.models.drives.findAll(query);
 }
 
+async function getDrive(dongleId, identifier) {
+  const drive = orm.models.drives.findOne({ where: { identifier, dongle_id: dongleId } });
+
+  if (drive.dataValues) return drive.dataValues;
+  return null;
+}
+
 async function getDriveFromidentifier(dongleId, identifier) {
   console.log('WAAAA', dongleId);
   return orm.models.drives.findAll({ where: { dongle_id: dongleId, identifier } });
@@ -335,6 +342,7 @@ module.exports = {
 
   // drive stuff, move maybe?
   getDrives,
+  getDrive,
   getBootlogs,
   getCrashlogs,
   getDriveFromidentifier,
