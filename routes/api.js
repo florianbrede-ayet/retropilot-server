@@ -28,6 +28,7 @@ async function dbConnect() {
 dbConnect();
 
 
+
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD HANDLING
 router.put('/backend/post_upload', bodyParser.raw({
   inflate: true,
@@ -284,51 +285,40 @@ async function upload(req, res) {
         const timeSplit = driveName.split('--');
         const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
 
-        const driveResult = await models.run(
-          'INSERT INTO drives (identifier, dongle_id, max_segment, duration, distance_meters, filesize, upload_complete, is_processed, drive_date, created, last_upload, is_preserved, is_deleted, is_physically_removed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          driveName,
-          dongleId,
-          segment,
-          0,
-          0,
-          0,
-          false,
-          false,
-          Date.parse(timeString),
-          Date.now(),
-          Date.now(),
-          false,
-          false,
-          false,
-        ).catch((err) => {logger.warn("303", err)})
+        const driveResult = await deviceController.updateOrCreateDrive(dongleId, identifier, {
+          max_segment: segment,
+          duration: 0,
+          distance_meters: 0,
+          filesize: 0,
+          upload_complete: false,
+          is_processed: false,
+          drive_date: Date.parse(timeString),
+          created: Date.now(),
+          last_upload: Date.now(),
+          is_preserved: false,
+          is_deleted: false,
+          is_physically_removed: false,
+        })
 
-        await models.run(
-          'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          segment,
-          driveName,
-          dongleId,
-          0,
-          0,
-          false,
-          false,
-          false,
-          Date.now(),
-        ).catch((err) => {logger.warn("316", err)})
+        await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
+          duration: 0,
+          distance_meters: 0,
+          upload_complete: false,
+          is_processed: false,
+          is_stalled: false,
+          created: Date.now(),
+        })
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
       } else {
-        await models.run(
-          'UPDATE drives SET last_upload = ?, max_segment = ?, upload_complete = ?, is_processed = ?  WHERE identifier = ? AND dongle_id = ?',
-          Date.now(),
-          Math.max(drive.max_segment, segment),
-          false,
-          false,
-          driveName,
-          dongleId,
-        ).catch((err) => {logger.warn("328", err)})
+        await deviceController.updateOrCreateDrive(dongleId, driveName, {
+          max_segment: Math.max(drive.max_segment, segment),
+          upload_complete: false,
+          is_processed: false,
+          last_upload: Date.now(),
+        })
 
-        const driveSegment = await models.get('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?', driveName, dongleId, segment);
-
+        const driveSegment = await driveController.getDriveSegment(dongleId, driveName, segment);
         if (driveSegment == null) {
           await models.run(
             'INSERT INTO drive_segments (segment_id, drive_identifier, dongle_id, duration, distance_meters, upload_complete, is_processed, is_stalled, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -342,15 +332,20 @@ async function upload(req, res) {
             false,
             Date.now(),
           ).catch((err) => {logger.warn("344", err)})
+
+          await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
+            duration: 0, 
+            distance_meters: 0, 
+            upload_complete: false, 
+            is_processed: false, 
+            is_stalled: false, 
+            created: Date.now()
+          })
         } else {
-          await models.run(
-            'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE drive_identifier = ? AND dongle_id = ? AND segment_id = ?',
-            false,
-            false,
-            driveName,
-            dongleId,
-            segment,
-          ).catch((err) => {logger.warn("353", err)})
+          await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
+            is_processed: false,
+            is_stalled: false,
+          })
         }
 
         logger.info(`HTTP.UPLOAD_URL updated existing drive: ${JSON.stringify(drive)}`);
@@ -391,7 +386,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     return res.status(400).send('Malformed Request.');
   }
 
-  const device = await models.get('SELECT * FROM devices WHERE serial = ?', serial);
+  const device = await deviceController.getDeviceFromSerial(serial)
   if (device == null) {
     logger.info(`HTTP.V2.PILOTAUTH REGISTERING NEW DEVICE (${imei1}, ${serial})`);
 
@@ -401,20 +396,10 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
       const dongleId = crypto.randomBytes(4).toString('hex');
       const isDongleIdTaken = await models.get('SELECT * FROM devices WHERE serial = ?', serial);
       if (isDongleIdTaken == null) {
-        await models.run(
-          'INSERT INTO devices (dongle_id, account_id, imei, serial, device_type, public_key, created, last_ping, storage_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          dongleId,
-          0,
-          imei1,
-          serial,
-          'freon',
-          publicKey,
-          Date.now(),
-          Date.now(),
-          0,
-        );
+        await deviceController.createDongle(dongleId, 0, imei1, serial, publicKey)
 
-        const newDevice = await models.get('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+
+        const newDevice = await deviceController.getDeviceFromDongle(dongleId);
 
         logger.info(`HTTP.V2.PILOTAUTH REGISTERED NEW DEVICE: ${JSON.stringify(newDevice)}`);
         return res.status(200).json({ dongle_id: newDevice.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });
@@ -422,12 +407,7 @@ router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (
     }
   }
 
-  await models.run(
-    'UPDATE devices SET last_ping = ?, public_key = ? WHERE dongle_id = ?',
-    Date.now(),
-    publicKey,
-    device.dongle_id,
-  );
+  await deviceController.updateDevice(device.dongle_id, {last_ping: Date.now(), public_key: publicKey})
 
   logger.info(`HTTP.V2.PILOTAUTH REACTIVATING KNOWN DEVICE (${imei1}, ${serial}) with dongle_id ${device.dongle_id}`);
   return res.status(200).json({ dongle_id: device.dongle_id, access_token: 'DEPRECATED-BUT-REQUIRED-FOR-07' });

@@ -107,6 +107,21 @@ async function getDeviceFromDongle(dongleId) {
   }
   return devices.dataValues;
 }
+// TODO combine these redundant functions into one
+async function getDeviceFromSerial(serial) {
+  if (!serial) return null;
+  const devices = await orm.models.device.findOne({ where: { serial } });
+  if (!devices || !devices.dataValues) {
+    return null;
+  }
+  return devices.dataValues;
+}
+
+async function updateDevice(dongleId, data) {
+  if (!dongleId) return null;
+
+  return orm.models.device.update(data, { where: { dongle_id: dongleId } });
+}
 
 async function setIgnoredUploads(dongleId, isIgnored) {
   await orm.models.accounts.update(
@@ -245,6 +260,63 @@ async function getBootlogs(dongleId) {
   return bootlogFiles;
 }
 
+async function updateOrCreateDrive(dongleId, identifier, data) {
+  const check = orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
+
+  if (check.dataValues) {
+    return { error: true, msg: 'DRIVE_EXISTS', drive_already_exits: true };
+  }
+
+  return orm.models.drives.create({
+    ...data,
+    dongle_Id: dongleId,
+    identifier,
+  });
+}
+
+async function updateOrCreateDriveSegment(dongleId, identifier, segmentId, data) {
+  console.log(orm);
+  const check = orm.models.drive_segments.findOne({
+    where: { dongle_id: dongleId, drive_identifier: identifier },
+  });
+
+  if (check.dataValues) {
+    return { error: true, msg: 'DRIVE_EXISTS', drive_already_exits: true };
+  }
+
+  return orm.models.drive_segments.create({
+    ...data,
+    segment_id: segmentId,
+    drive_identifier: identifier,
+    dongle_id: dongleId,
+  });
+}
+
+async function getDriveSegment(dongleId, driveName, segment) {
+  return orm.models.drive_segments.findOne({
+
+    where: {
+      segment_id: segment,
+      drive_identifier: driveName,
+      dongle_id: dongleId,
+    },
+  });
+}
+
+async function createDongle(dongleId, accountId, imei, serial, publicKey) {
+  return orm.models.device.create({
+    dongle_id: dongleId,
+    account_id: 0,
+    imei,
+    serial,
+    device_type: 'freon',
+    public_key: publicKey,
+    created: Date.now(),
+    last_ping: Date.now(),
+    storage_used: 0,
+  });
+}
+
 module.exports = {
   pairDevice,
   unpairDevice,
@@ -257,10 +329,15 @@ module.exports = {
   updateLastPing,
   isUserAuthorised,
   getOwnersFromDongle,
+  createDongle,
+  getDeviceFromSerial,
+  updateDevice,
 
   // drive stuff, move maybe?
   getDrives,
   getBootlogs,
   getCrashlogs,
   getDriveFromidentifier,
+  updateOrCreateDrive,
+  updateOrCreateDriveSegment,
 };

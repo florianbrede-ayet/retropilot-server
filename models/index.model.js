@@ -17,6 +17,7 @@ const modelDefiners = [
   require('./athena_action_log.model'),
   require('./athena_returned_data.model'),
   require('./device_authorised_users.model'),
+  require('./drive_segments.model'),
 ];
 
 for (const modelDefiner of modelDefiners) {
