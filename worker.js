@@ -417,7 +417,7 @@ async function updateSegments() {
   affectedDriveCarParams = {};
   affectedDriveInitData = {};
 
-  const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? ORDER BY created ASC', false, false);
+  const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? AND process_attempts < ? ORDER BY created ASC', false, false, 5);
   if (drive_segments != null) {
     for (var t = 0; t < drive_segments.length; t++) {
       var segment = drive_segments[t];
