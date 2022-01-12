@@ -1,10 +1,11 @@
-const orm = require('../models/index.model');
+import orm from '../models/index.model';
 
 // TODO move everythijng away from this dumb intertwined style
 
 // eslint-disable-next-line no-unused-vars
-const devices = require('./devices');
-const authentication = require('./authentication');
+import devices from './devices';
+
+import authentication from './authentication';
 
 async function isCurrentUserAdmin(hardFail, req) {
   const account = await authentication.getAuthenticatedAccount(req);
@@ -40,7 +41,7 @@ async function banAccount(ban, userId) {
   return { success: false, status: 500, data: { banned: false } };
 }
 
-module.exports = {
+export default {
   banAccount,
   isCurrentUserAdmin,
 };

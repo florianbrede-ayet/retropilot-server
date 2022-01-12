@@ -1,12 +1,13 @@
-const bodyParser = require('body-parser');
-const router = require('express').Router();
+import bodyParser from 'body-parser';
+import express from 'express';
+import authenticationController from '../../controllers/authentication';
 
-const authenticationController = require('../../controllers/authentication');
 /* eslint-disable no-unused-vars */
-const userController = require('../../controllers/users');
-const config = require('../../config');
-/* eslint-enable no-unused-vars */
+import userController from '../../controllers/users';
 
+import config from '../../config';
+/* eslint-enable no-unused-vars */
+const router = express.Router();
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
 
@@ -85,4 +86,4 @@ router.get('/session/get', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

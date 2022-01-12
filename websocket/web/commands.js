@@ -1,7 +1,8 @@
 // eslint-disable-next-line no-unused-vars
-const authenticationController = require('../../controllers/authentication');
-const deviceController = require('../../controllers/devices');
-const athenaRealtime = require('../athena/index');
+import authenticationController from '../../controllers/authentication';
+
+import deviceController from '../../controllers/devices';
+import athenaRealtime from '../athena/index';
 
 // Checks if device is currently online in Athena
 
@@ -57,7 +58,7 @@ async function takeSnapshot(ws, msg) {
   }
 }
 
-module.exports = {
+export default {
   isDongleOnline,
   rebootDongle,
   takeSnapshot,

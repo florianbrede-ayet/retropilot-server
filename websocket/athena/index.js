@@ -1,16 +1,17 @@
-const WebSocket = require('ws');
-const cookie = require('cookie');
-const jsonwebtoken = require('jsonwebtoken');
-const httpsServer = require('https');
-const httpServer = require('http');
-const { readFileSync } = require('fs');
-const log4js = require('log4js');
-const models = require('../../models/index.model');
-const config = require('../../config');
+import WebSocket, { WebSocketServer } from 'ws'; import cookie from 'cookie';
+import jsonwebtoken from 'jsonwebtoken';
+import httpsServer from 'https';
+import httpServer from 'http';
+import { readFileSync } from 'fs';
+import log4js from 'log4js';
+import models from '../../models/index.model';
+import config from '../../config';
+import helperFunctions from './helpers';
 
 // eslint-disable-next-line no-unused-vars
-const authenticationController = require('../../controllers/authentication');
-const deviceController = require('../../controllers/devices');
+import authenticationController from '../../controllers/authentication';
+
+import deviceController from '../../controllers/devices';
 
 const logger = log4js.getLogger('default');
 
@@ -29,7 +30,7 @@ function __server() {
     server = httpServer.createServer();
   }
 
-  wss = new WebSocket.WebSocketServer({ server }, { path: '/ws/v2/', handshakeTimeout: 500 });
+  wss = new WebSocketServer({ server }, { path: '/ws/v2/', handshakeTimeout: 500 });
 
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
@@ -174,6 +175,6 @@ wss.retropilotFunc = {
 
 };
 
-helpers = require('./helpers')(wss);
+helpers = helperFunctions();
 
-module.exports = helpers;
+export default helpers;

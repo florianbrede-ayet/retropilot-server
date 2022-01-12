@@ -1,6 +1,6 @@
-const crypto = require('crypto');
-const config = require('../config');
-const orm = require('../models/index.model');
+import crypto from 'crypto';
+import config from '../config';
+import orm from '../models/index.model';
 
 async function getAccountFromId(id) {
   return orm.models.accounts.findByPk(id);
@@ -83,7 +83,7 @@ async function getAllUsers() {
   return orm.models.accounts.findAll({ attributes: ['id', 'last_ping', 'created', 'admin', 'banned'] });
 }
 
-module.exports = {
+export default {
   createAccount,
   verifyEmailToken,
   getAccountFromId,

@@ -1,10 +1,10 @@
-const request = require('supertest');
-const dummyGenerator = require('./../dummyGenerator');
+import request from 'supertest';
+import dummyGenerator from './../dummyGenerator';
 let app;
 
 
 
-module.exports = (server) => {
+export default (server) => {
     app = server;
 
     describe('/useradmin', function() {
@@ -49,4 +49,4 @@ module.exports = (server) => {
         });
 
     });
-}
+};

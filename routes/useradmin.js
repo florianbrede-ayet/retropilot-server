@@ -1,21 +1,21 @@
-const router = require('express').Router();
-const bodyParser = require('body-parser');
-const crypto = require('crypto');
-const htmlspecialchars = require('htmlspecialchars');
-const dirTree = require('directory-tree');
-const cookieParser = require('cookie-parser');
-const log4js = require('log4js');
-const config = require('../config');
-const authenticationController = require('../controllers/authentication');
-const storageController = require('../controllers/storage');
-const helperController = require('../controllers/helpers');
-const mailingController = require('../controllers/mailing');
-const deviceController = require('../controllers/devices');
-const userController = require('../controllers/users');
+import express from 'express';
+import bodyParser from 'body-parser';
+import crypto from 'crypto';
+import htmlspecialchars from 'htmlspecialchars';
+import dirTree from 'directory-tree';
+import cookieParser from 'cookie-parser';
+import log4js from 'log4js';
+import config from '../config';
+import authenticationController from '../controllers/authentication';
+import storageController from '../controllers/storage';
+import helperController from '../controllers/helpers';
+import mailingController from '../controllers/mailing';
+import deviceController from '../controllers/devices';
+import userController from '../controllers/users';
 
 const logger = log4js.getLogger('default');
 let models;
-
+const router = express.Router();
 // TODO Remove this, pending on removing all auth logic from routes
 router.use(cookieParser());
 
@@ -119,14 +119,16 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
   } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
     infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
   } else {
-    const result = userController._dirtyCreateAccount(
+    const result = await userController._dirtyCreateAccount(
       email,
       crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
       Date.now(),
       false,
     );
 
-    if (result.lastID) {
+    console.log(result);
+
+    if (result.dataValues) {
       logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
       return res.redirect(`/useradmin?status=${encodeURIComponent('Successfully registered')}`);
     }
@@ -174,10 +176,13 @@ router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/useradmin/overview', runAsyncWrapper(async (req, res) => {
-  const account = await authenticationController.getAuthenticatedAccount(req);
-  if (account == null) {
+  let account = await authenticationController.getAuthenticatedAccount(req);
+  if (account === null) {
     return res.redirect(`/useradmin?status=${encodeURIComponent('Invalid or expired session')}`);
   }
+
+  account = account.dataValues;
+
   const devices = await deviceController.getDevices(account.id);
 
   let response = `<html style="font-family: monospace">
@@ -629,4 +634,4 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
   return res.status(200).send(response);
 }));
 
-module.exports = router;
+export default router;

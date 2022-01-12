@@ -1,6 +1,6 @@
 
-const jwt = require('jsonwebtoken')
-const crypto = require('crypto')
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const devicePrivateKey = "-----BEGIN RSA PRIVATE KEY-----\n" +
     "MIIEowIBAAKCAQEAwhH9PqBd/R/QPvcf1Gom5Vp+zYb1+DLjiFMC7a1lNvV8MUqK\n" +
@@ -66,6 +66,6 @@ function getSerial() {
 
 
 
-module.exports = {
+export default {
     makeJWT, getImei, getSerial, rougePublicKey, devicePubKey, devicePrivateKey, alreadyRegisteredEmail, newUserEmail
-}
+};

@@ -1,14 +1,17 @@
-const router = require('express').Router();
-const crypto = require('crypto');
-const dirTree = require('directory-tree');
-const config = require('../../config');
+import express from 'express';
+import crypto from 'crypto';
+import dirTree from 'directory-tree';
+import bodyParser from 'body-parser';
+import deviceSchema from '../../schema/routes/devices.mjs';
+import config from '../../config';
 
 /* eslint-disable no-unused-vars */
-const userController = require('../../controllers/users');
-const deviceController = require('../../controllers/devices');
-const authenticationController = require('../../controllers/authentication');
-/* eslint-enable no-unused-vars */
+import userController from '../../controllers/users';
 
+import deviceController from '../../controllers/devices';
+import authenticationController from '../../controllers/authentication';
+/* eslint-enable no-unused-vars */
+const router = express.Router();
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
 
@@ -28,6 +31,31 @@ router.get('/retropilot/0/devices', isAuthenticated, async (req, res) => {
   const dongles = await deviceController.getDevices(req.account.id);
 
   return res.json({ success: true, data: dongles });
+});
+
+/*
+{
+	version: "1.0"
+	2fa: {
+		tokenProvided: false,
+		token: 000000
+		unixTime: 00000
+	},
+	modifications: {
+		nicname: x
+		publicKey: x
+	}
+}
+
+*/
+
+router.put('/retropilot/0/device/:dongle_id/', [isAuthenticated, bodyParser.json()], async (req, res) => {
+  if (!req.account) {
+    return res.json({ success: false, msg: 'NOT_AUTHENTICATED' });
+  }
+
+  const { body } = req;
+  console.log(deviceSchema.MutateDevice.isValid(body));
 });
 
 router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', isAuthenticated, async (req, res) => {
@@ -97,9 +125,9 @@ router.get('/retropilot/0/device/:dongle_id/crashlogs', isAuthenticated, async (
     return res.json({ success: false, msg: isUserAuthorised.msg });
   }
 
-  const bootlogs = await deviceController.getCrashlogs(req.params.dongle_id);
+  const crashlogs = await deviceController.getCrashlogs(req.params.dongle_id);
 
-  return res.json({ success: true, data: bootlogs });
+  return res.json({ success: true, data: crashlogs });
 });
 
-module.exports = router;
+export default router;

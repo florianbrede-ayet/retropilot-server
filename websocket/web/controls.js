@@ -1,4 +1,4 @@
-const deviceController = require('../../controllers/devices');
+import deviceController from '../../controllers/devices';
 
 let wss;
 
@@ -44,7 +44,7 @@ async function passData(dongleId, msg) {
   return true;
 }
 
-module.exports = (websocket) => {
+export default (websocket) => {
   wss = websocket;
 
   return {

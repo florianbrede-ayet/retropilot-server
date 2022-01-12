@@ -1,6 +1,6 @@
-const nodemailer = require('nodemailer');
-const log4js = require('log4js');
-const config = require('../config');
+import nodemailer from 'nodemailer';
+import log4js from 'log4js';
+import config from '../config';
 
 const logger = log4js.getLogger('default');
 const transporter = nodemailer.createTransport(
@@ -47,6 +47,6 @@ async function sendEmailVerification(token, email) {
   return info;
 }
 
-module.exports = {
+export default {
   sendEmailVerification,
 };

@@ -1,11 +1,12 @@
-const sanitize = require('sanitize')();
-const { Op } = require('sequelize');
-const crypto = require('crypto');
-const dirTree = require('directory-tree');
-const config = require('../config');
-const authenticationController = require('./authentication');
-const orm = require('../models/index.model');
-const usersController = require('./users');
+import sanitizeFactory from 'sanitize';
+const sanitize = sanitizeFactory();
+import { Op } from 'sequelize';
+import crypto from 'crypto';
+import dirTree from 'directory-tree';
+import config from '../config';
+import authenticationController from './authentication';
+import orm from '../models/index.model';
+import usersController from './users';
 
 async function pairDevice(account, qrString) {
   if (qrString === undefined || qrString === null) {
@@ -327,7 +328,7 @@ async function createDongle(dongleId, accountId, imei, serial, publicKey) {
   });
 }
 
-module.exports = {
+export default {
   pairDevice,
   unpairDevice,
   setDeviceNickname,

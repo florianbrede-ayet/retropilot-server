@@ -1,6 +1,6 @@
-const request = require('supertest');
-const server = require('../server');
-const config = require('../config');
+import request from 'supertest';
+import server from '../server';
+import config from '../config';
 
 // TODO better way to only run tests once server is up
 describe('loading express', () => {

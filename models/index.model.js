@@ -1,27 +1,41 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable global-require */
 
-const { Sequelize } = require('sequelize');
+import { Sequelize } from 'sequelize';
+import devices from './devices.model';
+import drives from './drives.model';
+import users from './users.model';
+import athena_action_log from './athena_action_log.model';
+import athena_returned_data from './athena_returned_data.model';
+import device_authorised_users from './device_authorised_users.model';
+import drive_segments from './drive_segments.model';
+import config from '../config';
 
 const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: 'database.sqlite',
+
+  username: 'postgres',
+  password: config.sqltemp,
+  database: 'retro-dev',
+  host: '127.0.0.1',
+  port: 5432,
+  dialect: 'postgres',
+
 });
 
 sequelize.options.logging = () => {};
 
 const modelDefiners = [
-  require('./devices.model'),
-  require('./drives.model'),
-  require('./users.model'),
-  require('./athena_action_log.model'),
-  require('./athena_returned_data.model'),
-  require('./device_authorised_users.model'),
-  require('./drive_segments.model'),
+  devices,
+  drives,
+  users,
+  athena_action_log,
+  athena_returned_data,
+  device_authorised_users,
+  drive_segments,
 ];
 
 for (const modelDefiner of modelDefiners) {
   modelDefiner(sequelize);
 }
 
-module.exports = sequelize;
+export default sequelize;

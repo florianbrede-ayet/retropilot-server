@@ -1,11 +1,19 @@
 /* eslint-disable global-require */
-module.exports = {
-  useradmin: require('./useradmin'),
-  api: require('./api'),
-  useradminapi: require('./userAdminApi'),
-  admin: require('./administration/adminApi'),
-  realtime: require('./api/realtime'),
 
-  deviceApi: require('./api/devices'),
-  authenticationApi: require('./api/authentication'),
+import useradmin from './useradmin';
+import api from './api';
+import useradminapi from './userAdminApi';
+import admin from './administration/adminApi';
+import realtime from './api/realtime';
+import deviceApi from './api/devices';
+import authenticationApi from './api/authentication';
+
+export default {
+  useradmin,
+  api,
+  useradminapi,
+  admin,
+  realtime,
+  deviceApi,
+  authenticationApi,
 };

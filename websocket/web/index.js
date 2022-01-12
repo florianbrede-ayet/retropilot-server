@@ -1,28 +1,28 @@
-const WebSocket = require('ws');
-const cookie = require('cookie');
-const httpServer = require('http');
-const log4js = require('log4js');
-const config = require('../../config');
-let controls = require('./controls');
+import WebSocket, { WebSocketServer } from 'ws';
+import cookie from 'cookie';
+import httpServer from 'http';
+import log4js from 'log4js';
+import config from '../../config.js';
+import controlsFunction from './controls.js';
+import authenticationController from '../../controllers/authentication.js';
 
-const authenticationController = require('../../controllers/authentication');
 // eslint-disable-next-line no-unused-vars
-const deviceController = require('../../controllers/devices');
+import deviceController from '../../controllers/devices';
+
+import athenaRealtime from '../athena/index.js';
+import realtimeCommands from './commands.js';
 
 const logger = log4js.getLogger('default');
 
-const athenaRealtime = require('../athena/index');
-
-const realtimeCommands = require('./commands');
-
 let server;
 let wss;
+let controls;
 
 // eslint-disable-next-line no-underscore-dangle
 function __server() {
   server = httpServer.createServer();
 
-  wss = new WebSocket.WebSocketServer({ server }, { path: '/realtime/v1', handshakeTimeout: 500 });
+  wss = new WebSocketServer({ server }, { path: '/realtime/v1', handshakeTimeout: 500 });
 
   server.listen(config.clientSocket.port, config.clientSocket.host, () => {
     logger.info(`Web(Server) - UP @ ${config.clientSocket.host}:${config.clientSocket.port}`);
@@ -104,11 +104,11 @@ async function manageConnection(ws, req) {
 
 const websocketServer = __server();
 
-controls = controls(websocketServer);
+controls = controlsFunction(websocketServer);
 
 athenaRealtime.realtimeCallback(controls);
 
-module.exports = {
+export default {
   controls,
   websocketServer,
 };

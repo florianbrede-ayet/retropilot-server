@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   apps: [{
     name: 'Retropilot Service',
     script: './server.js',

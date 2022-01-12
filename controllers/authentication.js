@@ -1,8 +1,7 @@
-const crypto = require('crypto');
-const jsonwebtoken = require('jsonwebtoken');
-
-const config = require('../config');
-const orm = require('../models/index.model');
+import crypto from 'crypto';
+import jsonwebtoken from 'jsonwebtoken';
+import config from '../config';
+import orm from '../models/index.model';
 
 let logger;
 
@@ -106,7 +105,7 @@ async function getAccountFromJWT(jwt, limitData) {
   return account;
 }
 
-module.exports = {
+export default {
   validateJWT,
   getAuthenticatedAccount,
   changePassword,

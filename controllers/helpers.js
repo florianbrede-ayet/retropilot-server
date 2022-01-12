@@ -35,10 +35,10 @@ function simpleStringify(object) {
 }
 
 function formatDate(timestampMs) {
-  return new Date(timestampMs).toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  return new Date(parseInt(timestampMs)).toISOString().replace(/T/, ' ').replace(/\..+/, '');
 }
 
-module.exports = {
+export default {
   formatDuration,
   simpleStringify,
   formatDate,

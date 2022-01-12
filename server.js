@@ -1,14 +1,30 @@
 /* eslint-disable global-require */
-const fs = require('fs');
-const log4js = require('log4js');
-const lockfile = require('proper-lockfile');
-const http = require('http');
-const https = require('https');
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
-const storageController = require('./controllers/storage');
+import fs from 'fs';
+
+import log4js from 'log4js';
+import lockfile from 'proper-lockfile';
+import http from 'http';
+import https from 'https';
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+import storageController from './controllers/storage.js';
+
+/* eslint-disable no-unused-vars */
+import webWebsocket from './websocket/web/index.js';
+
+import athena from './websocket/athena/index.js';
+import routers from './routes/index.js';
+import orm from './models/index.model.js';
+import controllers from './controllers/index.js';
+import router from './routes/api/realtime.js';
+
+/* eslint-enable no-unused-vars */
+
+import config from './config.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 process.on('unhandledRejection', (error, p) => {
   console.log('=== UNHANDLED REJECTION ===');
@@ -22,18 +38,11 @@ log4js.configure({
 
 const logger = log4js.getLogger('default');
 // TODO evaluate if this is the best way to determine the root of project
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 global.__basedir = __dirname;
-
-/* eslint-disable no-unused-vars */
-const webWebsocket = require('./websocket/web');
-const athena = require('./websocket/athena');
-const routers = require('./routes');
-const orm = require('./models/index.model');
-const controllers = require('./controllers');
-const router = require('./routes/api/realtime');
-/* eslint-enable no-unused-vars */
-
-const config = require('./config');
 
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {

@@ -1,23 +1,19 @@
 /* eslint-disable */
-const config = require('./config');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const log4js = require('log4js');
+import config from './config';
 
-const sqlite3 = require('sqlite3');
-const { open } = require('sqlite');
-
-const lockfile = require('proper-lockfile');
-
-const jwt = require('jsonwebtoken');
-
-const dirTree = require('directory-tree');
-const { execSync } = require('child_process');
-
-const Reader = require('@commaai/log_reader');
-var ffprobe = require('ffprobe'),
-  ffprobeStatic = require('ffprobe-static');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import log4js from 'log4js';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import lockfile from 'proper-lockfile';
+import jwt from 'jsonwebtoken';
+import dirTree from 'directory-tree';
+import { execSync } from 'child_process';
+import Reader from '@commaai/log_reader';
+import ffprobe from 'ffprobe';
+import ffprobeStatic from 'ffprobe-static';
 
 var db = null;
 

@@ -1,12 +1,12 @@
-const router = require('express').Router();
-
+import express from 'express';
 /* eslint-disable no-unused-vars */
-const authenticationController = require('../../controllers/authentication');
-const userController = require('../../controllers/users');
-const deviceController = require('../../controllers/devices');
-const models = require('../../models/index.model');
-/* eslint-enable no-unused-vars */
+import authenticationController from '../../controllers/authentication';
 
+import userController from '../../controllers/users';
+import deviceController from '../../controllers/devices';
+import models from '../../models/index.model';
+/* eslint-enable no-unused-vars */
+const router = express.Router();
 const whitelistParams = {
   getmessage: true,
   getversion: true,
@@ -174,4 +174,4 @@ router.get('/dongle/:dongle_id/temp/nav/:lat/:long', async (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

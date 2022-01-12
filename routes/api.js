@@ -1,16 +1,18 @@
 /* eslint-disable */
-const router = require('express').Router();
-const bodyParser = require('body-parser');
-const crypto = require('crypto');
-const log4js = require('log4js');
-const storageController = require('../controllers/storage');
-const helperController = require('../controllers/helpers');
-const mailingController = require('../controllers/mailing');
-const deviceController = require('../controllers/devices');
-const config = require('../config');
-const authenticationController = require('./../controllers/authentication');
+import express from 'express';
+import bodyParser from 'body-parser';
+import crypto from 'crypto';
+import log4js from 'log4js';
+import storageController from '../controllers/storage';
+import helperController from '../controllers/helpers';
+import mailingController from '../controllers/mailing';
+import deviceController from '../controllers/devices';
+import config from '../config';
+import authenticationController from './../controllers/authentication';
 
 const logger = log4js.getLogger('default');
+const router = express.Router();
+
 
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {
@@ -428,4 +430,4 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
   });
 }));
 
-module.exports = router;
+export default router;

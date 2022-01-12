@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 let wss;
-const { v4: uuid } = require('uuid');
-const orm = require('../../models/index.model');
+import { v4 as uuid } from 'uuid';
+import orm from '../../models/index.model';
 
 let realtime;
 
@@ -56,7 +56,7 @@ async function realtimeCallback(callback) {
   realtime = callback;
 }
 
-module.exports = (websocketServer) => {
+export default (websocketServer) => {
   wss = websocketServer;
 
   return {

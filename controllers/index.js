@@ -1,12 +1,18 @@
 /* eslint-disable global-require, no-unused-vars */
-
+import authentication from './authentication';
+import helpers from './helpers';
+import storage from './storage';
+import mailing from './mailing';
+import users from './users';
+import admin from './admin';
+import devices from './devices';
 // TO DO, finish up removing this callback stuff
-module.exports = {
-  authentication: require('./authentication'),
-  helpers: require('./helpers'),
-  storage: require('./storage'),
-  mailing: require('./mailing'),
-  users: require('./users'),
-  admin: require('./admin'),
-  devices: require('./devices'),
+export default {
+  authentication,
+  helpers,
+  storage,
+  mailing,
+  users,
+  admin,
+  devices,
 };

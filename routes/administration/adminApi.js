@@ -1,6 +1,7 @@
-const router = require('express').Router();
-const controllers = require('../../controllers');
+import express from 'express';
+import controllers from '../../controllers';
 
+const router = express.Router();
 function runAsyncWrapper(callback) {
   return function wrapper(req, res, next) {
     callback(req, res, next)
@@ -103,4 +104,4 @@ router.get('/device/:dongle_id/athena/reboot', runAsyncWrapper(async (req, res) 
   res.send('ok');
 }));
 
-module.exports = router;
+export default router;

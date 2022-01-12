@@ -1,12 +1,13 @@
 /* eslint-disable max-len */
-const router = require('express').Router();
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const config = require('../config');
-const controllers = require('../controllers');
-const deviceController = require('../controllers/devices');
+import express from 'express';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import config from '../config';
+import controllers from '../controllers';
+import deviceController from '../controllers/devices';
 
 // TODO Remove this, pending on removing all auth logic from routes
+const router = express.Router();
 router.use(cookieParser());
 
 function runAsyncWrapper(callback) {
@@ -505,4 +506,4 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
 }))
 */
 
-module.exports = router;
+export default router;

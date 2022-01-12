@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
   sequelize.define(
-    'drives',
+    'drive_segments',
     {
       id: {
         allowNull: false,
@@ -10,35 +10,35 @@ export default (sequelize) => {
         primaryKey: true,
         type: DataTypes.INTEGER,
       },
-      identifier: {
+      segment_id: {
         allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      drive_identifier: {
+        allowNull: true,
         type: DataTypes.TEXT,
       },
       dongle_id: {
         allowNull: true,
-        type: DataTypes.TEXT,
-      },
-      max_segment: {
-        allowNull: true,
-        type: DataTypes.INTEGER,
-      },
-      upload_complete: {
-        allowedNull: true,
         type: DataTypes.INTEGER,
       },
       duration: {
-        allowNull: true,
+        allowedNull: true,
         type: DataTypes.NUMBER,
       },
       distance_meters: {
         allowNull: true,
         type: DataTypes.NUMBER,
       },
-      filesize: {
+      upload_complete: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BOOLEAN,
       },
       is_processed: {
+        allowNull: true,
+        type: DataTypes.BOOLEAN,
+      },
+      is_stalled: {
         allowNull: true,
         type: DataTypes.BOOLEAN,
       },
@@ -46,29 +46,9 @@ export default (sequelize) => {
         allowNull: true,
         type: DataTypes.INTEGER,
       },
-      last_upload: {
-        allowNull: true,
-        type: DataTypes.INTEGER,
-      },
-      is_preserved: {
+      process_attempts: {
         allowNull: true,
         type: DataTypes.BOOLEAN,
-      },
-      is_deleted: {
-        allowNull: true,
-        type: DataTypes.BOOLEAN,
-      },
-      drive_date: {
-        allowNull: true,
-        type: DataTypes.INTEGER,
-      },
-      is_physically_removed: {
-        allowNull: true,
-        type: DataTypes.BOOLEAN,
-      },
-      metadata: {
-        allowNull: true,
-        type: DataTypes.TEXT,
       },
     },
     {
