@@ -125,18 +125,14 @@ lockfile.lock('retropilot_server', { realpath: false, stale: 30000, update: 2000
     console.log('STARTING SERVER...');
     const app = await web();
 
-    const key = fs.readFileSync(config.sslKey, 'utf8');
-    const cert = fs.readFileSync(config.sslCrt, 'utf8');
+
 
     const httpServer = http.createServer(app);
-    const httpsServer = https.createServer({ key, cert }, app);
 
     httpServer.listen(config.httpPort, config.httpInterface, () => {
       logger.info(`Retropilot Server listening at http://${config.httpInterface}:${config.httpPort}`);
     });
-    httpsServer.listen(config.httpsPort, config.httpsInterface, () => {
-      logger.info(`Retropilot Server listening at https://${config.httpsInterface}:${config.httpsPort}`);
-    });
+
   }).catch((e) => {
     console.error(e);
     process.exit();
