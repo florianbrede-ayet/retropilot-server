@@ -14,6 +14,7 @@ import { execSync } from 'child_process';
 import Reader from '@commaai/log_reader';
 import ffprobe from 'ffprobe';
 import ffprobeStatic from 'ffprobe-static';
+import orm from './models/index.model'
 
 var db = null;
 
@@ -366,19 +367,15 @@ function processSegmentsRecursive() {
         (async () => {
           logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} internal gps: ${Math.round(rlog_totalDistInternal * 100) / 100}m, external gps: ${Math.round(rlog_totalDistExternal * 100) / 100}m, duration: ${qcamera_duration}s`);
 
-          const driveSegmentResult = await dbProtectedRun(
-            'UPDATE drive_segments SET duration = ?, distance_meters = ?, is_processed = ?, upload_complete = ?, is_stalled = ? WHERE id = ?',
-            qcamera_duration,
+          const driveSegmentResult = await orm.models.drive_segments.update({
+            duration: qcamera_duration, 
+            distance_meters: Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10, 
+            is_processed: true, 
+            upload_complete: uploadComplete, 
+            is_stalled: false
 
-            Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10,
+          }, {where: {id: segment.id}})
 
-            true,
-
-            uploadComplete,
-
-            false,
-            segment.id
-          );
 
           if (driveSegmentResult === null) // if the update failed, stop right here with segment processing and try to update the drives at least
           {
@@ -517,12 +514,12 @@ async function updateDevices() {
       .toString()) / 1024);
     logger.info(`updateDevices device ${dongleId} has an updated storage_used of: ${deviceQuotaMb} MB`);
 
-    const deviceResult = await dbProtectedRun(
-      'UPDATE devices SET storage_used = ? WHERE dongle_id = ?',
-      deviceQuotaMb,
+    const deviceResult = await orm.models.drives.update(
+      {storage_used: deviceQuotaMb},
+      {where: {dongle_id: device.dongle_id}}
+      )
 
-      device.dongle_id
-    );
+
   }
   affectedDevices = [];
 }
@@ -534,9 +531,9 @@ async function updateDrives() {
     var dongleId,
       driveIdentifier;
     [dongleId, driveIdentifier] = key.split('|');
-    const drive = await dbProtectedGet('SELECT * FROM drives WHERE identifier = ? AND dongle_id = ?', driveIdentifier, dongleId);
+    let drive = await orm.models.drives({where: {driveIdentifier: driveIdentifier, dongleId: dongleId}})
     if (drive == null) continue;
-
+    drive = drive.dataValues;
     var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
       .update(drive.dongle_id)
       .digest('hex');
@@ -553,7 +550,16 @@ async function updateDrives() {
     var totalDurationSeconds = 0;
     var playlistSegmentStrings = '';
 
-    const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ? ORDER BY segment_id ASC', driveIdentifier, dongleId);
+    const drive_segments= await orm.models.drive_segments.findAll({
+      where: {
+        drive_identifier: driveIdentifier,
+        dongle_id: dongleId
+      },
+      order: [
+        sequelize.fn('ASC', sequelize.col('segment_id')),
+      ]
+    })
+
     if (drive_segments != null) {
       for (var t = 0; t < drive_segments.length; t++) {
         if (!drive_segments[t].upload_complete) uploadComplete = false;
@@ -600,22 +606,17 @@ async function updateDrives() {
 
     logger.info(`updateDrives drive ${dongleId} ${driveIdentifier} uploadComplete: ${uploadComplete}`);
 
-    const driveResult = await dbProtectedRun(
-      'UPDATE drives SET distance_meters = ?, duration = ?, upload_complete = ?, is_processed = ?, filesize = ?, metadata = ? WHERE id = ?',
-      Math.round(totalDistanceMeters),
+    const driveResult = await orm.models.drives.update(
+      {distance_meters: Math.round(totalDistanceMeters), 
+        duration: totalDurationSeconds,
+        upload_complete: uploadComplete,
+        is_processed: isProcessed,
+        filesize,
+        metadata:JSON.stringify(metadata)
+      },
+      {where: {id: drive.id}}
+    )
 
-      totalDurationSeconds,
-
-      uploadComplete,
-
-      isProcessed,
-
-      filesize,
-
-      JSON.stringify(metadata),
-
-      drive.id
-    );
 
     affectedDevices[dongleId] = true;
 
@@ -646,12 +647,11 @@ async function deleteExpiredDrives() {
   if (expiredDrives != null) {
     for (var t = 0; t < expiredDrives.length; t++) {
       logger.info(`deleteExpiredDrives drive ${expiredDrives[t].dongle_id} ${expiredDrives[t].identifier} is older than ${config.deviceDriveExpirationDays} days, set is_deleted=true`);
-      const driveResult = await dbProtectedRun(
-        'UPDATE drives SET is_deleted = ? WHERE id = ?',
-        true,
-
-        expiredDrives[t].id
-      );
+      const driveResult = await orm.models.drives.update({
+        is_deleted: true
+      },
+      {where: {id: expiredDrives[t].id}})
+      
     }
   }
 }

@@ -193,7 +193,8 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
 }
 
 async function getDrive(dongleId, identifier) {
-  const drive = orm.models.drives.findOne({ where: { identifier, dongle_id: dongleId } });
+  const drive = await orm.models.drives.findOne({ where: { identifier, dongle_id: dongleId } });
+  console.log(drive);
 
   if (drive.dataValues) return drive.dataValues;
   return null;

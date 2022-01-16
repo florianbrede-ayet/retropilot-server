@@ -573,65 +573,64 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <table border=1 cellpadding=2 cellspacing=2>
             <tr><th>segment</th><th>qcamera</th><th>qlog</th><th>fcamera</th><th>rlog</th><th>dcamera</th><th>processed</th><th>stalled</th></tr>`;
 
-  const directoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`);
-
+            const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
   const directorySegments = {};
-  await Promise.all(directoryTree.children
+  for (var i in directoryTree.children) {
     // skip any non-directory entries (for example m3u8 file in the drive directory)
-    .filter((file) => file.type === 'directory')
-    .map(async (directory) => {
-      const segment = directory.name;
+    if (directoryTree.children[i].type != 'directory') continue;
 
-      // generate file links
-      const files = {
-        qcamera: '--',
-        fcamera: '--',
-        dcamera: '--',
-        qlog: '--',
-        rlog: '--',
-      };
-      directory.children
-        .filter((file) => file.name in files)
-        .forEach((file) => {
-          files[file.name] = `<a target="_blank" href="${driveUrl}${segment}/${file.name}">${file.name}</a>`;
-        });
+    var segment = directoryTree.children[i].name;
 
-      // get processed/stalled status
-      let isProcessed = '?';
-      let isStalled = '?';
-      const driveSegment = await deviceController.getDriveSegment(device.dongle_id, drive.identifier, parseInt(segment, 10));
 
-      if (driveSegment) {
-        isProcessed = driveSegment.is_processed;
-        isStalled = driveSegment.is_stalled;
-      }
-
-      directorySegments[`seg-${segment}`] = `<tr>
-    <td>${segment}</td>
-    <td>${files.qcamera}</td>
-    <td>${files.qlog}</td>
-    <td>${files.fcamera}</td>
-    <td>${files.rlog}</td>
-    <td>${files.dcamera}</td>
-    <td>${isProcessed}</td>
-    <td>${isStalled}</td>
-</tr>`;
-    }));
-
-  for (let i = 0; i <= drive.max_segment; i++) {
-    if (directorySegments[`seg-${i}`]) {
-      response += directorySegments[`seg-${i}`];
-    } else {
-      response += `<tr><td>${i}</td><td>--</td><td>--</td><td>--</td><td>--</td><td>--</td><td>?</td><td>?</td></tr>`;
+    var qcamera = '--';
+    var fcamera = '--';
+    var dcamera = '--';
+    var qlog = '--';
+    var rlog = '--';
+    for (var c in directoryTree.children[i].children) {
+        if (directoryTree.children[i].children[c].name == 'fcamera.hevc') fcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'dcamera.hevc') fcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'qcamera.ts') qcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'qlog.bz2') qlog = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'rlog.bz2') rlog = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
     }
-  }
 
-  response += `</table>
-                <br><br>
-                <hr/>
-                <a href="/useradmin/signout">Sign Out</a></body></html>`;
+    var isProcessed = '?';
+    var isStalled = '?';
 
-  return res.status(200).send(response);
-}));
+    const drive_segment = await models.__db.get('SELECT * FROM drive_segments WHERE segment_id = ? AND drive_identifier = ? AND dongle_id = ?', parseInt(segment), drive.identifier, device.dongle_id);
+
+    if (drive_segment) {
+        isProcessed = drive_segment.is_processed;
+        isStalled = drive_segment.is_stalled;
+    }
+
+    directorySegments["seg-" + segment] = '<tr><td>' + segment + '</td><td>' + qcamera + '</td><td>' + qlog + '</td><td>' + fcamera + '</td><td>' + rlog + '</td><td>' + dcamera + '</td><td>' + isProcessed + '</td><td>' + isStalled + '</td></tr>';
+}
+
+var qcamera = '--';
+var fcamera = '--';
+var dcamera = '--';
+var qlog = '--';
+var rlog = '--';
+var isProcessed = '?';
+var isStalled = '?';
+
+for (var i = 0; i <= drive.max_segment; i++) {
+    if (directorySegments["seg-" + i] == undefined) {
+        response += '<tr><td>' + i + '</td><td>' + qcamera + '</td><td>' + qlog + '</td><td>' + fcamera + '</td><td>' + rlog + '</td><td>' + dcamera + '</td><td>' + isProcessed + '</td><td>' + isStalled + '</td></tr>';
+    } else
+        response += directorySegments["seg-" + i];
+}
+
+response += `</table>
+            <br><br>
+            <hr/>
+            <a href="/useradmin/signout">Sign Out</a></body></html>`;
+
+res.status(200);
+res.send(response);
+
+}))
 
 export default router;
