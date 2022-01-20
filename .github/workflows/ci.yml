@@ -14,5 +14,5 @@ jobs:
           cache: 'npm'
       - run: npm install
       - run: npm run lint
-# TODO: re-add tests when it doesn't start the server 🤡
+# TODO: re-add tests
 #      - run: npm test

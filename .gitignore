@@ -1,13 +1,20 @@
-node_modules/
-realdata/
-worker.log
-server.log
-database.sqlite
-config.js
-.vscode
+# Editors
 .idea
-database.sqlite
+.vscode*
+*.swp
+*.swo
+
+# NPM
+node_modules/
+
+# Data
+realdata/
+*.sqlite
+!database.empty.sqlite
 config.js
-test/.devKeys
 config_prod.js
-database - copy.sqlite
+test/.devKeys
+
+# Miscellaneous
+.DS_Store
+*.log
