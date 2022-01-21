@@ -11,4 +11,4 @@ RUN npm ci
 COPY . .
 
 EXPOSE 3000
-CMD [ "node", "server.js" ]
+CMD [ "node", "--es-module-specifier-resolution=node", "server.js" ]
