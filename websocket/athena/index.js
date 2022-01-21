@@ -1,9 +1,9 @@
-import { WebSocketServer } from 'ws';
-import cookie from 'cookie';
+import WebSocket, { WebSocketServer } from 'ws'; import cookie from 'cookie';
 import jsonwebtoken from 'jsonwebtoken';
+import httpsServer from 'https';
 import httpServer from 'http';
+import { readFileSync } from 'fs';
 import log4js from 'log4js';
-
 import models from '../../models/index.model';
 import config from '../../config';
 import helperFunctions from './helpers';
@@ -19,7 +19,16 @@ let helpers;
 let wss;
 
 function __server() {
-  const server = httpServer.createServer();
+  let server;
+
+  if (config.athena.secure) {
+    server = httpsServer.createServer({
+      cert: readFileSync(config.sslCrt),
+      key: readFileSync(config.sslKey),
+    });
+  } else {
+    server = httpServer.createServer();
+  }
 
   wss = new WebSocketServer({ server }, { path: '/ws/v2/', handshakeTimeout: 500 });
 
