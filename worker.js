@@ -368,10 +368,10 @@ function processSegmentsRecursive() {
           logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} internal gps: ${Math.round(rlog_totalDistInternal * 100) / 100}m, external gps: ${Math.round(rlog_totalDistExternal * 100) / 100}m, duration: ${qcamera_duration}s`);
 
           const driveSegmentResult = await orm.models.drive_segments.update({
-            duration: qcamera_duration, 
-            distance_meters: Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10, 
-            is_processed: true, 
-            upload_complete: uploadComplete, 
+            duration: qcamera_duration,
+            distance_meters: Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10,
+            is_processed: true,
+            upload_complete: uploadComplete,
             is_stalled: false
 
           }, {where: {id: segment.id}})
@@ -607,7 +607,7 @@ async function updateDrives() {
     logger.info(`updateDrives drive ${dongleId} ${driveIdentifier} uploadComplete: ${uploadComplete}`);
 
     const driveResult = await orm.models.drives.update(
-      {distance_meters: Math.round(totalDistanceMeters), 
+      {distance_meters: Math.round(totalDistanceMeters),
         duration: totalDurationSeconds,
         upload_complete: uploadComplete,
         is_processed: isProcessed,
@@ -651,7 +651,7 @@ async function deleteExpiredDrives() {
         is_deleted: true
       },
       {where: {id: expiredDrives[t].id}})
-      
+
     }
   }
 }
