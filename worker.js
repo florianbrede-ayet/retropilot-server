@@ -834,7 +834,7 @@ try {
   process.exit();
 }
 
-lockfile.lock('retropilot_worker.lock', {
+lockfile.lock('retropilot_worker', {
     realpath: false,
     stale: 90000,
     update: 2000
