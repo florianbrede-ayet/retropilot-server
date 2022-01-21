@@ -8,11 +8,6 @@ const config = {
   httpInterface: '0.0.0.0',
   httpPort: 3000,
 
-  httpsInterface: '0.0.0.0',
-  httpsPort: 4430,
-  sslKey: 'certs/retropilot.key',
-  sslCrt: 'certs/retropilot.crt',
-
   canSendMail: true, // Skips sending mail, all attempted mail is logged under DEBUG
   smtpHost: 'localhost', // credentials for smtp server to send account registration mails. if not filled in, get the generated tokens from the server.log manually
   smtpPort: 25,
