@@ -4,15 +4,13 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build and test
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
-      - run: cp config.sample.js config.js
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 16
-          cache: 'npm'
-      - run: npm install
-      - run: npm run lint
-# TODO: re-add tests
-#      - run: npm test
+      - name: Build Docker image
+        run: docker build -t retropilot-server:latest .
+      - name: Run linter
+        run: docker run --rm -v $(pwd)/config.sample.js:/app/config.js retropilot-server:latest npm run lint
+#      - name: Run tests
+#        run: docker run --rm -v $(pwd)/config.sample.js:/app/config.js retropilot-server:latest npm test
