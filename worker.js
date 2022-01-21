@@ -1,20 +1,23 @@
 /* eslint-disable */
-import config from './config';
 
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
+import fs from 'fs';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
 import log4js from 'log4js';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import lockfile from 'proper-lockfile';
-import jwt from 'jsonwebtoken';
 import dirTree from 'directory-tree';
 import { execSync } from 'child_process';
 import Reader from '@commaai/log_reader';
 import ffprobe from 'ffprobe';
 import ffprobeStatic from 'ffprobe-static';
-import orm from './models/index.model'
+
+import orm from './models/index.model';
+import config from './config';
+
 
 var db = null;
 
@@ -27,6 +30,10 @@ log4js.configure({
 });
 
 var logger = log4js.getLogger('default');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+global.__basedir = __dirname;
 
 function initializeStorage() {
   var verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
@@ -120,7 +127,7 @@ function moveUploadedFile(buffer, directory, filename) {
 function deleteFolderRecursive(directoryPath) {
   if (fs.existsSync(directoryPath)) {
     fs.readdirSync(directoryPath)
-      .forEach((file, index) => {
+      .forEach((file) => {
         const curPath = path.join(directoryPath, file);
         if (fs.lstatSync(curPath)
           .isDirectory()) {
@@ -205,6 +212,8 @@ var rlog_lastTsExternal = 0;
 var rlog_prevLatExternal = -1000;
 var rlog_prevLngExternal = -1000;
 var rlog_totalDistExternal = 0;
+var rlog_CarParams = null;
+var rlog_InitData = null;
 var qcamera_duration = 0;
 
 function processSegmentRLog(rLogPath) {
@@ -220,7 +229,7 @@ function processSegmentRLog(rLogPath) {
   rlog_InitData = null;
 
   return new Promise(
-    (resolve, reject) => {
+    (resolve) => {
       var temporaryFile = rLogPath.replace('.bz2', '');
 
       try {
@@ -556,7 +565,7 @@ async function updateDrives() {
         dongle_id: dongleId
       },
       order: [
-        sequelize.fn('ASC', sequelize.col('segment_id')),
+        orm.fn('ASC', orm.col('segment_id')),
       ]
     })
 
