@@ -139,7 +139,7 @@ wss.retropilotFunc = {
     const device = await deviceController.getDeviceFromDongle(unsafeJwt.identity);
 
     let verifiedJWT;
-
+    console.log('JWT', cookies.jwt);
     try {
       verifiedJWT = jsonwebtoken.verify(cookies.jwt, device.public_key, { ignoreNotBefore: true });
     } catch (err) {

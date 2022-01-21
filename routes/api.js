@@ -268,14 +268,21 @@ async function upload(req, res) {
       responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
       logger.info(`HTTP.UPLOAD_URL matched 'drive' file upload, constructed responseUrl: ${responseUrl}`);
 
-      const drive = await deviceController.getDriveFromidentifier(dongleId, driveName).catch(logger.error)
+      const drive = await deviceController.getDriveFromidentifier(dongleId, driveName).catch((err)=>{
+        logger.warn("drive failed to make", err)
+      })
+      console.log("drive value", drive)
+      console.log("drive name:", driveName)
 
-      if (drive == null) {
+
+
+      if (drive === undefined || drive === null) {
+        logger.info("CREATING NEW DRIVE")
         // create a new drive
         const timeSplit = driveName.split('--');
         const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
 
-        const driveResult = await deviceController.updateOrCreateDrive(dongleId, identifier, {
+        const driveResult = await deviceController.updateOrCreateDrive(dongleId, driveName, {
           max_segment: segment,
           duration: 0,
           distance_meters: 0,
@@ -301,6 +308,7 @@ async function upload(req, res) {
 
         logger.info(`HTTP.UPLOAD_URL created new drive #${JSON.stringify(driveResult.lastID)}`);
       } else {
+        logger.info("UPDATING DRIVE")
         await deviceController.updateOrCreateDrive(dongleId, driveName, {
           max_segment: Math.max(drive.max_segment, segment),
           upload_complete: false,
@@ -308,8 +316,6 @@ async function upload(req, res) {
           last_upload: Date.now(),
         })
 
-        const driveSegment = await driveController.getDriveSegment(dongleId, driveName, segment);
-        if (driveSegment == null) {
           await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
             duration: 0, 
             distance_meters: 0, 
@@ -318,12 +324,7 @@ async function upload(req, res) {
             is_stalled: false, 
             created: Date.now()
           })
-        } else {
-          await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
-            is_processed: false,
-            is_stalled: false,
-          })
-        }
+      
 
         logger.info(`HTTP.UPLOAD_URL updated existing drive: ${JSON.stringify(drive)}`);
       }
@@ -338,8 +339,8 @@ async function upload(req, res) {
 }
 
 // DRIVE & BOOT/CRASH LOG FILE UPLOAD URL REQUEST
-router.get('/v1.3/:dongleId/upload_url/', upload);
-router.get('/v1.4/:dongleId/upload_url/', upload);
+router.get('/v1.3/:dongleId/upload_url', upload);
+router.get('/v1.4/:dongleId/upload_url', upload);
 
 // DEVICE REGISTRATION OR RE-ACTIVATION
 router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (req, res) => {

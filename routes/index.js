@@ -7,6 +7,7 @@ import admin from './administration/adminApi';
 import realtime from './api/realtime';
 import deviceApi from './api/devices';
 import authenticationApi from './api/authentication';
+import oauthAuthenticator from './api/authentication/oauth';
 
 export default {
   useradmin,
@@ -16,4 +17,5 @@ export default {
   realtime,
   deviceApi,
   authenticationApi,
+  oauthAuthenticator,
 };

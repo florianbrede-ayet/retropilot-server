@@ -83,6 +83,7 @@ const web = async () => {
     app.use('/admin', routers.admin);
     app.use('/realtime', athenaRateLimit);
     app.use('/realtime', routers.realtime);
+    //app.use(routers.oauthAuthenticator)
   } else {
     logger.log('Athena disabled');
   }
@@ -99,10 +100,7 @@ const web = async () => {
   app.use('/cabana', express.static('cabana/'));
 
   app.get('/', async (req, res) => {
-    res.status(200);
-    const response = '<html style="font-family: monospace"><h2>404 Not found</h2>'
-            + 'Are you looking for the <a href="/useradmin">useradmin dashboard</a>?';
-    res.send(response);
+    res.redirect('/useradmin')
   });
 
   app.get('*', runAsyncWrapper(async (req, res) => {

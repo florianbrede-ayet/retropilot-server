@@ -9,6 +9,7 @@ import athena_action_log from './athena_action_log.model';
 import athena_returned_data from './athena_returned_data.model';
 import device_authorised_users from './device_authorised_users.model';
 import drive_segments from './drive_segments.model';
+import oauth_accounts from './oauth_accounts';
 import config from '../config';
 
 const sequelize = new Sequelize({
@@ -32,6 +33,7 @@ const modelDefiners = [
   athena_returned_data,
   device_authorised_users,
   drive_segments,
+  oauth_accounts,
 ];
 
 for (const modelDefiner of modelDefiners) {

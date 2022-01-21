@@ -36,6 +36,10 @@ export default (sequelize) => {
       allowNull: true,
       type: DataTypes.TEXT,
     },
+    g_oauth_sub: {
+      allowNull: true,
+      type: DataTypes.TEXT,
+    },
   }, {
     timestamps: false,
   });

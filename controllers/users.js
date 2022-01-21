@@ -1,12 +1,14 @@
 import crypto from 'crypto';
+import log4js from 'log4js';
 import config from '../config';
 import orm from '../models/index.model';
 
-async function getAccountFromId(id) {
+const logger = log4js.getLogger('default');
+export async function getAccountFromId(id) {
   return orm.models.accounts.findByPk(id);
 }
 
-async function getAccountFromEmail(email) {
+export async function getAccountFromEmail(email) {
   if (!email) return null;
 
   const account = orm.models.accounts.findOne({ where: { email } });
@@ -15,13 +17,13 @@ async function getAccountFromEmail(email) {
   return null;
 }
 
-async function _dirtyCreateAccount(email, password, created, banned) {
+export async function _dirtyCreateAccount(email, password, created, banned) {
   return orm.models.accounts.create({
     email, password, created, banned,
   });
 }
 
-async function createAccount(email, password) {
+export async function createAccount(email, password) {
   if (!email || !password) {
     return { success: false, status: 400, data: { missingData: true } };
   }
@@ -55,7 +57,7 @@ async function createAccount(email, password) {
   return { success: false, status: 500, data: {} };
 }
 
-async function verifyEmailToken(token) {
+export async function verifyEmailToken(token) {
   if (!token) {
     return { success: false, status: 400, data: { missingToken: true } };
   }
@@ -79,7 +81,7 @@ async function verifyEmailToken(token) {
   return { success: true, status: 200, data: { successfullyVerified: true } };
 }
 
-async function getAllUsers() {
+export async function getAllUsers() {
   return orm.models.accounts.findAll({ attributes: ['id', 'last_ping', 'created', 'admin', 'banned'] });
 }
 

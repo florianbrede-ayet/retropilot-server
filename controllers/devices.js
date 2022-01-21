@@ -1,12 +1,14 @@
 import sanitizeFactory from 'sanitize';
-const sanitize = sanitizeFactory();
-import { Op } from 'sequelize';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
+import log4js from 'log4js';
 import config from '../config';
 import authenticationController from './authentication';
 import orm from '../models/index.model';
 import usersController from './users';
+
+const logger = log4js.getLogger('default');
+const sanitize = sanitizeFactory();
 
 async function pairDevice(account, qrString) {
   if (qrString === undefined || qrString === null) {
@@ -192,8 +194,8 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
   return orm.models.drives.findAll(query);
 }
 
-async function getDrive(dongleId, identifier) {
-  const drive = await orm.models.drives.findOne({ where: { identifier, dongle_id: dongleId } });
+async function getDrive(identifier) {
+  const drive = await orm.models.drives.findOne({ where: { identifier } });
   console.log(drive);
 
   if (drive.dataValues) return drive.dataValues;
@@ -201,8 +203,7 @@ async function getDrive(dongleId, identifier) {
 }
 
 async function getDriveFromidentifier(dongleId, identifier) {
-  console.log('WAAAA', dongleId);
-  return orm.models.drives.findAll({ where: { dongle_id: dongleId, identifier } });
+  return orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
 }
 
 /*
@@ -270,30 +271,36 @@ async function getBootlogs(dongleId) {
 }
 
 async function updateOrCreateDrive(dongleId, identifier, data) {
-  const check = orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
+  logger.info('updateOrCreate Drive', dongleId, identifier, data);
+  const check = await orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
 
-  if (check.dataValues) {
-    return { error: true, msg: 'DRIVE_EXISTS', drive_already_exits: true };
+  console.log('checking for existing drive....', check);
+
+  if (check) {
+    return orm.models.drives.update(
+      data,
+      { where: { dongle_id: dongleId, identifier } },
+    );
   }
 
   return orm.models.drives.create({
     ...data,
-    dongle_Id: dongleId,
-    [Op.or]: [
-      { identifier: dongleId },
-      { id: dongleId },
-    ],
+    dongle_id: dongleId,
+    identifier,
   });
 }
 
 async function updateOrCreateDriveSegment(dongleId, identifier, segmentId, data) {
-  console.log(orm);
-  const check = orm.models.drive_segments.findOne({
-    where: { dongle_id: dongleId, drive_identifier: identifier },
+  logger.info('updateOrCreate Drive_Segment', dongleId, identifier, data);
+  const check = await orm.models.drive_segments.findOne({
+    where: { segment_id: segmentId, dongle_id: dongleId, drive_identifier: identifier },
   });
 
-  if (check.dataValues) {
-    return { error: true, msg: 'DRIVE_EXISTS', drive_already_exits: true };
+  if (check) {
+    return orm.models.drive_segments.update(
+      data,
+      { where: { segment_id: segmentId, dongle_id: dongleId, drive_identifier: identifier } },
+    );
   }
 
   return orm.models.drive_segments.create({
@@ -304,13 +311,12 @@ async function updateOrCreateDriveSegment(dongleId, identifier, segmentId, data)
   });
 }
 
-async function getDriveSegment(dongleId, driveName, segment) {
+async function getDriveSegment(driveName, segment) {
   return orm.models.drive_segments.findOne({
 
     where: {
       segment_id: segment,
       drive_identifier: driveName,
-      dongle_id: dongleId,
     },
   });
 }

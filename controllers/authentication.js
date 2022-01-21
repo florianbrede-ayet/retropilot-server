@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import jsonwebtoken from 'jsonwebtoken';
+import log4js from 'log4js';
 import config from '../config';
 import orm from '../models/index.model';
 
-let logger;
+const logger = log4js.getLogger('default');
 
 async function validateJWT(token, key) {
   try {
