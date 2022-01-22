@@ -16,6 +16,7 @@
   "dependencies": {
     "@commaai/log_reader": "^0.9.0",
     "@sendgrid/client": "^7.4.3",
+    "2fa-util": "^1.1.1",
     "body-parser": "^1.19.1",
     "chai": "^4.3.4",
     "chai-http": "^4.3.0",

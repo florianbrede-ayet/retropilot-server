@@ -1,48 +1,36 @@
 import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
-  sequelize.define('accounts', {
+  sequelize.define('oauth_accounts', {
     id: {
-      allowNull: false,
+      id: false,
       autoIncrement: true,
       primaryKey: true,
+      type: DataTypes.INTEGER,
+    },
+    account_id: {
+      allowNull: false,
       type: DataTypes.INTEGER,
     },
     email: {
       allowNull: false,
       type: DataTypes.TEXT,
     },
-    password: {
-      allowNull: true,
-      type: DataTypes.INTEGER,
-    },
     created: {
       allowNull: true,
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
     },
-    last_ping: {
-      allowNull: true,
-      type: DataTypes.NUMBER,
-    },
-    '2fa_token': {
-      allowNull: true,
-      type: DataTypes.TEXT,
-    },
-    admin: {
+    last_used: {
       allowNull: true,
       type: DataTypes.INTEGER,
     },
-    email_verify_token: {
+    refresh: {
       allowNull: true,
       type: DataTypes.TEXT,
     },
-    g_oauth_sub: {
+    provider: {
       allowNull: true,
       type: DataTypes.TEXT,
-    },
-    two_factor_enabled: {
-      allowNull: true,
-      type: DataTypes.BOOLEAN,
     },
   }, {
     timestamps: false,
