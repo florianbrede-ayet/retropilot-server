@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import jsonwebtoken from 'jsonwebtoken';
 import log4js from 'log4js';
-import config from '../config';
 import orm from '../models/index.model';
 
 const logger = log4js.getLogger('default');
@@ -29,9 +28,9 @@ async function signIn(email, password) {
 
   if (account.dataValues) {
     account = account.dataValues;
-    const inputPassword = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
+    const inputPassword = crypto.createHash('sha256').update(password + process.env.APP_SALT).digest('hex');
     if (account.password === inputPassword) {
-      const token = jsonwebtoken.sign({ accountId: account.id }, config.applicationSalt);
+      const token = jsonwebtoken.sign({ accountId: account.id }, process.env.APP_SALT);
 
       return { success: true, jwt: token };
     }
@@ -44,10 +43,10 @@ async function changePassword(account, newPassword, oldPassword) {
   if (!account || !newPassword || !oldPassword) {
     return { success: false, error: 'MISSING_DATA' };
   }
-  const oldPasswordHash = crypto.createHash('sha256').update(oldPassword + config.applicationSalt).digest('hex');
+  const oldPasswordHash = crypto.createHash('sha256').update(oldPassword + process.env.APP_SALT).digest('hex');
 
   if (account.password === oldPasswordHash) {
-    const newPasswordHash = crypto.createHash('sha256').update(newPassword + config.applicationSalt).digest('hex');
+    const newPasswordHash = crypto.createHash('sha256').update(newPassword + process.env.APP_SALT).digest('hex');
 
     await orm.models.accounts.update(
       { password: newPasswordHash },
@@ -76,7 +75,7 @@ async function getAccountFromJWT(jwt, limitData) {
   let token;
 
   try {
-    token = jsonwebtoken.verify(jwt, config.applicationSalt);
+    token = jsonwebtoken.verify(jwt, process.env.APP_SALT);
   } catch (err) {
     return null;// {success: false, msg: 'BAD_JWT'}
   }

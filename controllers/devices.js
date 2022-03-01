@@ -2,7 +2,6 @@ import sanitizeFactory from 'sanitize';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import log4js from 'log4js';
-import config from '../config';
 import authenticationController from './authentication';
 import orm from '../models/index.model';
 import usersController from './users';
@@ -211,9 +210,9 @@ async function getDriveFromidentifier(dongleId, identifier) {
 */
 
 async function getCrashlogs(dongleId) {
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId).digest('hex');
 
-  const directoryTree = dirTree(`${config.storagePath}${dongleId}/${dongleIdHash}/crash/`, { attributes: ['size'] });
+  const directoryTree = dirTree(`${process.env.STORAGE_PATH}${dongleId}/${dongleIdHash}/crash/`, { attributes: ['size'] });
   const crashlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('.bz2', '').split('--');
     let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
@@ -236,7 +235,7 @@ async function getCrashlogs(dongleId) {
       name: file.name,
       size: file.size,
       date: dateObj,
-      permalink: `${config.baseDriveDownloadUrl}${dongleId}/${dongleIdHash}/crash/${file.name}`,
+      permalink: `${process.env.BASE_DRIVE_DOWNLOAD_URL}${dongleId}/${dongleIdHash}/crash/${file.name}`,
     };
   });
   crashlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
@@ -244,9 +243,9 @@ async function getCrashlogs(dongleId) {
 }
 
 async function getBootlogs(dongleId) {
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId).digest('hex');
 
-  const directoryTree = dirTree(`${config.storagePath}${dongleId}/${dongleIdHash}/boot/`, { attributes: ['size'] });
+  const directoryTree = dirTree(`${process.env.STORAGE_PATH}${dongleId}/${dongleIdHash}/boot/`, { attributes: ['size'] });
   const bootlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('.bz2', '').split('--');
     const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
@@ -263,7 +262,7 @@ async function getBootlogs(dongleId) {
       name: file.name,
       size: file.size,
       date: dateObj,
-      permalink: `${config.baseDriveDownloadUrl}${dongleId}/${dongleIdHash}/boot/${file.name}`,
+      permalink: `${process.env.BASE_DRIVE_DOWNLOAD_URL}${dongleId}/${dongleIdHash}/boot/${file.name}`,
     };
   });
   bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));

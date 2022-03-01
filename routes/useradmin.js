@@ -5,9 +5,7 @@ import htmlspecialchars from 'htmlspecialchars';
 import dirTree from 'directory-tree';
 import cookieParser from 'cookie-parser';
 import log4js from 'log4js';
-import config from '../config';
 import authenticationController from '../controllers/authentication';
-import storageController from '../controllers/storage';
 import helperController from '../controllers/helpers';
 import mailingController from '../controllers/mailing';
 import deviceController from '../controllers/devices';
@@ -71,9 +69,9 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
         <input type="submit">
     </form>
     <br><br>
-    ${!config.allowAccountRegistration ? '<i>User Account Registration is disabled on this Server</i>' : '<a href="/useradmin/register">Register new Account</a>'}
+    ${!process.env.ALLOW_REGISTRATION ? '<i>User Account Registration is disabled on this Server</i>' : '<a href="/useradmin/register">Register new Account</a>'}
     <br><br>
-    <br><br>${config.welcomeMessage}
+    <br><br>${process.env.WELCOME_MESSAGE}
 </html>
 `, /*
     Accounts: ${accounts.num}  |
@@ -82,7 +80,7 @@ router.get('/useradmin', runAsyncWrapper(async (req, res) => {
     Distance Traveled: ${Math.round(drives.distance / 1000)} km  |
     Time Traveled: ${helperController.formatDuration(drives.duration)}  |
     Storage Used: ${await storageController.getTotalStorageUsed() !== null ? await storageController.getTotalStorageUsed() : '--'}
-    <br><br>${config.welcomeMessage}` */);
+    <br><br>${process.env.WELCOME_MESSAGE}` */);
 }));
 
 router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
@@ -92,7 +90,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     return res.status(400).send('Malformed Request');
   }
 
-  if (!config.allowAccountRegistration) {
+  if (!process.env.ALLOW_REGISTRATION) {
     return res.status(401).send('Unauthorized.');
   }
 
@@ -106,7 +104,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     return res.redirect(`/useradmin/register?status=${encodeURIComponent('Email is already registered')}`);
   }
 
-  const token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
+  const token = crypto.createHmac('sha256', process.env.APP_SALT).update(email.trim()).digest('hex');
 
   let infoText = '';
 
@@ -121,7 +119,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
   } else {
     const result = await userController._dirtyCreateAccount(
       email,
-      crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
+      crypto.createHash('sha256').update(req.body.password + process.env.APP_SALT).digest('hex'),
       Date.now(),
       false,
     );
@@ -153,7 +151,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
 }));
 
 router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
-  if (!config.allowAccountRegistration) {
+  if (!process.env.ALLOW_REGISTRATION) {
     return res.status(400).send('Unauthorized.');
   }
 
@@ -222,7 +220,7 @@ ${req.query.linkstatus !== undefined ? `<br><u>${htmlspecialchars(req.query.link
 <hr/>
 <a href="/useradmin/signout">Sign Out</a>`;
 
-  response += `<br>${config.welcomeMessage}</html>`;
+  response += `<br>${process.env.WELCOME_MESSAGE}</html>`;
 
   return res.status(200).send(response);
 }));
@@ -274,7 +272,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 
   const drives = await deviceController.getDrives(device.dongle_id, false, true);
 
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(device.dongle_id).digest('hex');
 
   const bootlogFiles = await deviceController.getBootlogs(device.dongle_id);
   const crashlogFiles = await deviceController.getCrashlogs(device.dongle_id);
@@ -292,7 +290,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <b>Public Key:</b><br>
     <span style="font-size: 0.8em">${device.public_key.replace(/\r?\n|\r/g, '<br>')}</span><br>
     <b>Stored Drives:</b> ${drives.length}<br>
-    <b>Quota Storage:</b> ${device.storage_used} MB / ${config.deviceStorageQuotaMb} MB<br>
+    <b>Quota Storage:</b> ${device.storage_used} MB / ${process.env.DEVICE_STORAGE_QUOTA_MB} MB<br>
     <br>`;
 
   response += `<b>Boot Logs (last 5):</b>
@@ -301,7 +299,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
     <tr><th>date</th><th>file</th><th>size</th></tr>
 `;
   for (let i = 0; i < Math.min(5, bootlogFiles.length); i++) {
-    response += `<tr><td>${helperController.formatDate(bootlogFiles[i].date)}</td><td><a href="${config.baseDriveDownloadUrl}${device.dongle_id}/${dongleIdHash}/boot/${bootlogFiles[i].name}" target=_blank>${bootlogFiles[i].name}</a></td><td>${bootlogFiles[i].size}</td></tr>`;
+    response += `<tr><td>${helperController.formatDate(bootlogFiles[i].date)}</td><td><a href="${process.env.BASE_DRIVE_DOWNLOAD_URL}${device.dongle_id}/${dongleIdHash}/boot/${bootlogFiles[i].name}" target=_blank>${bootlogFiles[i].name}</a></td><td>${bootlogFiles[i].size}</td></tr>`;
   }
   response += '</table><br><br>';
 
@@ -311,13 +309,13 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
   for (let i = 0; i < Math.min(5, crashlogFiles.length); i++) {
     response += `<tr>
     <td>${helperController.formatDate(crashlogFiles[i].date)}</td>.
-    <td><a href="${config.baseDriveDownloadUrl}${device.dongle_id}/${dongleIdHash}/crash/${crashlogFiles[i].name}" target=_blank>${crashlogFiles[i].name}</a></td>
+    <td><a href="${process.env.BASE_DRIVE_DOWNLOAD_URL}${device.dongle_id}/${dongleIdHash}/crash/${crashlogFiles[i].name}" target=_blank>${crashlogFiles[i].name}</a></td>
     <td>${crashlogFiles[i].size}</td>
 </tr>`;
   }
   response += '</table><br><br>';
 
-  response += `<b>Drives (non-preserved drives expire ${config.deviceDriveExpirationDays} days after upload):</b><br>
+  response += `<b>Drives (non-preserved drives expire ${process.env.DEVICE_EXPIRATION_DAYS} days after upload):</b><br>
         <table border=1 cellpadding=2 cellspacing=2>
         <tr>
             <th>identifier</th>
@@ -423,14 +421,14 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     return res.status(400).send('Unauthorized.');
   }
 
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
-  const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(device.dongle_id).digest('hex');
+  const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT).update(drive.identifier).digest('hex');
 
-  const driveUrl = `${config.baseDriveDownloadUrl + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}/`;
+  const driveUrl = `${process.env.BASE_DRIVE_DOWNLOAD_URL + device.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}/`;
 
   let cabanaUrl = null;
   if (drive.is_processed) {
-    cabanaUrl = `${config.cabanaUrl}?retropilotIdentifier=${device.dongle_id}|${dongleIdHash}|${drive.identifier}|${driveIdentifierHash}&retropilotHost=${encodeURIComponent(config.baseUrl)}&demo=1"`;
+    cabanaUrl = `${process.env.CABANA_URL}?retropilotIdentifier=${device.dongle_id}|${dongleIdHash}|${drive.identifier}|${driveIdentifierHash}&retropilotHost=${encodeURIComponent(process.env.BASE_URL)}&demo=1"`;
   }
 
   let vehicle = '';
@@ -573,7 +571,7 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <table border=1 cellpadding=2 cellspacing=2>
             <tr><th>segment</th><th>qcamera</th><th>qlog</th><th>fcamera</th><th>rlog</th><th>dcamera</th><th>processed</th><th>stalled</th></tr>`;
 
-            const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
+            const directoryTree = dirTree(process.env.STORAGE_PATH + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
   const directorySegments = {};
   for (var i in directoryTree.children) {
     // skip any non-directory entries (for example m3u8 file in the drive directory)

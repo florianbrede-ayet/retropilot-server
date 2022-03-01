@@ -2,11 +2,6 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import authenticationController from '../../controllers/authentication';
 
-/* eslint-disable no-unused-vars */
-import userController from '../../controllers/users';
-
-import config from '../../config';
-/* eslint-enable no-unused-vars */
 const router = express.Router();
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);

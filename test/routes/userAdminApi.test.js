@@ -23,7 +23,7 @@ export default (server) => {
                             body.data.hasOwnProperty('serverStats') &&
                             body.data.serverStats.hasOwnProperty('config') &&
                             typeof body.data.serverStats.config.registerAllowed === "boolean" &&
-                            typeof body.data.serverStats.config.welcomeMessage === "string" &&
+                            typeof body.data.serverStats.process.env.WELCOME_MESSAGE === "string" &&
                             typeof body.data.serverStats['accounts'] === "number" &&
                             typeof body.data.serverStats['devices'] === "number" &&
                             typeof body.data.serverStats['drives'] === "number" &&

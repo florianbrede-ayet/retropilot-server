@@ -1,13 +1,11 @@
 /* eslint-disable */
-
+import 'dotenv/config'
 import crypto from 'crypto';
 import fs from 'fs';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import log4js from 'log4js';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import lockfile from 'proper-lockfile';
 import dirTree from 'directory-tree';
 import { execSync } from 'child_process';
@@ -16,10 +14,6 @@ import ffprobe from 'ffprobe';
 import ffprobeStatic from 'ffprobe-static';
 
 import orm from './models/index.model';
-import config from './config';
-
-
-var db = null;
 
 var lastCleaningTime = 0;
 var startTime = Date.now();
@@ -36,12 +30,12 @@ const __dirname = dirname(__filename);
 global.__basedir = __dirname;
 
 function initializeStorage() {
-  var verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  var verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (verifiedPath != null) {
     logger.info(`Verified storage path ${verifiedPath}`);
   }
   else {
-    logger.error(`Unable to verify storage path '${config.storagePath}', check filesystem / permissions`);
+    logger.error(`Unable to verify storage path '${process.env.STORAGE_PATH}', check filesystem / permissions`);
     process.exit();
   }
 }
@@ -106,12 +100,12 @@ function moveUploadedFile(buffer, directory, filename) {
     return false;
   }
 
-  if (config.storagePath.lastIndexOf('/') !== config.storagePath.length - 1) {
+  if (process.env.STORAGE_PATH.lastIndexOf('/') !== process.env.STORAGE_PATH.length - 1) {
     directory = `/${directory}`;
   }
   if (directory.lastIndexOf('/') !== directory.length - 1) directory += '/';
 
-  var finalPath = mkDirByPathSync(config.storagePath + directory, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  var finalPath = mkDirByPathSync(process.env.STORAGE_PATH + directory, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (finalPath && finalPath.length > 0) {
     if (writeFileSync(`${finalPath}/${filename}`, buffer, 0o660)) {
       logger.info(`moveUploadedFile successfully written '${finalPath}/${filename}'`);
@@ -120,7 +114,7 @@ function moveUploadedFile(buffer, directory, filename) {
     logger.error('moveUploadedFile failed to writeFileSync');
     return false;
   }
-  logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${config.storagePath + directory}'`);
+  logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${process.env.STORAGE_PATH + directory}'`);
   return false;
 }
 
@@ -139,60 +133,6 @@ function deleteFolderRecursive(directoryPath) {
       });
     fs.rmdirSync(directoryPath);
   }
-}
-
-async function dbProtectedRun() {
-  let retries = 0;
-  while (true) {
-    try {
-        return await db.run(...arguments);
-    } catch (error) {
-      logger.error(error);
-      retries++;
-      if (retries >= 10) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-  }
-  logger.error(`unable to complete dbProtectedRun for ${arguments}`);
-  return null;
-}
-
-async function dbProtectedGet() {
-  let retries = 0;
-  while (true) {
-    try {
-        return await db.get(...arguments);
-    } catch (error) {
-      logger.error(error);
-      retries++;
-      if (retries >= 10) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-  }
-  logger.error(`unable to complete dbProtectedGet for ${arguments}`);
-  return null;
-}
-
-async function dbProtectedAll() {
-  let retries = 0;
-  while (true) {
-    try {
-        return await db.all(...arguments);
-    } catch (error) {
-      logger.error(error);
-      retries++;
-      if (retries >= 10) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-  }
-  logger.error(`unable to complete dbProtectedGet for ${arguments}`);
-  return null;
 }
 
 var segmentProcessQueue = [];
@@ -356,19 +296,16 @@ function processSegmentsRecursive() {
 
   logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} ${JSON.stringify(segment)}`);
 
-  const driveSegmentResult = dbProtectedRun(
-    'UPDATE drive_segments SET process_attempts = ? WHERE id = ?',
+  segment.process_attempts = segment.process_attempts + 1
 
-    segment.process_attempts = segment.process_attempts + 1,
-    segment.id
+  const [driveSegmentResult] = orm.query(
+    `UPDATE drive_segments SET process_attempts = ${segment.process_attempts} WHERE id = ${segment.id}`,
   );
 
   if (segment.process_attempts > 5) {
     logger.error(`FAILING TO PROCESS SEGMENT,${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} JSON: ${JSON.stringify(segment)} SKIPPING `);
     segmentProcessPosition++;
-  }
-  else {
-
+  } else {
     var p1 = processSegmentRLog(fileStatus['rlog.bz2']);
     var p2 = processSegmentVideo(fileStatus['qcamera.ts']);
     Promise.all([p1, p2])
@@ -382,7 +319,6 @@ function processSegmentsRecursive() {
             is_processed: true,
             upload_complete: uploadComplete,
             is_stalled: false
-
           }, {where: {id: segment.id}})
 
 
@@ -419,19 +355,19 @@ async function updateSegments() {
   affectedDriveCarParams = {};
   affectedDriveInitData = {};
 
-  const drive_segments = await dbProtectedAll('SELECT * FROM drive_segments WHERE upload_complete = ? AND is_stalled = ? AND process_attempts < ? ORDER BY created ASC', false, false, 5);
+  const [drive_segments] = await orm.query('SELECT * FROM drive_segments WHERE upload_complete = false AND is_stalled = false AND process_attempts < 5 ORDER BY created ASC');
   if (drive_segments != null) {
     for (var t = 0; t < drive_segments.length; t++) {
       var segment = drive_segments[t];
 
-      var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+      var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
         .update(segment.dongle_id)
         .digest('hex');
-      var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt)
+      var driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
         .update(segment.drive_identifier)
         .digest('hex');
 
-      const directoryTree = dirTree(`${config.storagePath + segment.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${segment.drive_identifier}/${segment.segment_id}`);
+      const directoryTree = dirTree(`${process.env.STORAGE_PATH + segment.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${segment.drive_identifier}/${segment.segment_id}`);
       if (directoryTree == null || directoryTree.children == undefined) continue; // happens if upload in progress (db entity written but directory not yet created)
 
       var qcamera = false;
@@ -468,13 +404,8 @@ async function updateSegments() {
       else if (uploadComplete) {
         logger.info(`updateSegments uploadComplete for ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id}`);
 
-        const driveSegmentResult = await dbProtectedRun(
-          'UPDATE drive_segments SET upload_complete = ?, is_stalled = ? WHERE id = ?',
-          true,
-
-          false,
-
-          segment.id
+        const [driveSegmentResult] = await orm.query(
+          `UPDATE drive_segments SET upload_complete = true, is_stalled = false WHERE id = ${segment.id}`
         );
 
         affectedDrives[`${segment.dongle_id}|${segment.drive_identifier}`] = true;
@@ -482,11 +413,8 @@ async function updateSegments() {
       else if (Date.now() - segment.created > 10 * 24 * 3600 * 1000) { // ignore non-uploaded segments after 10 days until a new upload_url is requested (which resets is_stalled)
         logger.info(`updateSegments isStalled for ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id}`);
 
-        const driveSegmentResult = await dbProtectedRun(
-          'UPDATE drive_segments SET is_stalled = ? WHERE id = ?',
-          true,
-
-          segment.id
+        const driveSegmentResult = await orm.query(
+          `UPDATE drive_segments SET is_stalled = true WHERE id = ${segment.id}`
         );
       }
 
@@ -512,13 +440,13 @@ async function updateDevices() {
   for (const [key, value] of Object.entries(affectedDevices)) {
     var dongleId = key;
 
-    const device = await dbProtectedGet('SELECT * FROM devices WHERE dongle_id = ?', dongleId);
+    const [device] = await orm.query(`SELECT * FROM devices WHERE dongle_id = ${dongleId}`);
     if (device == null) continue;
 
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(device.dongle_id)
       .digest('hex');
-    var devicePath = `${config.storagePath + device.dongle_id}/${dongleIdHash}`;
+    var devicePath = `${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}`;
     var deviceQuotaMb = Math.round(parseInt(execSync(`du -s ${devicePath} | awk -F'\t' '{print $1;}'`)
       .toString()) / 1024);
     logger.info(`updateDevices device ${dongleId} has an updated storage_used of: ${deviceQuotaMb} MB`);
@@ -543,14 +471,14 @@ async function updateDrives() {
     let drive = await orm.models.drives({where: {driveIdentifier: driveIdentifier, dongleId: dongleId}})
     if (drive == null) continue;
     drive = drive.dataValues;
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(drive.dongle_id)
       .digest('hex');
-    var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt)
+    var driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(drive.identifier)
       .digest('hex');
-    var driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
-    var drivePath = `${config.storagePath + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+    var driveUrl = `${process.env.BASE_DRIVE_DOWNLOAD_URL + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+    var drivePath = `${process.env.STORAGE_PATH + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
     var uploadComplete = true;
     var isProcessed = true;
@@ -587,10 +515,10 @@ async function updateDrives() {
     var { filesize } = drive;
     if (uploadComplete) {
       try {
-        var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+        var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
           .update(dongleId)
           .digest('hex');
-        var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt)
+        var driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
           .update(driveIdentifier)
           .digest('hex');
         filesize = parseInt(execSync(`du -s ${drivePath} | awk -F'\t' '{print $1;}'`)
@@ -650,12 +578,12 @@ async function updateDrives() {
 }
 
 async function deleteExpiredDrives() {
-  var expirationTs = Date.now() - config.deviceDriveExpirationDays * 24 * 3600 * 1000;
+  var expirationTs = Date.now() - process.env.DEVICE_EXPIRATION_DAYS * 24 * 3600 * 1000;
 
-  const expiredDrives = await dbProtectedAll('SELECT * FROM drives WHERE is_preserved = ? AND is_deleted = ? AND created < ?', false, false, expirationTs);
+  const [expiredDrives] = await orm.query(`SELECT * FROM drives WHERE is_preserved = false AND is_deleted = false AND created < ${expirationTs}`);
   if (expiredDrives != null) {
     for (var t = 0; t < expiredDrives.length; t++) {
-      logger.info(`deleteExpiredDrives drive ${expiredDrives[t].dongle_id} ${expiredDrives[t].identifier} is older than ${config.deviceDriveExpirationDays} days, set is_deleted=true`);
+      logger.info(`deleteExpiredDrives drive ${expiredDrives[t].dongle_id} ${expiredDrives[t].identifier} is older than ${process.env.DEVICE_EXPIRATION_DAYS} days, set is_deleted=true`);
       const driveResult = await orm.models.drives.update({
         is_deleted: true
       },
@@ -666,35 +594,27 @@ async function deleteExpiredDrives() {
 }
 
 async function removeDeletedDrivesPhysically() {
-  const deletedDrives = await dbProtectedAll('SELECT * FROM drives WHERE is_deleted = ? AND is_physically_removed = ?', true, false);
+  const [deletedDrives] = await orm.query('SELECT * FROM drives WHERE is_deleted = true AND is_physically_removed = false');
   if (deletedDrives == null) {
     return;
   }
   for (var t = 0; t < deletedDrives.length; t++) {
     logger.info(`removeDeletedDrivesPhysically drive ${deletedDrives[t].dongle_id} ${deletedDrives[t].identifier} is deleted, remove physical files and clean database`);
 
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(deletedDrives[t].dongle_id)
       .digest('hex');
-    var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt)
+    var driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(deletedDrives[t].identifier)
       .digest('hex');
 
-    const drivePath = `${config.storagePath + deletedDrives[t].dongle_id}/${dongleIdHash}/${driveIdentifierHash}`;
+    const drivePath = `${process.env.STORAGE_PATH + deletedDrives[t].dongle_id}/${dongleIdHash}/${driveIdentifierHash}`;
     logger.info(`removeDeletedDrivesPhysically drive ${deletedDrives[t].dongle_id} ${deletedDrives[t].identifier} storage path is ${drivePath}`);
     try {
-      const driveResult = await dbProtectedRun(
-        'UPDATE drives SET is_physically_removed = ? WHERE id = ?',
-        true,
+      const driveResult = await orm.query(`UPDATE drives SET is_physically_removed = true WHERE id = ${deletedDrives[t].id}`);
 
-        deletedDrives[t].id
-      );
-
-      const driveSegmentResult = await dbProtectedRun(
-        'DELETE FROM drive_segments WHERE drive_identifier = ? AND dongle_id = ?',
-        deletedDrives[t].identifier,
-
-        deletedDrives[t].dongle_id
+      const driveSegmentResult = await orm.query(
+        `DELETE FROM drive_segments WHERE drive_identifier = ${deletedDrives[t].identifier} AND dongle_id = ${deletedDrives[t].dongle_id}`
       );
 
       if (driveResult != null && driveSegmentResult != null) deleteFolderRecursive(drivePath, { recursive: true });
@@ -706,7 +626,7 @@ async function removeDeletedDrivesPhysically() {
 }
 
 async function deleteOverQuotaDrives() {
-  const devices = await dbProtectedAll('SELECT * FROM devices WHERE storage_used > ?', config.deviceStorageQuotaMb);
+  const [devices] = await orm.query(`SELECT * FROM devices WHERE storage_used > ${process.env.DEVICE_STORAGE_QUOTA_MB}`);
   if (devices == null) {
     return;
   }
@@ -714,27 +634,21 @@ async function deleteOverQuotaDrives() {
   for (var t = 0; t < devices.length; t++) {
     var foundDriveToDelete = false;
 
-    const driveNormal = await dbProtectedGet('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, false, false);
+    const [driveNormal] = await orm.query(`SELECT * FROM drives WHERE dongle_id = ${devices[t].dongle_id} AND is_preserved = false AND is_deleted = false ORDER BY created ASC LIMIT 1`);
     if (driveNormal != null) {
       logger.info(`deleteOverQuotaDrives drive ${driveNormal.dongle_id} ${driveNormal.identifier} (normal) is deleted for over-quota`);
-      const driveResult = await dbProtectedRun(
-        'UPDATE drives SET is_deleted = ? WHERE id = ?',
-        true,
-
-        driveNormal.id
+      const [driveResult] = await orm.query(
+        `UPDATE drives SET is_deleted = true WHERE id = ${driveNormal.id}`,
       );
       foundDriveToDelete = true;
     }
 
     if (!foundDriveToDelete) {
-      const drivePreserved = await dbProtectedGet('SELECT * FROM drives WHERE dongle_id = ? AND is_preserved = ? AND is_deleted = ? ORDER BY created ASC LIMIT 1', devices[t].dongle_id, true, false);
+      const [drivePreserved] = await orm.query(`SELECT * FROM drives WHERE dongle_id = devices[t].dongle_id AND is_preserved = true AND is_deleted = false ORDER BY created ASC LIMIT 1`);
       if (drivePreserved != null) {
         logger.info(`deleteOverQuotaDrives drive ${drivePreserved.dongle_id} ${drivePreserved.identifier} (preserved!) is deleted for over-quota`);
-        const driveResult = await dbProtectedRun(
-          'UPDATE drives SET is_deleted = ? WHERE id = ?',
-          true,
-
-          drivePreserved.id
+        const [driveResult] = await orm.query(
+          `UPDATE drives SET is_deleted = ? WHERE id = ${drivePreserved.id}`
         );
         foundDriveToDelete = true;
       }
@@ -743,18 +657,18 @@ async function deleteOverQuotaDrives() {
 }
 
 async function deleteBootAndCrashLogs() {
-  const devices = await dbProtectedAll('SELECT * FROM devices');
+  const [devices] = await orm.query('SELECT * FROM devices');
   if (devices == null) {
     return;
   }
 
   for (var t = 0; t < devices.length; t++) {
     var device = devices[t];
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt)
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(device.dongle_id)
       .digest('hex');
 
-    const bootlogDirectoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
+    const bootlogDirectoryTree = dirTree(`${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
     var bootlogFiles = [];
     if (bootlogDirectoryTree != undefined) {
       for (var i = 0; i < bootlogDirectoryTree.children.length; i++) {
@@ -782,7 +696,7 @@ async function deleteBootAndCrashLogs() {
       }
     }
 
-    const crashlogDirectoryTree = dirTree(`${config.storagePath + device.dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
+    const crashlogDirectoryTree = dirTree(`${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
     var crashlogFiles = [];
     if (crashlogDirectoryTree != undefined) {
       for (var i = 0; i < crashlogDirectoryTree.children.length; i++) {
@@ -851,21 +765,6 @@ lockfile.lock('retropilot_worker', {
   .then((release) => {
     logger.info('STARTING WORKER...');
     (async () => {
-      try {
-        db = await open({
-          filename: config.databaseFile,
-          driver: sqlite3.Database,
-          mode: sqlite3.OPEN_READWRITE
-        });
-        await db.get('SELECT * FROM accounts LIMIT 1');
-        await db.get('SELECT * FROM devices LIMIT 1');
-        await db.get('SELECT * FROM drives LIMIT 1');
-        await db.get('SELECT * FROM drive_segments LIMIT 1');
-      } catch (exception) {
-        logger.error(exception);
-        process.exit();
-      }
-
       initializeStorage();
       setTimeout(() => {
         mainWorkerLoop();

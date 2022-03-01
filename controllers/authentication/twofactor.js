@@ -1,5 +1,3 @@
-import { log4js } from 'log4js';
-import { crypto } from 'crypto';
 import { generateSecret, verify } from '2fa-util';
 import {
   AUTH_2FA_BAD_ACCOUNT,
@@ -8,9 +6,7 @@ import {
   AUTH_2FA_ENROLLED,
   AUTH_2FA_BAD_TOKEN,
 } from '../../consistency/terms';
-import { getAccountFromEmail } from '../users';
 import orm from '../../models/index.model';
-import config from '../../config';
 
 export async function twoFactorOnboard(account) {
   if (!account || !account.dataValues) { return { success: false, ...AUTH_2FA_BAD_ACCOUNT }; }

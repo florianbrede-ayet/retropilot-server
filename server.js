@@ -1,10 +1,9 @@
 /* eslint-disable global-require */
-import fs from 'fs';
+import 'dotenv/config'
 
 import log4js from 'log4js';
 import lockfile from 'proper-lockfile';
 import http from 'http';
-import https from 'https';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -12,17 +11,13 @@ import cookieParser from 'cookie-parser';
 import storageController from './controllers/storage.js';
 
 /* eslint-disable no-unused-vars */
-import webWebsocket from './websocket/web/index.js';
 
 import athena from './websocket/athena/index.js';
 import routers from './routes/index.js';
-import orm from './models/index.model.js';
 import controllers from './controllers/index.js';
-import router from './routes/api/realtime.js';
 
 /* eslint-enable no-unused-vars */
 
-import config from './config.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -55,7 +50,7 @@ const web = async () => {
   const app = express();
 
   app.use((req, res, next) => {
-    // TODO: can we use config.baseUrl here?
+    // TODO: can we use process.env.BASE_URL here?
     res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
     res.header('Access-Control-Allow-Credentials', true);
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -69,10 +64,10 @@ const web = async () => {
   app.use(routers.useradmin);
   app.use(routers.authenticationApi);
 
-  if (config.athena.enabled) {
+  if (process.env.ATHENA_ENABLED) {
     const athenaRateLimit = rateLimit({
       windowMs: 30000,
-      max: config.athena.api.ratelimit,
+      max: process.env.ATHENA_API_RATE_LIMIT,
     });
 
     app.use((req, res, next) => {
@@ -91,7 +86,7 @@ const web = async () => {
   app.use(cors({ origin: 'http://localhost:3000' }));
   app.use(cookieParser());
   app.use('/favicon.ico', express.static('static/favicon.ico'));
-  app.use(config.baseDriveDownloadPathMapping, express.static(config.storagePath));
+  app.use(process.env.BASE_DRIVE_DOWNLOAD_PATH_MAPPING, express.static(process.env.STORAGE_PATH));
 
   app.use(routers.deviceApi);
 
@@ -127,8 +122,8 @@ lockfile.lock('retropilot_server', { realpath: false, stale: 30000, update: 2000
 
     const httpServer = http.createServer(app);
 
-    httpServer.listen(config.httpPort, config.httpInterface, () => {
-      logger.info(`Retropilot Server listening at http://${config.httpInterface}:${config.httpPort}`);
+    httpServer.listen(process.env.HTTP_PORT, process.env.HTTP_INTERFACE, () => {
+      logger.info(`Retropilot Server listening at http://${process.env.HTTP_INTERFACE}:${process.env.HTTP_PORT}`);
     });
 
   }).catch((e) => {

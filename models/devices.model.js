@@ -53,7 +53,7 @@ export default (sequelize) => {
       },
       ignore_uploads: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BOOLEAN,
       },
       nickname: {
         allowNull: true,

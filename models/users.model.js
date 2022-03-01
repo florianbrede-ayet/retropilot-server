@@ -14,15 +14,15 @@ export default (sequelize) => {
     },
     password: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.TEXT,
     },
     created: {
       allowNull: true,
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
     },
     last_ping: {
       allowNull: true,
-      type: DataTypes.NUMBER,
+      type: DataTypes.INTEGER,
     },
     '2fa_token': {
       allowNull: true,
@@ -30,7 +30,7 @@ export default (sequelize) => {
     },
     admin: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BOOLEAN,
     },
     email_verify_token: {
       allowNull: true,

@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import log4js from 'log4js';
-import config from '../config';
 import orm from '../models/index.model';
 
 const logger = log4js.getLogger('default');
@@ -27,12 +26,12 @@ export async function createAccount(email, password) {
   if (!email || !password) {
     return { success: false, status: 400, data: { missingData: true } };
   }
-  if (!config.allowAccountRegistration) {
+  if (!process.env.ALLOW_REGISTRATION) {
     return { success: false, status: 403, data: { registerEnabled: false } };
   }
 
-  const emailToken = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
-  password = crypto.createHash('sha256').update(password + config.applicationSalt).digest('hex');
+  const emailToken = crypto.createHmac('sha256', process.env.APP_SALT).update(email.trim()).digest('hex');
+  password = crypto.createHash('sha256').update(password + process.env.APP_SALT).digest('hex');
 
   const account = await orm.models.accounts.findOne({ where: { email } });
   if (account != null && account.dataValues != null) {

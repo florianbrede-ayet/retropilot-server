@@ -24,15 +24,15 @@ export default (sequelize) => {
       },
       upload_complete: {
         allowedNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BOOLEAN,
       },
       duration: {
         allowNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       distance_meters: {
         allowNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       filesize: {
         allowNull: true,

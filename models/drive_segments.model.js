@@ -20,15 +20,15 @@ export default (sequelize) => {
       },
       dongle_id: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.TEXT,
       },
       duration: {
         allowedNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       distance_meters: {
         allowNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       upload_complete: {
         allowNull: true,
@@ -48,7 +48,7 @@ export default (sequelize) => {
       },
       process_attempts: {
         allowNull: true,
-        type: DataTypes.BOOLEAN,
+        type: DataTypes.INTEGER,
       },
     },
     {

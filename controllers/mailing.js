@@ -1,24 +1,23 @@
 import nodemailer from 'nodemailer';
 import log4js from 'log4js';
-import config from '../config';
 
 const logger = log4js.getLogger('default');
 const transporter = nodemailer.createTransport(
   {
-    host: config.smtpHost,
-    port: config.smtpPort,
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
     auth: {
-      user: config.smtpUser,
-      pass: config.smtpPassword,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
     logger: true,
     debug: false,
   },
-  { from: config.smtpFrom },
+  { from: process.env.SMTP_FROM },
 );
 
 async function sendEmailVerification(token, email) {
-  if (!config.canSendMail) {
+  if (!process.env.CAN_SEND_MAIL) {
     return logger.warn(`Mailing disabled. ${email} - ${token}`);
   }
 
@@ -28,7 +27,7 @@ async function sendEmailVerification(token, email) {
 
   try {
     message = {
-      from: config.smtpFrom,
+      from: process.env.SMTP_FROM,
       to: email.trim(),
       subject: 'RetroPilot Registration Token',
       text: `Your Email Registration Token Is: "${token}"`,

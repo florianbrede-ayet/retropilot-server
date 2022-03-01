@@ -18,3 +18,4 @@ test/.devKeys
 # Miscellaneous
 .DS_Store
 *.log
+.env
