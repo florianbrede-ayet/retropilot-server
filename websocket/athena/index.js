@@ -17,10 +17,10 @@ let wss;
 function __server() {
   let server;
 
-  if (process.env.ATHENA_SECURE) {
+  if (process.env.ATHENA_SECURE && process.env.SSL_CRT) {
     server = httpsServer.createServer({
-      cert: readFileSync(config.sslCrt),
-      key: readFileSync(config.sslKey),
+      cert: readFileSync(process.env.SSL_CRT),
+      key: readFileSync(process.env.SSL_KEY),
     });
   } else {
     server = httpServer.createServer();

@@ -50,8 +50,7 @@ const web = async () => {
   const app = express();
 
   app.use((req, res, next) => {
-    // TODO: can we use process.env.BASE_URL here?
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.header('Access-Control-Allow-Origin', `${process.env.BASE_URL}`);
     res.header('Access-Control-Allow-Credentials', true);
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
@@ -117,13 +116,10 @@ lockfile.lock('retropilot_server', { realpath: false, stale: 30000, update: 2000
   .then(async () => {
     console.log('STARTING SERVER...');
     const app = await web();
-
-
-
     const httpServer = http.createServer(app);
 
-    httpServer.listen(process.env.HTTP_PORT, process.env.HTTP_INTERFACE, () => {
-      logger.info(`Retropilot Server listening at http://${process.env.HTTP_INTERFACE}:${process.env.HTTP_PORT}`);
+    httpServer.listen(process.env.HTTP_PORT, () => {
+      logger.info(`Retropilot Server listening at http://${process.env.BASE_URL}`);
     });
 
   }).catch((e) => {
