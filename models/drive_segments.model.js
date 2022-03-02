@@ -44,7 +44,7 @@ export default (sequelize) => {
       },
       created: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
       },
       process_attempts: {
         allowNull: true,
