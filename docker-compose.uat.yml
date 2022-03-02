@@ -1,0 +1,5 @@
+version: "3.0"
+services:
+  server:
+    ports:
+      - "80:3000"
