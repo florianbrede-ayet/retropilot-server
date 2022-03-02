@@ -185,6 +185,7 @@ function processSegmentRLog(rLogPath) {
 
       let readStream;
       let reader;
+
       try {
         readStream = fs.createReadStream(temporaryFile);
         reader = Reader(readStream);
@@ -199,8 +200,11 @@ function processSegmentRLog(rLogPath) {
         } catch (exception) { }
         resolve();
       });
+
+      //const jsonLog = fs.createWriteStream(rLogPath.replace('.bz2', '.json'));
       try {
         reader((obj) => {
+          //jsonLog.write(JSON.stringify(obj));
           try {
             if (obj.LogMonoTime !== undefined && obj.LogMonoTime - rlog_lastTsInternal >= 1000000 * 1000 * 0.99 && obj.GpsLocation !== undefined) {
               logger.info(`processSegmentRLog GpsLocation @ ${obj.LogMonoTime}: ${obj.GpsLocation.Latitude} ${obj.GpsLocation.Longitude}`);
