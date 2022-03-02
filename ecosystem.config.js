@@ -1,10 +1,9 @@
-export default {
-  apps: [{
-    name: 'Retropilot Service',
-    script: './server.js',
-
-    env_development: {
-      NODE_ENV: 'development',
-    },
-  }],
-};
+module.exports = [{
+  script: 'server.js',
+  name: 'server',
+  node_args: '-r esm',
+}, {
+  script: 'worker.js',
+  node_args: '-r esm',
+  name: 'worker'
+}]

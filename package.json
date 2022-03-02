@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana instance.",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "test": "mocha",
     "start": "node --es-module-specifier-resolution=node server.js",

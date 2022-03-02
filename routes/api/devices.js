@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import bodyParser from 'body-parser';
-import deviceSchema from '../../schema/routes/devices.mjs';
+import deviceSchema from '../../schema/routes/devices';
 
 import deviceController from '../../controllers/devices';
 import authenticationController from '../../controllers/authentication';
