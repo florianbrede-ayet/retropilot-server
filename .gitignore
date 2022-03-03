@@ -19,3 +19,5 @@ test/.devKeys
 .DS_Store
 *.log
 .env
+
+data/certbot
