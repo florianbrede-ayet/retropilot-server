@@ -24,6 +24,12 @@ function runAsyncWrapper(callback) {
   };
 }
 
+if(process.env.NODE_ENV === 'development') {
+  router.get('/useradmin/createbaseaccount', runAsyncWrapper(async (req, res) => {
+    res.send(await userController.createBaseAccount());
+  }));
+}
+
 router.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const signIn = await authenticationController.signIn(req.body.email, req.body.password);
 

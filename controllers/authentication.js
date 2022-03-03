@@ -26,7 +26,7 @@ async function readJWT(token) {
 async function signIn(email, password) {
   let account = await orm.models.accounts.findOne({ where: { email } });
 
-  if (account.dataValues) {
+  if (account && account.dataValues) {
     account = account.dataValues;
     const inputPassword = crypto.createHash('sha256').update(password + process.env.APP_SALT).digest('hex');
     if (account.password === inputPassword) {
