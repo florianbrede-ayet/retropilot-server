@@ -6,6 +6,7 @@ import log4js from 'log4js';
 import storageController from '../controllers/storage';
 import deviceController from '../controllers/devices';
 import authenticationController from './../controllers/authentication';
+import userController from './../controllers/users';
 
 const logger = log4js.getLogger('default');
 const router = express.Router();
