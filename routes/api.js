@@ -341,9 +341,11 @@ router.get('/v1.4/:dongleId/upload_url', upload);
 // DEVICE REGISTRATION OR RE-ACTIVATION
 router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (req, res) => {
   const imei1 = req.query.imei;
-  const { serial } = req.query;
-  const { public_key: publicKey } = req.query;
-  const { register_token: registerToken } = req.query;
+  const {
+    serial,
+    public_key: publicKey,
+    register_token: registerToken
+  } = req.query;
 
   if (
     serial == null || serial.length < 5
