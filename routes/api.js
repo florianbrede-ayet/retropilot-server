@@ -268,10 +268,9 @@ async function upload(req, res) {
       const drive = await deviceController.getDriveFromidentifier(dongleId, driveName).catch((err)=>{
         logger.warn("drive failed to make", err)
       })
-      console.log("drive value", drive)
-      console.log("drive name:", driveName)
 
-
+      logger.log("drive value", drive)
+      logger.log("drive name:", driveName)
 
       if (drive === undefined || drive === null) {
         logger.info("CREATING NEW DRIVE")

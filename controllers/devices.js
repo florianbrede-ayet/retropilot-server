@@ -195,7 +195,7 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
 
 async function getDrive(identifier) {
   const drive = await orm.models.drives.findOne({ where: { identifier } });
-  console.log(drive);
+  logger.log(drive);
 
   if (drive.dataValues) return drive.dataValues;
   return null;
@@ -273,7 +273,7 @@ async function updateOrCreateDrive(dongleId, identifier, data) {
   logger.info('updateOrCreate Drive', dongleId, identifier, data);
   const check = await orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
 
-  console.log('checking for existing drive....', check);
+  logger.log('checking for existing drive....', check);
 
   if (check) {
     return orm.models.drives.update(

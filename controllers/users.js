@@ -17,7 +17,7 @@ export async function getAccountFromEmail(email) {
 }
 
 export async function _dirtyCreateAccount(email, password, created, admin) {
-  console.log('creating acount: ', email, password, created, admin);
+  logger.log('creating acount: ', email, password, created, admin);
   return orm.models.accounts.create({
     email, password, created, admin,
   });

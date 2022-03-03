@@ -1,9 +1,10 @@
 import express from 'express';
-import jsonwebtoken from 'jsonwebtoken';
 import { getURL, getToken } from '../../../controllers/authentication/oauth/google';
 import authenticationController from '../../../controllers/authentication';
+import log4js from 'log4js';
 
 const router = express.Router();
+const logger = log4js.getLogger('default');
 
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
@@ -22,14 +23,13 @@ async function isAuthenticated(req, res, next) {
 }
 
 router.get('/authentication/oauth/callback', async (req, res) => {
-  console.log(req.query);
-
+  logger.log(req.query);
   res.json(await getToken(req.query.code, req.query.scope));
 });
 
 router.get('/authentication/oauth/:provider', async (req, res) => {
   const { provider } = req.params;
-  console.log('provider', provider);
+  logger.log('provider', provider);
   let url;
   switch (provider) {
     case 'google':
@@ -48,9 +48,7 @@ router.get('/authentication/oauth/:provider', async (req, res) => {
 });
 
 router.get('/authentication/oauth/pair/:provider', isAuthenticated, async (req, res) => {
-  
-
-
+  res.status(200);
 });
 
 export default router;

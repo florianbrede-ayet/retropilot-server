@@ -44,8 +44,6 @@ router.get('/user/:userId/get/devices', runAsyncWrapper(async (req, res) => {
 }));
 
 router.get('/user/', runAsyncWrapper(async (req, res) => {
-  console.warn('PROCESSED');
-
   return res.status(200).json({ success: true, data: await controllers.users.getAllUsers() });
 }));
 
@@ -71,7 +69,6 @@ router.get('/device/:dongle_id/pair/:user_id', runAsyncWrapper(async (req, res) 
 
 router.get('/device', runAsyncWrapper(async (req, res) => {
   const filteredDevices = await controllers.devices.getAllDevicesFiltered();
-  console.log('fil', filteredDevices);
   return res.status(200).json({ success: true, data: filteredDevices });
 }));
 

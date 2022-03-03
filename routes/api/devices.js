@@ -3,9 +3,13 @@ import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import bodyParser from 'body-parser';
 import deviceSchema from '../../schema/routes/devices';
+import log4js from 'log4js';
 
 import deviceController from '../../controllers/devices';
 import authenticationController from '../../controllers/authentication';
+
+const logger = log4js.getLogger('default');
+
 const router = express.Router();
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
@@ -50,7 +54,7 @@ router.put('/retropilot/0/device/:dongle_id/', [isAuthenticated, bodyParser.json
   }
 
   const { body } = req;
-  console.log(deviceSchema.MutateDevice.isValid(body));
+  logger.log(deviceSchema.MutateDevice.isValid(body));
 });
 
 router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', isAuthenticated, async (req, res) => {

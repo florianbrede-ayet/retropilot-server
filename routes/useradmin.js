@@ -27,7 +27,7 @@ function runAsyncWrapper(callback) {
 router.post('/useradmin/auth', bodyParser.urlencoded({ extended: true }), runAsyncWrapper(async (req, res) => {
   const signIn = await authenticationController.signIn(req.body.email, req.body.password);
 
-  console.log(signIn);
+  logger.log(signIn);
 
   if (signIn.success) {
     res.cookie('jwt', signIn.jwt);
@@ -130,7 +130,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
       console.error(error);
     }
 
-    console.log(result);
+    logger.log(result);
 
     if (result.dataValues) {
       logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
