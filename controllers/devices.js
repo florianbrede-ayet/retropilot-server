@@ -17,7 +17,7 @@ async function pairDevice(account, qrString) {
   // Versions >= 0.8.3 uses only a pairtoken
 
   const qrCodeParts = qrString.split('--');
-  const device;
+  let device;
   let pairJWT;
 
   if (qrString.indexOf('--') >= 0) {
