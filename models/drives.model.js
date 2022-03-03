@@ -11,7 +11,7 @@ export default (sequelize) => {
         type: DataTypes.INTEGER,
       },
       identifier: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.TEXT,
       },
       dongle_id: {
