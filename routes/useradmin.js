@@ -104,14 +104,14 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
     return res.redirect(`/useradmin/register?status=${encodeURIComponent('Email is already registered')}`);
   }
 
-  const token = crypto.createHmac('sha256', process.env.APP_SALT).update(email.trim()).digest('hex');
+  const token = (process.env.NODE_ENV === 'development') ? 'verysecrettoken' : crypto.createHmac('sha256', process.env.APP_SALT).update(email.trim()).digest('hex');
 
   let infoText = '';
 
   if (req.body.token === undefined) { // email entered, token request
     infoText = 'Please check your inbox (<b>SPAM</b>) for an email with the registration token.<br>If the token was not delivered, please ask the administrator to check the <i>server.log</i> for the token generated for your email.<br><br>';
 
-    const emailStatus = await mailingController.sendEmailVerification(token, email);
+    await mailingController.sendEmailVerification(token, email);
   } else if (req.body.token !== token) {
     infoText = 'The registration token you entered was incorrect, please try again.<br><br>';
   } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
