@@ -16,6 +16,19 @@ export async function getAccountFromEmail(email) {
   return null;
 }
 
+export async function createBaseAccount() {
+  await orm.models.accounts.create({
+    id: 0,
+    email: 'dummy@retropilot.org',
+    password: '123123',
+    created: Date.now(),
+    last_ping: Date.now(),
+    email_verify_token: 'notokenplease',
+  });
+
+  return { success: true, status: 200 };
+}
+
 export async function _dirtyCreateAccount(email, password, created, admin) {
   logger.log('creating acount: ', email, password, created, admin);
   return orm.models.accounts.create({
@@ -87,6 +100,7 @@ export async function getAllUsers() {
 
 export default {
   createAccount,
+  createBaseAccount,
   verifyEmailToken,
   getAccountFromId,
   getAllUsers,
