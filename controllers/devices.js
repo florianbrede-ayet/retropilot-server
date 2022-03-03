@@ -2,7 +2,6 @@ import sanitizeFactory from 'sanitize';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import log4js from 'log4js';
-import config from '../config';
 import authenticationController from './authentication';
 import orm from '../models/index.model';
 import usersController from './users';
@@ -18,26 +17,26 @@ async function pairDevice(account, qrString) {
   // Versions >= 0.8.3 uses only a pairtoken
 
   const qrCodeParts = qrString.split('--');
-  let deviceQuery;
+  let device;
   let pairJWT;
+
   if (qrString.indexOf('--') >= 0) {
     const [, serial, pairToken] = qrCodeParts;
-    deviceQuery = await orm.models.device.findOne({ where: { serial } });
+    device = await orm.models.device.findOne({ where: { serial } });
     pairJWT = pairToken;
   } else {
     const data = await authenticationController.readJWT(qrString);
-    if (!data.pair) {
+    if (!data || !data.pair) {
       return { success: false, noPair: true };
     }
-    deviceQuery = await orm.models.device.findOne({ where: { dongle_id: data.identity } });
+    device = await orm.models.device.findOne({ where: { dongle_id: data.identity } });
     pairJWT = qrString;
   }
 
   if (deviceQuery == null || !deviceQuery.dataValues) {
-    return { success: false, registered: false };
+    return { success: false, registered: false, noPair: true };
   }
 
-  const device = deviceQuery.dataValues;
   const decoded = await authenticationController.validateJWT(pairJWT, device.public_key);
   if (decoded == null || !decoded.pair) {
     return { success: false, badToken: true };
@@ -196,7 +195,7 @@ async function getDrives(dongleId, includeDeleted, includeMeta) {
 
 async function getDrive(identifier) {
   const drive = await orm.models.drives.findOne({ where: { identifier } });
-  console.log(drive);
+  logger.log(drive);
 
   if (drive.dataValues) return drive.dataValues;
   return null;
@@ -211,9 +210,9 @@ async function getDriveFromidentifier(dongleId, identifier) {
 */
 
 async function getCrashlogs(dongleId) {
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId).digest('hex');
 
-  const directoryTree = dirTree(`${config.storagePath}${dongleId}/${dongleIdHash}/crash/`, { attributes: ['size'] });
+  const directoryTree = dirTree(`${process.env.STORAGE_PATH}${dongleId}/${dongleIdHash}/crash/`, { attributes: ['size'] });
   const crashlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('.bz2', '').split('--');
     let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
@@ -236,7 +235,7 @@ async function getCrashlogs(dongleId) {
       name: file.name,
       size: file.size,
       date: dateObj,
-      permalink: `${config.baseDriveDownloadUrl}${dongleId}/${dongleIdHash}/crash/${file.name}`,
+      permalink: `${process.env.BASE_DRIVE_DOWNLOAD_URL}${dongleId}/${dongleIdHash}/crash/${file.name}`,
     };
   });
   crashlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
@@ -244,9 +243,9 @@ async function getCrashlogs(dongleId) {
 }
 
 async function getBootlogs(dongleId) {
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId).digest('hex');
 
-  const directoryTree = dirTree(`${config.storagePath}${dongleId}/${dongleIdHash}/boot/`, { attributes: ['size'] });
+  const directoryTree = dirTree(`${process.env.STORAGE_PATH}${dongleId}/${dongleIdHash}/boot/`, { attributes: ['size'] });
   const bootlogFiles = (directoryTree ? directoryTree.children : []).map((file) => {
     const timeSplit = file.name.replace('boot-', '').replace('crash-', '').replace('.bz2', '').split('--');
     const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
@@ -263,7 +262,7 @@ async function getBootlogs(dongleId) {
       name: file.name,
       size: file.size,
       date: dateObj,
-      permalink: `${config.baseDriveDownloadUrl}${dongleId}/${dongleIdHash}/boot/${file.name}`,
+      permalink: `${process.env.BASE_DRIVE_DOWNLOAD_URL}${dongleId}/${dongleIdHash}/boot/${file.name}`,
     };
   });
   bootlogFiles.sort((a, b) => ((a.date < b.date) ? 1 : -1));
@@ -274,7 +273,7 @@ async function updateOrCreateDrive(dongleId, identifier, data) {
   logger.info('updateOrCreate Drive', dongleId, identifier, data);
   const check = await orm.models.drives.findOne({ where: { dongle_id: dongleId, identifier } });
 
-  console.log('checking for existing drive....', check);
+  logger.log('checking for existing drive....', check);
 
   if (check) {
     return orm.models.drives.update(

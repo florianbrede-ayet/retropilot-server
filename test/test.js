@@ -1,6 +1,5 @@
 import request from 'supertest';
 import server from '../server';
-import config from '../config';
 
 // TODO better way to only run tests once server is up
 describe('loading express', () => {
@@ -18,4 +17,4 @@ describe('loading express', () => {
 
 require('./routes/api.test')(server);
 require('./routes/useradmin.test')(server);
-if (config.flags.useUserAdminApi) require('./routes/userAdminApi.test')(server);
+if (process.env.USE_USER_ADMIN_API) require('./routes/userAdminApi.test')(server);

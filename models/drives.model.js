@@ -24,15 +24,15 @@ export default (sequelize) => {
       },
       upload_complete: {
         allowedNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BOOLEAN,
       },
       duration: {
         allowNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       distance_meters: {
         allowNull: true,
-        type: DataTypes.NUMBER,
+        type: DataTypes.INTEGER,
       },
       filesize: {
         allowNull: true,
@@ -44,11 +44,11 @@ export default (sequelize) => {
       },
       created: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
       },
       last_upload: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
       },
       is_preserved: {
         allowNull: true,
@@ -60,7 +60,7 @@ export default (sequelize) => {
       },
       drive_date: {
         allowNull: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
       },
       is_physically_removed: {
         allowNull: true,

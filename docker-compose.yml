@@ -1,29 +1,23 @@
-version: "3.9"
-
+version: "3.0"
 services:
   server:
-    # Build image from Dockerfile
     build: .
     restart: unless-stopped
+    depends_on:
+      - db
     volumes:
-      # Mount the config to the container
-      - ./config.js:/app/config.js
-      # Mount the database to the container
-      - ./database.sqlite:/app/database.sqlite
-      # Mount the data directory to the container
-      - ./realdata:/app/realdata
+      - ./:/app
     ports:
-      # HTTP server
       - "3000:3000"
-      # Athena WebSocket
       - "4040:4040"
-  worker:
-    # Use the same image as the server
-    build: .
-    # But run the worker.js script instead
-    command: node --es-module-specifier-resolution=node worker.js
-    restart: unless-stopped
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - '5438:5432'
     volumes:
-      - ./config.js:/app/config.js
-      - ./database.sqlite:/app/database.sqlite
-      - ./realdata:/app/realdata
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: retro-pilot

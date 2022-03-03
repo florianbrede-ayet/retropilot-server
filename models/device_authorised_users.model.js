@@ -18,19 +18,19 @@ export default (sequelize) => {
     },
     athena: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BOOLEAN,
     },
     unpair: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BOOLEAN,
     },
     view_drives: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BOOLEAN,
     },
     created_at: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
     },
 
   }, {

@@ -4,10 +4,7 @@ import bodyParser from 'body-parser';
 import crypto from 'crypto';
 import log4js from 'log4js';
 import storageController from '../controllers/storage';
-import helperController from '../controllers/helpers';
-import mailingController from '../controllers/mailing';
 import deviceController from '../controllers/devices';
-import config from '../config';
 import authenticationController from './../controllers/authentication';
 
 const logger = log4js.getLogger('default');
@@ -45,7 +42,7 @@ router.put('/backend/post_upload', bodyParser.raw({
     logger.info(`HTTP.PUT /backend/post_upload BOOT or CRASH upload with filename: ${filename}, token: ${req.query.token}`);
   }
 
-  const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
+  const token = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId + filename + directory + ts).digest('hex');
   if (token !== req.query.token) {
     logger.error(`HTTP.PUT /backend/post_upload token mismatch (${token} vs ${req.query.token})`);
     return res.status(400).send('Malformed request');
@@ -216,7 +213,7 @@ async function upload(req, res) {
   let responseUrl = null;
   const ts = Date.now(); // we use this to make sure old URLs cannot be reused (timeout after 60min)
 
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(dongleId).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId).digest('hex');
 
   // boot log upload
 
@@ -234,9 +231,9 @@ async function upload(req, res) {
     // "boot-2021-04-12--01-45-30.bz" for example
     const directory = `${dongleId}/${dongleIdHash}/${uploadType}`;
 
-    const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
+    const token = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId + filename + directory + ts).digest('hex');
 
-    responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
+    responseUrl = `${process.env.BASE_UPLOAD_URL}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
     logger.info(`HTTP.UPLOAD_URL matched '${uploadType}' file upload, constructed responseUrl: ${responseUrl}`);
   } else {
     // "2021-04-12--01-44-25--0/qlog.bz2" for example
@@ -260,21 +257,20 @@ async function upload(req, res) {
         return res.send('Malformed Request.').status(400);
       }
 
-      const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(driveName).digest('hex');
+      const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT).update(driveName).digest('hex');
 
       directory = `${dongleId}/${dongleIdHash}/${driveIdentifierHash}/${directory}`;
 
-      const token = crypto.createHmac('sha256', config.applicationSalt).update(dongleId + filename + directory + ts).digest('hex');
-      responseUrl = `${config.baseUploadUrl}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
+      const token = crypto.createHmac('sha256', process.env.APP_SALT).update(dongleId + filename + directory + ts).digest('hex');
+      responseUrl = `${process.env.BASE_UPLOAD_URL}?file=${filename}&dir=${directory}&dongleId=${dongleId}&ts=${ts}&token=${token}`;
       logger.info(`HTTP.UPLOAD_URL matched 'drive' file upload, constructed responseUrl: ${responseUrl}`);
 
       const drive = await deviceController.getDriveFromidentifier(dongleId, driveName).catch((err)=>{
         logger.warn("drive failed to make", err)
       })
-      console.log("drive value", drive)
-      console.log("drive name:", driveName)
 
-
+      logger.log("drive value", drive)
+      logger.log("drive name:", driveName)
 
       if (drive === undefined || drive === null) {
         logger.info("CREATING NEW DRIVE")
@@ -345,9 +341,11 @@ router.get('/v1.4/:dongleId/upload_url', upload);
 // DEVICE REGISTRATION OR RE-ACTIVATION
 router.post('/v2/pilotauth/', bodyParser.urlencoded({ extended: true }), async (req, res) => {
   const imei1 = req.query.imei;
-  const { serial } = req.query;
-  const { public_key: publicKey } = req.query;
-  const { register_token: registerToken } = req.query;
+  const {
+    serial,
+    public_key: publicKey,
+    register_token: registerToken
+  } = req.query;
 
   if (
     serial == null || serial.length < 5
@@ -405,9 +403,9 @@ router.get('/useradmin/cabana_drive/:extendedRouteIdentifier', runAsyncWrapper(a
     return res.status(200).json({ status: 'drive not found' });
   }
 
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.dongle_id).digest('hex');
-  const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
-  const driveUrl = `${config.baseDriveDownloadUrl + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(drive.dongle_id).digest('hex');
+  const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT).update(drive.identifier).digest('hex');
+  const driveUrl = `${process.env.BASE_DRIVE_DOWNLOAD_URL + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
   if (dongleIdHash !== dongleIdHashReq || driveIdentifierHash !== driveIdentifierHashReq) {
     return res.status(200).json({ status: 'hashes not matching' });

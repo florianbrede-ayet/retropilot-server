@@ -2,7 +2,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-import config from '../config';
 import controllers from '../controllers';
 import deviceController from '../controllers/devices';
 
@@ -47,8 +46,8 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
     data: {
       serverStats: {
         config: {
-          registerAllowed: config.allowAccountRegistration,
-          welcomeMessage: config.welcomeMessage,
+          registerAllowed: process.env.ALLOW_REGISTRATION,
+          welcomeMessage: process.env.WELCOME_MESSAGE,
         },
         accounts: accounts.num,
         devices: devices.num,
@@ -67,7 +66,7 @@ router.get('/retropilot/0/useradmin', runAsyncWrapper(async (req, res) => {
 router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true}), runAsyncWrapper(async (req, res) => {
     const email = req.body.email;
 
-    if (!config.allowAccountRegistration) {
+    if (!process.env.ALLOW_REGISTRATION) {
         res.send('Unauthorized.').status(401);
         return;
     }
@@ -84,7 +83,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
         return;
     }
 
-    const token = crypto.createHmac('sha256', config.applicationSalt).update(email.trim()).digest('hex');
+    const token = crypto.createHmac('sha256', process.env.APP_SALT).update(email.trim()).digest('hex');
 
     let infoText = '';
 
@@ -103,7 +102,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
             const result = await models.__db.run(
                 'INSERT INTO accounts (email, password, created, banned) VALUES (?, ?, ?, ?)',
                 email,
-                crypto.createHash('sha256').update(req.body.password + config.applicationSalt).digest('hex'),
+                crypto.createHash('sha256').update(req.body.password + process.env.APP_SALT).digest('hex'),
                 Date.now(), false);
 
             if (result.lastID != undefined) {
@@ -138,7 +137,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({extended: true})
 }))
 
 router.get('/useradmin/register', runAsyncWrapper(async (req, res) => {
-    if (!config.allowAccountRegistration) {
+    if (!process.env.ALLOW_REGISTRATION) {
         res.status(400);
         res.send('Unauthorized.');
         return;
@@ -262,9 +261,9 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
 
     const drives = await models.__db.all('SELECT * FROM drives WHERE dongle_id = ? AND is_deleted = ? ORDER BY created DESC', device.dongle_id, false);
 
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(device.dongle_id).digest('hex');
 
-    const bootlogDirectoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/boot/", {attributes: ['size']});
+    const bootlogDirectoryTree = dirTree(process.env.STORAGE_PATH + device.dongle_id + "/" + dongleIdHash + "/boot/", {attributes: ['size']});
     var bootlogFiles = [];
     if (bootlogDirectoryTree != undefined) {
         for (var i = 0; i < bootlogDirectoryTree.children.length; i++) {
@@ -280,7 +279,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
         bootlogFiles.sort((a, b) => (a.date < b.date) ? 1 : -1);
     }
 
-    const crashlogDirectoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/crash/", {attributes: ['size']});
+    const crashlogDirectoryTree = dirTree(process.env.STORAGE_PATH + device.dongle_id + "/" + dongleIdHash + "/crash/", {attributes: ['size']});
     var crashlogFiles = [];
     if (crashlogDirectoryTree != undefined) {
         for (var i = 0; i < crashlogDirectoryTree.children.length; i++) {
@@ -309,7 +308,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
                 <b>Public Key:</b><br><span style="font-size: 0.8em">` + device.public_key.replace(/\r?\n|\r/g, "<br>") + `</span>
                 <br>
                 <b>Stored Drives:</b> ` + drives.length + `<br>
-                <b>Quota Storage:</b> ` + device.storage_used + ` MB / ` + config.deviceStorageQuotaMb + ` MB<br>
+                <b>Quota Storage:</b> ` + device.storage_used + ` MB / ` + process.env.DEVICE_STORAGE_QUOTA_MB + ` MB<br>
                 <br>
                 `;
 
@@ -318,7 +317,7 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
             <tr><th>date</th><th>file</th><th>size</th></tr>
         `;
     for (var i = 0; i < Math.min(5, bootlogFiles.length); i++) {
-        response += `<tr><td>` + controllers.helpers.formatDate(bootlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/boot/" + bootlogFiles[i].name + `" target=_blank>` + bootlogFiles[i].name + `</a></td><td>` + bootlogFiles[i].size + `</td></tr>`;
+        response += `<tr><td>` + controllers.helpers.formatDate(bootlogFiles[i].date) + `</td><td><a href="` + process.env.BASE_DRIVE_DOWNLOAD_URL + device.dongle_id + "/" + dongleIdHash + "/boot/" + bootlogFiles[i].name + `" target=_blank>` + bootlogFiles[i].name + `</a></td><td>` + bootlogFiles[i].size + `</td></tr>`;
     }
     response += `</table><br><br>`;
 
@@ -327,11 +326,11 @@ router.get('/useradmin/device/:dongleId', runAsyncWrapper(async (req, res) => {
             <tr><th>date</th><th>file</th><th>size</th></tr>
         `;
     for (var i = 0; i < Math.min(5, crashlogFiles.length); i++) {
-        response += `<tr><td>` + controllers.helpers.formatDate(crashlogFiles[i].date) + `</td><td><a href="` + config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/crash/" + crashlogFiles[i].name + `" target=_blank>` + crashlogFiles[i].name + `</a></td><td>` + crashlogFiles[i].size + `</td></tr>`;
+        response += `<tr><td>` + controllers.helpers.formatDate(crashlogFiles[i].date) + `</td><td><a href="` + process.env.BASE_DRIVE_DOWNLOAD_URL + device.dongle_id + "/" + dongleIdHash + "/crash/" + crashlogFiles[i].name + `" target=_blank>` + crashlogFiles[i].name + `</a></td><td>` + crashlogFiles[i].size + `</td></tr>`;
     }
     response += `</table><br><br>`;
 
-    response += `<b>Drives (non-preserved drives expire ` + config.deviceDriveExpirationDays + ` days after upload):</b><br>
+    response += `<b>Drives (non-preserved drives expire ` + process.env.DEVICE_EXPIRATION_DAYS + ` days after upload):</b><br>
         <table border=1 cellpadding=2 cellspacing=2>
         <tr><th>identifier</th><th>filesize</th><th>duration</th><th>distance_meters</th><th>upload_complete</th><th>is_processed</th><th>upload_date</th><th>actions</th></tr>
     `;
@@ -415,17 +414,17 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         return;
     }
 
-    var dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(device.dongle_id).digest('hex');
-    var driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(drive.identifier).digest('hex');
+    var dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(device.dongle_id).digest('hex');
+    var driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT).update(drive.identifier).digest('hex');
 
-    var driveUrl = config.baseDriveDownloadUrl + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier + "/";
+    var driveUrl = process.env.BASE_DRIVE_DOWNLOAD_URL + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier + "/";
 
     var cabanaUrl = null;
     if (drive.is_processed) {
-        cabanaUrl = config.cabanaUrl + '?retropilotIdentifier=' + device.dongle_id + '|' + dongleIdHash + '|' + drive.identifier + '|' + driveIdentifierHash + '&retropilotHost=' + encodeURIComponent(config.baseUrl) + '&demo=1"';
+        cabanaUrl = process.env.CABANA_URL + '?retropilotIdentifier=' + device.dongle_id + '|' + dongleIdHash + '|' + drive.identifier + '|' + driveIdentifierHash + '&retropilotHost=' + encodeURIComponent(process.env.BASE_URL) + '&demo=1"';
     }
 
-    const directoryTree = dirTree(config.storagePath + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
+    const directoryTree = dirTree(process.env.STORAGE_PATH + device.dongle_id + "/" + dongleIdHash + "/" + driveIdentifierHash + "/" + drive.identifier);
 
     var response = '<html style="font-family: monospace"><h2>Welcome To The RetroPilot Server Dashboard!</h2>' +
         `

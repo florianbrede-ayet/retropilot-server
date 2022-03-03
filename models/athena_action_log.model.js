@@ -34,7 +34,7 @@ export default (sequelize) => {
     },
     created_at: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
     },
     dongle_id: {
       allowNull: true,

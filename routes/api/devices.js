@@ -2,15 +2,14 @@ import express from 'express';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import bodyParser from 'body-parser';
-import deviceSchema from '../../schema/routes/devices.mjs';
-import config from '../../config';
-
-/* eslint-disable no-unused-vars */
-import userController from '../../controllers/users';
+import deviceSchema from '../../schema/routes/devices';
+import log4js from 'log4js';
 
 import deviceController from '../../controllers/devices';
 import authenticationController from '../../controllers/authentication';
-/* eslint-enable no-unused-vars */
+
+const logger = log4js.getLogger('default');
+
 const router = express.Router();
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
@@ -55,7 +54,7 @@ router.put('/retropilot/0/device/:dongle_id/', [isAuthenticated, bodyParser.json
   }
 
   const { body } = req;
-  console.log(deviceSchema.MutateDevice.isValid(body));
+  logger.log(deviceSchema.MutateDevice.isValid(body));
 });
 
 router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', isAuthenticated, async (req, res) => {
@@ -70,10 +69,10 @@ router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', i
   if (isUserAuthorised.success === false || isUserAuthorised.data.authorised === false) {
     return res.json({ success: false, msg: isUserAuthorised.msg });
   }
-  const dongleIdHash = crypto.createHmac('sha256', config.applicationSalt).update(req.params.dongle_id).digest('hex');
-  const driveIdentifierHash = crypto.createHmac('sha256', config.applicationSalt).update(req.params.drive_identifier).digest('hex');
+  const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT).update(req.params.dongle_id).digest('hex');
+  const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT).update(req.params.drive_identifier).digest('hex');
 
-  const directoryTree = dirTree(`${config.storagePath + req.params.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${req.params.drive_identifier}`);
+  const directoryTree = dirTree(`${process.env.STORAGE_PATH + req.params.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${req.params.drive_identifier}`);
 
   return res.json({ success: true, msg: 'ok', data: directoryTree });
 });

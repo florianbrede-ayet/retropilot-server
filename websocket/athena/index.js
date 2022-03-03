@@ -1,15 +1,11 @@
-import WebSocket, { WebSocketServer } from 'ws'; import cookie from 'cookie';
+import { WebSocketServer } from 'ws'; import cookie from 'cookie';
 import jsonwebtoken from 'jsonwebtoken';
 import httpsServer from 'https';
 import httpServer from 'http';
 import { readFileSync } from 'fs';
 import log4js from 'log4js';
 import models from '../../models/index.model';
-import config from '../../config';
 import helperFunctions from './helpers';
-
-// eslint-disable-next-line no-unused-vars
-import authenticationController from '../../controllers/authentication';
 
 import deviceController from '../../controllers/devices';
 
@@ -21,10 +17,10 @@ let wss;
 function __server() {
   let server;
 
-  if (config.athena.secure) {
+  if (process.env.ATHENA_SECURE && process.env.SSL_CRT) {
     server = httpsServer.createServer({
-      cert: readFileSync(config.sslCrt),
-      key: readFileSync(config.sslKey),
+      cert: readFileSync(process.env.SSL_CRT),
+      key: readFileSync(process.env.SSL_KEY),
     });
   } else {
     server = httpServer.createServer();
@@ -48,10 +44,10 @@ function __server() {
       ws.isAlive = false;
       ws.ping();
     });
-  }, config.athena.socket.heartbeatFrequency ? config.athena.socket.heartbeatFrequency : 5000);
+  }, process.env.ATHENA_SOCKET_HEARTBEAT_FREQ ? process.env.ATHENA_SOCKET_HEARTBEAT_FREQ : 5000);
 
-  server.listen(config.athena.socket.port, () => {
-    logger.info(`Athena(Server) - UP @ ${config.athena.host}:${config.athena.port}`);
+  server.listen(process.env.ATHENA_SOCKET_PORT, () => {
+    logger.info(`Athena(Server) - UP @ ${process.env.ATHENA_SOCKET_HOST}:${process.env.ATHENA_SOCKET_PORT}`);
   });
 
   wss.on('connection', manageConnection);

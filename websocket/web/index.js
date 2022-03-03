@@ -1,13 +1,9 @@
-import WebSocket, { WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';
 import cookie from 'cookie';
 import httpServer from 'http';
 import log4js from 'log4js';
-import config from '../../config.js';
 import controlsFunction from './controls.js';
 import authenticationController from '../../controllers/authentication.js';
-
-// eslint-disable-next-line no-unused-vars
-import deviceController from '../../controllers/devices';
 
 import athenaRealtime from '../athena/index.js';
 import realtimeCommands from './commands.js';
@@ -24,8 +20,8 @@ function __server() {
 
   wss = new WebSocketServer({ server }, { path: '/realtime/v1', handshakeTimeout: 500 });
 
-  server.listen(config.clientSocket.port, config.clientSocket.host, () => {
-    logger.info(`Web(Server) - UP @ ${config.clientSocket.host}:${config.clientSocket.port}`);
+  server.listen(process.env.CLIENT_SOCKET_PORT, process.env.CLIENT_SOCKET_HOST, () => {
+    logger.info(`Web(Server) - UP @ ${process.env.CLIENT_SOCKET_HOST}:${process.env.CLIENT_SOCKET_PORT}`);
   });
 
   wss.on('connection', manageConnection);

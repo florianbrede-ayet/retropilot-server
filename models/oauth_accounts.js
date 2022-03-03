@@ -18,11 +18,11 @@ export default (sequelize) => {
     },
     created: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.TIME,
     },
     last_used: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.CHAR,
     },
     refresh: {
       allowNull: true,

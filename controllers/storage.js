@@ -2,18 +2,17 @@ import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import log4js from 'log4js';
-import config from '../config.js';
 
 const logger = log4js.getLogger('default');
 
 let totalStorageUsed;
 
 function initializeStorage() {
-  const verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  const verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (verifiedPath != null) {
     logger.info(`Verified storage path ${verifiedPath}`);
   } else {
-    logger.error(`Unable to verify storage path '${config.storagePath}', check filesystem / permissions`);
+    logger.error(`Unable to verify storage path '${process.env.STORAGE_PATH}', check filesystem / permissions`);
     process.exit();
   }
 }
@@ -79,16 +78,16 @@ function moveUploadedFile(buffer, directory, filename) {
     return false;
   }
 
-  if (config.storagePath.lastIndexOf('/') !== config.storagePath.length - 1) {
+  if (process.env.STORAGE_PATH.lastIndexOf('/') !== process.env.STORAGE_PATH.length - 1) {
     directory = `/${directory}`;
   }
   if (directory.lastIndexOf('/') !== directory.length - 1) {
     directory += '/';
   }
 
-  const finalPath = mkDirByPathSync(config.storagePath + directory, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  const finalPath = mkDirByPathSync(process.env.STORAGE_PATH + directory, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (!finalPath || finalPath.length === 0) {
-    logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${config.storagePath + directory}'`);
+    logger.error(`moveUploadedFile invalid final path, check permissions to create / write '${process.env.STORAGE_PATH + directory}'`);
     return false;
   }
 
@@ -102,7 +101,7 @@ function moveUploadedFile(buffer, directory, filename) {
 }
 
 async function updateTotalStorageUsed() {
-  const verifiedPath = mkDirByPathSync(config.storagePath, { isRelativeToScript: (config.storagePath.indexOf('/') !== 0) });
+  const verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (!verifiedPath) {
     return;
   }
