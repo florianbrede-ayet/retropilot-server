@@ -17,26 +17,26 @@ async function pairDevice(account, qrString) {
   // Versions >= 0.8.3 uses only a pairtoken
 
   const qrCodeParts = qrString.split('--');
-  let deviceQuery;
+  const device;
   let pairJWT;
+
   if (qrString.indexOf('--') >= 0) {
     const [, serial, pairToken] = qrCodeParts;
-    deviceQuery = await orm.models.device.findOne({ where: { serial } });
+    device = await orm.models.device.findOne({ where: { serial } });
     pairJWT = pairToken;
   } else {
     const data = await authenticationController.readJWT(qrString);
-    if (!data.pair) {
+    if (!data || !data.pair) {
       return { success: false, noPair: true };
     }
-    deviceQuery = await orm.models.device.findOne({ where: { dongle_id: data.identity } });
+    device = await orm.models.device.findOne({ where: { dongle_id: data.identity } });
     pairJWT = qrString;
   }
 
   if (deviceQuery == null || !deviceQuery.dataValues) {
-    return { success: false, registered: false };
+    return { success: false, registered: false, noPair: true };
   }
 
-  const device = deviceQuery.dataValues;
   const decoded = await authenticationController.validateJWT(pairJWT, device.public_key);
   if (decoded == null || !decoded.pair) {
     return { success: false, badToken: true };

@@ -94,10 +94,14 @@ async function getAccountFromJWT(jwt, limitData) {
     return null; // {success: false, isInvalid: true}
   }
 
-  await orm.models.accounts.update(
-    { last_ping: Date.now() },
-    { where: { id: account.id } },
-  );
+  try {
+    await orm.models.accounts.update(
+      { last_ping: Date.now() },
+      { where: { id: account.id } },
+    );
+  } catch(error) {
+    console.log(error);
+  }
 
   if (!account || account.banned) {
     return null; // {success: false, isBanned: true}

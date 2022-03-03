@@ -18,11 +18,11 @@ export default (sequelize) => {
     },
     created: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
     },
     last_ping: {
       allowNull: true,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
     },
     '2fa_token': {
       allowNull: true,

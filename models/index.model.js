@@ -4,7 +4,7 @@
 import { Sequelize } from 'sequelize';
 import devices from './devices.model';
 import drives from './drives.model';
-import users from './users.model';
+import accounts from './accounts.model';
 import athena_action_log from './athena_action_log.model';
 import athena_returned_data from './athena_returned_data.model';
 import device_authorised_users from './device_authorised_users.model';
@@ -25,7 +25,7 @@ sequelize.options.logging = () => {};
 const modelDefiners = [
   devices,
   drives,
-  users,
+  accounts,
   athena_action_log,
   athena_returned_data,
   device_authorised_users,

@@ -117,12 +117,18 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
   } else if (req.body.password !== req.body.password2 || req.body.password.length < 3) {
     infoText = 'The passwords you entered did not match or were shorter than 3 characters, please try again.<br><br>';
   } else {
-    const result = await userController._dirtyCreateAccount(
-      email,
-      crypto.createHash('sha256').update(req.body.password + process.env.APP_SALT).digest('hex'),
-      Date.now(),
-      false,
-    );
+    let result = false;
+
+    try {
+      result = await userController._dirtyCreateAccount(
+        email,
+        crypto.createHash('sha256').update(req.body.password + process.env.APP_SALT).digest('hex'),
+        Date.now(),
+        false,
+      );
+    } catch(error) {
+      console.error(error);
+    }
 
     console.log(result);
 
@@ -130,6 +136,7 @@ router.post('/useradmin/register/token', bodyParser.urlencoded({ extended: true 
       logger.info(`USERADMIN REGISTRATION - created new account #${result.lastID} with email ${email}`);
       return res.redirect(`/useradmin?status=${encodeURIComponent('Successfully registered')}`);
     }
+
     logger.error(`USERADMIN REGISTRATION - account creation failed, resulting account data for email ${email} is: ${result}`);
     infoText = 'Unable to complete account registration (database error).<br><br>';
   }
