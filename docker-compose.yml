@@ -11,7 +11,7 @@ services:
       - "3000:3000"
       - "4040:4040"
   db:
-    image: postgres
+    image: postgres:14-bullseye
     restart: always
     ports:
       - '5438:5432'
