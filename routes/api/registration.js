@@ -1,8 +1,9 @@
 import bodyParser from 'body-parser';
-const router = require('express').Router();
+import express from 'express';
 
 import userController from '../../controllers/users';
 
+const router = express.Router();
 router.post('/retropilot/0/register/email', bodyParser.urlencoded({ extended: true }), async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
