@@ -16,7 +16,7 @@ const sequelize = new Sequelize({
   password: process.env.DB_PASS,
   database: process.env.DB_NAME || 'retro-pilot',
   host: process.env.DB_HOST || '127.0.0.1',
-  port: process.env.DB_PORT || 5432,
+  port: process.env.DB_PORT || 5432,
   dialect: 'postgres',
 });
 

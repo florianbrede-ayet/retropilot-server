@@ -46,7 +46,6 @@ export default (sequelize) => {
         allowNull: true,
         type: DataTypes.INTEGER,
       },
-
       max_storage: {
         allowNull: true,
         type: DataTypes.INTEGER,
