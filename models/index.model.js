@@ -37,8 +37,14 @@ for (const modelDefiner of modelDefiners) {
   modelDefiner(sequelize);
 }
 
-// Create tables if they don't exist
-// Update columns to match if the table already exists
-sequelize.sync({ alter: true });
+/**
+ * Synchronise the database (create new tables) to match the models defined
+ * above.
+ *
+ * WARNING: If force is set, sequelize will delete columns and create new ones
+ *          if their types have changed!
+ *          Use sequelize-cli and migrations instead!
+ */
+sequelize.sync({ force: process.env.DB_FORCE_SYNC });
 
 export default sequelize;
