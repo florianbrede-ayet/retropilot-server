@@ -17,7 +17,8 @@ services:
       - '5438:5432'
     volumes:
       - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./data/postgres:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: retro-pilot
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
