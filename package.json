@@ -6,7 +6,6 @@
   "scripts": {
     "test": "mocha",
     "start": "node --es-module-specifier-resolution=node server.js",
-    "prod": "node server.js && node worker.js",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix"
   },
