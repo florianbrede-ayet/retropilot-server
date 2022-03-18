@@ -1,5 +1,4 @@
-/* eslint-disable */
-import 'dotenv/config'
+import 'dotenv/config';
 import crypto from 'crypto';
 import fs from 'fs';
 import path, { dirname } from 'path';
@@ -23,14 +22,14 @@ log4js.configure({
     categories: { default: { appenders: ['out', 'logfile'], level: 'info' } }
 });
 
-let logger = log4js.getLogger('default');
+const logger = log4js.getLogger('default');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 global.__basedir = __dirname;
 
 function initializeStorage() {
-  let verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
+  const verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (verifiedPath != null) {
     logger.info(`Verified storage path ${verifiedPath}`);
   }
@@ -105,7 +104,7 @@ function moveUploadedFile(buffer, directory, filename) {
   }
   if (directory.lastIndexOf('/') !== directory.length - 1) directory += '/';
 
-  let finalPath = mkDirByPathSync(process.env.STORAGE_PATH + directory, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
+  const finalPath = mkDirByPathSync(process.env.STORAGE_PATH + directory, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });
   if (finalPath && finalPath.length > 0) {
     if (writeFileSync(`${finalPath}/${filename}`, buffer, 0o660)) {
       logger.info(`moveUploadedFile successfully written '${finalPath}/${filename}'`);
@@ -123,11 +122,9 @@ function deleteFolderRecursive(directoryPath) {
     fs.readdirSync(directoryPath)
       .forEach((file) => {
         const curPath = path.join(directoryPath, file);
-        if (fs.lstatSync(curPath)
-          .isDirectory()) {
+        if (fs.lstatSync(curPath).isDirectory()) {
           deleteFolderRecursive(curPath);
-        }
-        else {
+        } else {
           fs.unlinkSync(curPath);
         }
       });
@@ -170,7 +167,7 @@ function processSegmentRLog(rLogPath) {
 
   return new Promise(
     (resolve) => {
-      let temporaryFile = rLogPath.replace('.bz2', '');
+      const temporaryFile = rLogPath.replace('.bz2', '');
 
       try {
         execSync(`bunzip2 -k -f "${rLogPath}"`);
@@ -210,13 +207,13 @@ function processSegmentRLog(rLogPath) {
               logger.info(`processSegmentRLog GpsLocation @ ${obj.LogMonoTime}: ${obj.GpsLocation.Latitude} ${obj.GpsLocation.Longitude}`);
 
               if (rlog_prevLatInternal != -1000) {
-                let lat1 = rlog_prevLatInternal;
-                let lat2 = obj.GpsLocation.Latitude;
-                let lon1 = rlog_prevLngInternal;
-                let lon2 = obj.GpsLocation.Longitude;
-                let p = 0.017453292519943295; // Math.PI / 180
-                let c = Math.cos;
-                let a = 0.5 - c((lat2 - lat1) * p) / 2
+                const lat1 = rlog_prevLatInternal;
+                const lat2 = obj.GpsLocation.Latitude;
+                const lon1 = rlog_prevLngInternal;
+                const lon2 = obj.GpsLocation.Longitude;
+                const p = 0.017453292519943295; // Math.PI / 180
+                const c = Math.cos;
+                const a = 0.5 - c((lat2 - lat1) * p) / 2
                   + c(lat1 * p) * c(lat2 * p)
                   * (1 - c((lon2 - lon1) * p)) / 2;
 
@@ -227,18 +224,17 @@ function processSegmentRLog(rLogPath) {
               rlog_prevLatInternal = obj.GpsLocation.Latitude;
               rlog_prevLngInternal = obj.GpsLocation.Longitude;
               rlog_lastTsInternal = obj.LogMonoTime;
-            }
-            else if (obj.LogMonoTime !== undefined && obj.LogMonoTime - rlog_lastTsExternal >= 1000000 * 1000 * 0.99 && obj.GpsLocationExternal !== undefined) {
+            } else if (obj.LogMonoTime !== undefined && obj.LogMonoTime - rlog_lastTsExternal >= 1000000 * 1000 * 0.99 && obj.GpsLocationExternal !== undefined) {
               logger.info(`processSegmentRLog GpsLocationExternal @ ${obj.LogMonoTime}: ${obj.GpsLocationExternal.Latitude} ${obj.GpsLocationExternal.Longitude}`);
 
               if (rlog_prevLatExternal != -1000) {
-                let lat1 = rlog_prevLatExternal;
-                let lat2 = obj.GpsLocationExternal.Latitude;
-                let lon1 = rlog_prevLngExternal;
-                let lon2 = obj.GpsLocationExternal.Longitude;
-                let p = 0.017453292519943295; // Math.PI / 180
-                let c = Math.cos;
-                let a = 0.5 - c((lat2 - lat1) * p) / 2
+                const lat1 = rlog_prevLatExternal;
+                const lat2 = obj.GpsLocationExternal.Latitude;
+                const lon1 = rlog_prevLngExternal;
+                const lon2 = obj.GpsLocationExternal.Longitude;
+                const p = 0.017453292519943295; // Math.PI / 180
+                const c = Math.cos;
+                const a = 0.5 - c((lat2 - lat1) * p) / 2
                   + c(lat1 * p) * c(lat2 * p)
                   * (1 - c((lon2 - lon1) * p)) / 2;
 
@@ -249,11 +245,9 @@ function processSegmentRLog(rLogPath) {
               rlog_prevLatExternal = obj.GpsLocationExternal.Latitude;
               rlog_prevLngExternal = obj.GpsLocationExternal.Longitude;
               rlog_lastTsExternal = obj.LogMonoTime;
-            }
-            else if (obj.LogMonoTime !== undefined && obj.CarParams !== undefined && rlog_CarParams == null) {
+            } else if (obj.LogMonoTime !== undefined && obj.CarParams !== undefined && rlog_CarParams == null) {
               rlog_CarParams = obj.CarParams;
-            }
-            else if (obj.LogMonoTime !== undefined && obj.InitData !== undefined && rlog_InitData == null) {
+            } else if (obj.LogMonoTime !== undefined && obj.InitData !== undefined && rlog_InitData == null) {
               rlog_InitData = obj.InitData;
             }
           } catch (exception) {
@@ -291,16 +285,16 @@ async function processSegmentsRecursive() {
     return updateDrives();
   }
 
-  let segmentWrapper = segmentProcessQueue[segmentProcessPosition];
-  const { segment } = segmentWrapper;
-
-  const { uploadComplete } = segmentWrapper;
-  const { driveIdentifier } = segmentWrapper;
-  const { fileStatus } = segmentWrapper;
+  const {
+    segment,
+    uploadComplete,
+    driveIdentifier,
+    fileStatus,
+  } = segmentProcessQueue[segmentProcessPosition];
 
   logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} ${JSON.stringify(segment)}`);
 
-  segment.process_attempts = segment.process_attempts + 1
+  segment.process_attempts += 1;
 
   await orm.query(
     `UPDATE drive_segments SET process_attempts = ${segment.process_attempts} WHERE id = ${segment.id}`,
@@ -310,40 +304,38 @@ async function processSegmentsRecursive() {
     logger.error(`FAILING TO PROCESS SEGMENT,${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} JSON: ${JSON.stringify(segment)} SKIPPING `);
     segmentProcessPosition++;
   } else {
-    let p1 = processSegmentRLog(fileStatus['rlog.bz2']);
-    let p2 = processSegmentVideo(fileStatus['qcamera.ts']);
-    Promise.all([p1, p2])
-      .then((values) => {
-        (async () => {
-          logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} internal gps: ${Math.round(rlog_totalDistInternal * 100) / 100}m, external gps: ${Math.round(rlog_totalDistExternal * 100) / 100}m, duration: ${qcamera_duration}s`);
+    Promise.all([
+        processSegmentRLog(fileStatus['rlog.bz2']),
+        processSegmentVideo(fileStatus['qcamera.ts']),
+      ])
+      .then(async () => {
+        logger.info(`processSegmentsRecursive ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id} internal gps: ${Math.round(rlog_totalDistInternal * 100) / 100}m, external gps: ${Math.round(rlog_totalDistExternal * 100) / 100}m, duration: ${qcamera_duration}s`);
 
-          const driveSegmentResult = await orm.models.drive_segments.update({
-            duration: Math.round(qcamera_duration),
-            distance_meters: Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10,
-            is_processed: true,
-            upload_complete: uploadComplete,
-            is_stalled: false
-          }, {where: {id: segment.id}})
+        const driveSegmentResult = await orm.models.drive_segments.update({
+          duration: Math.round(qcamera_duration),
+          distance_meters: Math.round(Math.max(rlog_totalDistInternal, rlog_totalDistExternal) * 10) / 10,
+          is_processed: true,
+          upload_complete: uploadComplete,
+          is_stalled: false
+        }, {where: {id: segment.id}})
 
+        // if the update failed, stop right here with segment processing and try to update the drives at least
+        if (driveSegmentResult === null) {
+          segmentProcessPosition = segmentProcessQueue.length;
+        }
 
-          if (driveSegmentResult === null) // if the update failed, stop right here with segment processing and try to update the drives at least
-          {
-            segmentProcessPosition = segmentProcessQueue.length;
-          }
+        affectedDrives[driveIdentifier] = true;
+        if (rlog_CarParams != null) {
+          affectedDriveCarParams[driveIdentifier] = rlog_CarParams;
+        }
+        if (rlog_InitData != null) {
+          affectedDriveInitData[driveIdentifier] = rlog_InitData;
+        }
 
-          affectedDrives[driveIdentifier] = true;
-          if (rlog_CarParams != null) {
-            affectedDriveCarParams[driveIdentifier] = rlog_CarParams;
-          }
-          if (rlog_InitData != null) {
-            affectedDriveInitData[driveIdentifier] = rlog_InitData;
-          }
-
-          segmentProcessPosition++;
-          setTimeout(() => {
-            processSegmentsRecursive();
-          }, 0);
-        })();
+        segmentProcessPosition++;
+        setTimeout(() => {
+          processSegmentsRecursive();
+        }, 0);
       })
       .catch((error) => {
         logger.error(error);
@@ -361,15 +353,15 @@ async function updateSegments() {
 
   const [drive_segments] = await orm.query('SELECT * FROM drive_segments WHERE upload_complete = false AND is_stalled = false AND process_attempts < 5 ORDER BY created ASC');
   logger.info('updateSegments - total drive_segments', drive_segments.length);
-  
+
   if (drive_segments != null) {
     for (let t = 0; t < drive_segments.length; t++) {
-      let segment = drive_segments[t];
+      const segment = drive_segments[t];
 
-      let dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
+      const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
         .update(segment.dongle_id)
         .digest('hex');
-      let driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
+      const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
         .update(segment.drive_identifier)
         .digest('hex');
 
@@ -381,7 +373,7 @@ async function updateSegments() {
         continue; // happens if upload in progress (db entity written but directory not yet created)
       }
 
-      let fileStatus = {
+      const fileStatus = {
         'fcamera.hevc': false,
         'dcamera.hevc': false,
         'qcamera.ts': false,
@@ -405,8 +397,7 @@ async function updateSegments() {
           uploadComplete,
           driveIdentifier: `${segment.dongle_id}|${segment.drive_identifier}`
         });
-      }
-      else if (uploadComplete) {
+      } else if (uploadComplete) {
         logger.info(`updateSegments uploadComplete for ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id}`);
 
         await orm.query(
@@ -414,8 +405,7 @@ async function updateSegments() {
         );
 
         affectedDrives[`${segment.dongle_id}|${segment.drive_identifier}`] = true;
-      }
-      else if (Date.now() - segment.created > 10 * 24 * 3600 * 1000) { // ignore non-uploaded segments after 10 days until a new upload_url is requested (which resets is_stalled)
+      } else if (Date.now() - segment.created > 10 * 24 * 3600 * 1000) { // ignore non-uploaded segments after 10 days until a new upload_url is requested (which resets is_stalled)
         logger.info(`updateSegments isStalled for ${segment.dongle_id} ${segment.drive_identifier} ${segment.segment_id}`);
 
         await orm.query(
@@ -423,8 +413,8 @@ async function updateSegments() {
         );
       }
 
-      if (segmentProcessQueue.length >= 15) // we process at most 15 segments per batch
-      {
+      // we process at most 15 segments per batch
+      if (segmentProcessQueue.length >= 15) {
         break;
       }
     }
@@ -442,17 +432,15 @@ async function updateSegments() {
 async function updateDevices() {
   // go through all affected devices (with deleted or updated drives) and update them (storage_used)
   logger.info(`updateDevices - affected drives: ${JSON.stringify(affectedDevices)}`);
-  for (const [key, value] of Object.entries(affectedDevices)) {
-    let dongleId = key;
-
+  for (const dongleId of Object.keys(affectedDevices)) {
     const [device] = await orm.query(`SELECT * FROM devices WHERE dongle_id = ${dongleId}`);
     if (device == null) continue;
 
-    let dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(device.dongle_id)
       .digest('hex');
-    let devicePath = `${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}`;
-    let deviceQuotaMb = Math.round(parseInt(execSync(`du -s ${devicePath} | awk -F'\t' '{print $1;}'`)
+    const devicePath = `${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}`;
+    const deviceQuotaMb = Math.round(parseInt(execSync(`du -s ${devicePath} | awk -F'\t' '{print $1;}'`)
       .toString()) / 1024);
     logger.info(`updateDevices device ${dongleId} has an updated storage_used of: ${deviceQuotaMb} MB`);
 
@@ -462,9 +450,9 @@ async function updateDevices() {
       },
       {
         where: {
-          dongle_id: device.dongle_id
-        }
-      }
+          dongle_id: device.dongle_id,
+        },
+      },
     );
   }
 
@@ -474,21 +462,19 @@ async function updateDevices() {
 async function updateDrives() {
   // go through all affected drives and update them / complete and/or build m3u8
   logger.info(`updateDrives - affected drives: ${JSON.stringify(affectedDrives)}`);
-  for (const [key, value] of Object.entries(affectedDrives)) {
-    let dongleId,
-      driveIdentifier;
-    [dongleId, driveIdentifier] = key.split('|');
-    let drive = await orm.models.drives.findOne({where: {identifier: driveIdentifier, dongle_id: dongleId}});
+  for (const key of Object.keys(affectedDrives)) {
+    const [dongleId, driveIdentifier] = key.split('|');
+    let drive = await orm.models.drives.findOne({ where: { identifier: driveIdentifier, dongle_id: dongleId } });
     if (drive == null) continue;
     drive = drive.dataValues;
-    let dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(drive.dongle_id)
       .digest('hex');
-    let driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(drive.identifier)
       .digest('hex');
-    let driveUrl = `${process.env.BASE_DRIVE_DOWNLOAD_URL + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
-    let drivePath = `${process.env.STORAGE_PATH + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+    const driveUrl = `${process.env.BASE_DRIVE_DOWNLOAD_URL + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
+    const drivePath = `${process.env.STORAGE_PATH + drive.dongle_id}/${dongleIdHash}/${driveIdentifierHash}/${drive.identifier}`;
 
     let uploadComplete = true;
     let isProcessed = true;
@@ -505,7 +491,7 @@ async function updateDrives() {
       order: [
         orm.fn('ASC', orm.col('segment_id')),
       ]
-    })
+    });
 
     if (drive_segments != null) {
       for (let t = 0; t < drive_segments.length; t++) {
@@ -562,7 +548,7 @@ async function updateDrives() {
 
     if (isProcessed) {
       // create the playlist file m3u8 for cabana
-      let playlist = '#EXTM3U\n'
+      const playlist = '#EXTM3U\n'
         + '#EXT-X-VERSION:3\n'
         + '#EXT-X-TARGETDURATION:61\n'
         + '#EXT-X-MEDIA-SEQUENCE:0\n'
@@ -581,7 +567,7 @@ async function updateDrives() {
 }
 
 async function deleteExpiredDrives() {
-  let expirationTs = Date.now() - process.env.DEVICE_EXPIRATION_DAYS * 24 * 3600 * 1000;
+  const expirationTs = Date.now() - process.env.DEVICE_EXPIRATION_DAYS * 24 * 3600 * 1000;
 
   const [expiredDrives] = await orm.query(`SELECT * FROM drives WHERE is_preserved = false AND is_deleted = false AND created < ${expirationTs}`);
   if (expiredDrives != null) {
@@ -605,10 +591,10 @@ async function removeDeletedDrivesPhysically() {
   for (let t = 0; t < deletedDrives.length; t++) {
     logger.info(`removeDeletedDrivesPhysically drive ${deletedDrives[t].dongle_id} ${deletedDrives[t].identifier} is deleted, remove physical files and clean database`);
 
-    let dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(deletedDrives[t].dongle_id)
       .digest('hex');
-    let driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const driveIdentifierHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(deletedDrives[t].identifier)
       .digest('hex');
 
@@ -667,20 +653,20 @@ async function deleteBootAndCrashLogs() {
   }
 
   for (let t = 0; t < devices.length; t++) {
-    let device = devices[t];
-    let dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
+    const device = devices[t];
+    const dongleIdHash = crypto.createHmac('sha256', process.env.APP_SALT)
       .update(device.dongle_id)
       .digest('hex');
 
     const bootlogDirectoryTree = dirTree(`${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}/boot/`, { attributes: ['size'] });
-    let bootlogFiles = [];
+    const bootlogFiles = [];
     if (bootlogDirectoryTree != undefined) {
       for (let i = 0; i < bootlogDirectoryTree.children.length; i++) {
-        let timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '')
+        const timeSplit = bootlogDirectoryTree.children[i].name.replace('boot-', '')
           .replace('crash-', '')
           .replace('\.bz2', '')
           .split('--');
-        let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
+        const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
         bootlogFiles.push({
           name: bootlogDirectoryTree.children[i].name,
           size: bootlogDirectoryTree.children[i].size,
@@ -701,14 +687,14 @@ async function deleteBootAndCrashLogs() {
     }
 
     const crashlogDirectoryTree = dirTree(`${process.env.STORAGE_PATH + device.dongle_id}/${dongleIdHash}/crash/`, { attributes: ['size'] });
-    let crashlogFiles = [];
+    const crashlogFiles = [];
     if (crashlogDirectoryTree != undefined) {
       for (let i = 0; i < crashlogDirectoryTree.children.length; i++) {
-        let timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '')
+        const timeSplit = crashlogDirectoryTree.children[i].name.replace('boot-', '')
           .replace('crash-', '')
           .replace('\.bz2', '')
           .split('--');
-        let timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
+        const timeString = `${timeSplit[0]} ${timeSplit[1].replace(/-/g, ':')}`;
         crashlogFiles.push({
           name: crashlogDirectoryTree.children[i].name,
           size: crashlogDirectoryTree.children[i].size,
