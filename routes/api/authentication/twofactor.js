@@ -22,7 +22,7 @@ async function isAuthenticated(req, res, next) {
 }
 
 router.get('/authentication/twofactor/enrol', isAuthenticated, async (req, res) => {
-
+  // TODO: implementation
 });
 
 export default router;

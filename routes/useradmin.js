@@ -1,3 +1,5 @@
+/* eslint-disable */
+// TODO: delete useradmin...
 import express from 'express';
 import bodyParser from 'body-parser';
 import crypto from 'crypto';
@@ -517,14 +519,14 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
         <a id="show-button" href="#" onclick="
             document.getElementById('hide-button').style.display = 'inline';
             document.getElementById('show-button').style.display = 'none';
-            document.getElementById('car-parameter-div').style.display = 'block'; 
+            document.getElementById('car-parameter-div').style.display = 'block';
             return false;">Show</a>
         <a id="hide-button" style="display: none;" href="#" onclick="
             document.getElementById('hide-button').style.display = 'none';
             document.getElementById('show-button').style.display = 'inline';
-            document.getElementById('car-parameter-div').style.display = 'none'; 
+            document.getElementById('car-parameter-div').style.display = 'none';
             return false;">Hide</a>
-            
+
             <br><pre id="car-parameter-div" style="display: none; font-size: 0.8em">${carParams}</pre>
         <br>
 

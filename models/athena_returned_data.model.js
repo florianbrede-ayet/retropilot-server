@@ -1,7 +1,8 @@
 import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
-  sequelize.define('athena_returned_data',
+  sequelize.define(
+    'athena_returned_data',
     {
       id: {
         allowNull: false,

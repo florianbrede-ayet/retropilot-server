@@ -1,7 +1,8 @@
 import express from 'express';
+import log4js from 'log4js';
+
 import { getURL, getToken } from '../../../controllers/authentication/oauth/google';
 import authenticationController from '../../../controllers/authentication';
-import log4js from 'log4js';
 
 const router = express.Router();
 const logger = log4js.getLogger('default');

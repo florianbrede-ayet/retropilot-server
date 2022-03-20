@@ -35,7 +35,7 @@ function simpleStringify(object) {
 }
 
 function formatDate(timestampMs) {
-  return new Date(parseInt(timestampMs)).toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  return new Date(parseInt(timestampMs, 10)).toISOString().replace(/T/, ' ').replace(/\..+/, '');
 }
 
 export default {

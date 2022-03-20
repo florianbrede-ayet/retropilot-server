@@ -2,11 +2,11 @@ import { WebSocketServer } from 'ws';
 import cookie from 'cookie';
 import httpServer from 'http';
 import log4js from 'log4js';
-import controlsFunction from './controls.js';
-import authenticationController from '../../controllers/authentication.js';
+import authenticationController from '../../controllers/authentication';
+import athenaRealtime from '../athena';
 
-import athenaRealtime from '../athena/index.js';
-import realtimeCommands from './commands.js';
+import controlsFunction from './controls';
+import realtimeCommands from './commands';
 
 const logger = log4js.getLogger('default');
 

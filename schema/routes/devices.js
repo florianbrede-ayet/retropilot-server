@@ -9,7 +9,6 @@ export const MutateDevice = yup.object().shape({
   },
 });
 
-
 export default {
 
 };

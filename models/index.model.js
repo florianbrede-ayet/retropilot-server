@@ -2,14 +2,6 @@
 /* eslint-disable global-require */
 
 import { Sequelize } from 'sequelize';
-import devices from './devices.model';
-import drives from './drives.model';
-import accounts from './accounts.model';
-import athena_action_log from './athena_action_log.model';
-import athena_returned_data from './athena_returned_data.model';
-import device_authorised_users from './device_authorised_users.model';
-import drive_segments from './drive_segments.model';
-import oauth_accounts from './oauth_accounts';
 
 const sequelize = new Sequelize({
   username: process.env.DB_USER,
@@ -23,14 +15,14 @@ const sequelize = new Sequelize({
 sequelize.options.logging = () => {};
 
 const modelDefiners = [
-  devices,
-  drives,
-  accounts,
-  athena_action_log,
-  athena_returned_data,
-  device_authorised_users,
-  drive_segments,
-  oauth_accounts,
+  require('./devices.model').default,
+  require('./drives.model').default,
+  require('./accounts.model').default,
+  require('./athena_action_log.model').default,
+  require('./athena_returned_data.model').default,
+  require('./device_authorised_users.model').default,
+  require('./drive_segments.model').default,
+  require('./oauth_accounts.model').default,
 ];
 
 for (const modelDefiner of modelDefiners) {

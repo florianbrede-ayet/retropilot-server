@@ -1,16 +1,17 @@
-import express from 'express';
+import bodyParser from 'body-parser';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
-import bodyParser from 'body-parser';
-import deviceSchema from '../../schema/routes/devices';
+import express from 'express';
 import log4js from 'log4js';
 
-import deviceController from '../../controllers/devices';
 import authenticationController from '../../controllers/authentication';
+import deviceController from '../../controllers/devices';
+import { MutateDevice } from '../../schema/routes/devices';
 
 const logger = log4js.getLogger('default');
 
 const router = express.Router();
+
 async function isAuthenticated(req, res, next) {
   const account = await authenticationController.getAuthenticatedAccount(req);
 
@@ -34,18 +35,17 @@ router.get('/retropilot/0/devices', isAuthenticated, async (req, res) => {
 
 /*
 {
-	version: "1.0"
-	2fa: {
-		tokenProvided: false,
-		token: 000000
-		unixTime: 00000
-	},
-	modifications: {
-		nicname: x
-		publicKey: x
-	}
+  version: "1.0"
+  2fa: {
+    tokenProvided: false,
+    token: 000000
+    unixTime: 00000
+  },
+  modifications: {
+    nicname: x
+    publicKey: x
+  }
 }
-
 */
 
 router.put('/retropilot/0/device/:dongle_id/', [isAuthenticated, bodyParser.json()], async (req, res) => {
@@ -54,7 +54,9 @@ router.put('/retropilot/0/device/:dongle_id/', [isAuthenticated, bodyParser.json
   }
 
   const { body } = req;
-  logger.log(deviceSchema.MutateDevice.isValid(body));
+  logger.log(MutateDevice.isValid(body));
+  // TODO: response?
+  return res.json({ success: true });
 });
 
 router.get('/retropilot/0/device/:dongle_id/drives/:drive_identifier/segment', isAuthenticated, async (req, res) => {

@@ -1,7 +1,7 @@
 import bodyParser from 'body-parser';
 import express from 'express';
 
-import userController from '../../controllers/users';
+import { createAccount, verifyEmailToken } from '../../controllers/users';
 
 const router = express.Router();
 router.post('/retropilot/0/register/email', bodyParser.urlencoded({ extended: true }), async (req, res) => {
@@ -12,7 +12,7 @@ router.post('/retropilot/0/register/email', bodyParser.urlencoded({ extended: tr
     return res.status(400).json({ success: false, msg: 'malformed request' });
   }
 
-  const accountStatus = await userController.createAccount(req.body.email, req.body.password);
+  const accountStatus = await createAccount(req.body.email, req.body.password);
   if (accountStatus && accountStatus.status) {
     return res.status(accountStatus.status).json(accountStatus);
   }
@@ -25,7 +25,7 @@ router.get('/retropilot/0/register/verify/:token', bodyParser.urlencoded({ exten
     return res.status(400).json({ success: false, status: 400, data: { missingToken: true } });
   }
 
-  const verified = await userController.verifyEmailToken(req.params.token);
+  const verified = await verifyEmailToken(req.params.token);
 
   if (verified && verified.status) {
     return res.status(verified.status).json(verified);

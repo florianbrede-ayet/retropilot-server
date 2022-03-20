@@ -7,6 +7,9 @@ export function oauthRegister(email) {
   const account = getAccountFromEmail(email);
 
   if (account) return { error: true, ...AUTH_REGISTER_ALREADY_REGISTERED };
+
+  // TODO: finish
+  return { error: false };
 }
 
 export default function register() {

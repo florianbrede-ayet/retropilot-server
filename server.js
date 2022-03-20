@@ -120,7 +120,7 @@ lockfile.lock('retropilot_server', { realpath: false, stale: 30000, update: 2000
     const httpServer = http.createServer(app);
 
     httpServer.listen(process.env.HTTP_PORT, () => {
-      logger.info(`Retropilot Server listening at http://${process.env.BASE_URL}`);
+      logger.info(`RetroPilot Server listening at ${process.env.BASE_URL}`);
     });
 
   }).catch((e) => {

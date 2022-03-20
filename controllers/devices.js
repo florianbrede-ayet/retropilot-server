@@ -2,9 +2,10 @@ import sanitizeFactory from 'sanitize';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import log4js from 'log4js';
-import authenticationController from './authentication';
 import orm from '../models/index.model';
-import usersController from './users';
+
+import { readJWT, validateJWT } from './authentication';
+import { getAccountFromId } from './users';
 
 const logger = log4js.getLogger('default');
 const sanitize = sanitizeFactory();
@@ -25,7 +26,7 @@ async function pairDevice(account, qrString) {
     device = await orm.models.device.findOne({ where: { serial } });
     pairJWT = pairToken;
   } else {
-    const data = await authenticationController.readJWT(qrString);
+    const data = await readJWT(qrString);
     if (!data || !data.pair) {
       return { success: false, noPair: true };
     }
@@ -33,11 +34,11 @@ async function pairDevice(account, qrString) {
     pairJWT = qrString;
   }
 
-  if (deviceQuery == null || !deviceQuery.dataValues) {
+  if (device == null || !device.dataValues) {
     return { success: false, registered: false, noPair: true };
   }
 
-  const decoded = await authenticationController.validateJWT(pairJWT, device.public_key);
+  const decoded = await validateJWT(pairJWT, device.public_key);
   if (decoded == null || !decoded.pair) {
     return { success: false, badToken: true };
   }
@@ -151,7 +152,7 @@ async function isUserAuthorised(accountId, dongleId) {
     return { success: false, msg: 'bad_data' };
   }
 
-  const account = await usersController.getAccountFromId(accountId);
+  const account = await getAccountFromId(accountId);
   if (!account || !account.dataValues) {
     return { success: false, msg: 'bad_account', data: { authorised: false, account_id: accountId } };
   }

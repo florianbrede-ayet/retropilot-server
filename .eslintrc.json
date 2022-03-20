@@ -5,12 +5,17 @@
   "env": {
     "es6": true,
     "node": true,
-    "browser": false // do we need this? none of this code will ever run on a browswer 
+    "browser": false // do we need this? none of this code will ever run on a browswer
   },
   "plugins": [
     "no-floating-promise"
   ],
   "rules": {
+    // enforces no braces where they can be omitted
+    // https://eslint.org/docs/rules/arrow-body-style
+    // retropilot: this seems dumb. do whatever looks nice.
+    "arrow-body-style": "off",
+
     // disallow use of unary operators, ++ and --
     // http://eslint.org/docs/rules/no-plusplus
     // retropilot: we allow them in the for loop

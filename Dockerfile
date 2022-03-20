@@ -6,10 +6,9 @@ WORKDIR /app
 # Install app dependencies
 COPY package*.json ./
 RUN npm ci
-RUN npm install pm2 -g
 
 # Bundle app source
 COPY . .
 
 EXPOSE 3000
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD ["node", "-r", "esm", "server.js"]

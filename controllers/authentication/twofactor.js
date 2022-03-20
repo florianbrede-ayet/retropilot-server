@@ -12,7 +12,7 @@ export async function twoFactorOnboard(account) {
   if (!account || !account.dataValues) { return { success: false, ...AUTH_2FA_BAD_ACCOUNT }; }
   if (account['2fa_token'] !== null) return { success: false, ...AUTH_2FA_ONBOARD_ALREADY_ENROLLED };
 
-  const token = await generateSecret(account.email, config.enterprise.name);
+  const token = await generateSecret(account.email, process.env.AUTH_2FA_ISSUER);
 
   orm.models.account.update(
     { '2fa_token': token.secret },

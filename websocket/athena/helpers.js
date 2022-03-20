@@ -1,9 +1,9 @@
 /* eslint-disable no-underscore-dangle */
-let wss;
 import { v4 as uuid } from 'uuid';
 import orm from '../../models/index.model';
 
 let realtime;
+let wss;
 
 async function incoming(ws, res, msg) {
   return realtime.passData(ws.dongleId, msg);
