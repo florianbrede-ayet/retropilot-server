@@ -7,8 +7,8 @@ If you don't want to host your own instance, check out https://api.retropilot.or
 
 The server consists of 2 node scripts.
 
-`server.js` is using expressjs and runs the backend (file upload / communication with openpilot) and the useradmin dashboard to manage / view / download drives & logs.
-`worker.js` is a background worker that is processing drives (analyzing video files & logs) to prepare drives for playback in cabana and to gather statistics. It automatically terminates itself after 60 minutes to make sure the video/log libraries do not cause memory leaks.
+`src/server` is using expressjs and runs the backend (file upload / communication with openpilot) and the useradmin dashboard to manage / view / download drives & logs.
+`src/worker` is a background worker that is processing drives (analyzing video files & logs) to prepare drives for playback in cabana and to gather statistics. It automatically terminates itself after 60 minutes to make sure the video/log libraries do not cause memory leaks.
 
 Both scripts can be started with a cronjob each minute, they use locking to make sure they run exclusively.
 
@@ -27,15 +27,15 @@ cp database.empty.sqlite database.sqlite
 ### [Server] Running
 
 ```
-node -r esm server.js
+node -r esm src/server
 ```
 ```
-node -r esm worker.js
+node -r esm src/worker
 ```
 
 
 ### [Server] CABANA Support
-A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet/retropilot-cabana) is directly bundled in the `cabana/` subdirectory and will be served by the express app. After starting `server.js`, cabana is ready to use.
+A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet/retropilot-cabana) is directly bundled in the `cabana/` subdirectory and will be served by the express app. After starting `index.js`, cabana is ready to use.
 
 -----
 

@@ -7,7 +7,7 @@ import log4js from 'log4js';
 import models from '../../models/index.model';
 import helperFunctions from './helpers';
 
-import deviceController from '../../controllers/devices';
+import deviceController from '../../server/controllers/devices';
 
 const logger = log4js.getLogger('default');
 

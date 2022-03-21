@@ -4,7 +4,7 @@ import authenticationController from '../../controllers/authentication';
 
 import userController from '../../controllers/users';
 import deviceController from '../../controllers/devices';
-import models from '../../models/index.model';
+import models from '../../../models/index.model';
 /* eslint-enable no-unused-vars */
 const router = express.Router();
 const whitelistParams = {

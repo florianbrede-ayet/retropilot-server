@@ -2,10 +2,10 @@
   "name": "retropilot-server",
   "version": "1.0.0",
   "description": "replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana instance.",
-  "main": "server.js",
+  "main": "src/server/index.js",
   "scripts": {
     "test": "mocha",
-    "start": "node --es-module-specifier-resolution=node server.js",
+    "start": "node -r esm src/server",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix"
   },

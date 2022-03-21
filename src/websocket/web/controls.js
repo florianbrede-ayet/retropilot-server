@@ -1,4 +1,4 @@
-import deviceController from '../../controllers/devices';
+import deviceController from '../../server/controllers/devices';
 
 let wss;
 

@@ -1,8 +1,8 @@
 // eslint-disable-next-line no-unused-vars
-import authenticationController from '../../controllers/authentication';
+import authenticationController from '../../server/controllers/authentication';
 
-import deviceController from '../../controllers/devices';
-import athenaRealtime from '../athena/index';
+import deviceController from '../../server/controllers/devices';
+import athenaRealtime from '../athena';
 
 // Checks if device is currently online in Athena
 

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import jsonwebtoken from 'jsonwebtoken';
 import log4js from 'log4js';
-import orm from '../../models/index.model';
+import orm from '../../../models/index.model';
 
 const logger = log4js.getLogger('default');
 

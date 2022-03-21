@@ -5,8 +5,8 @@ import crypto from 'crypto';
 import log4js from 'log4js';
 import storageController from '../controllers/storage';
 import deviceController from '../controllers/devices';
-import authenticationController from './../controllers/authentication';
-import userController from './../controllers/users';
+import authenticationController from '../controllers/authentication';
+import userController from '../controllers/users';
 
 const logger = log4js.getLogger('default');
 const router = express.Router();
@@ -314,14 +314,14 @@ async function upload(req, res) {
         })
 
           await deviceController.updateOrCreateDriveSegment(dongleId, driveName, segment, {
-            duration: 0, 
-            distance_meters: 0, 
-            upload_complete: false, 
-            is_processed: false, 
-            is_stalled: false, 
+            duration: 0,
+            distance_meters: 0,
+            upload_complete: false,
+            is_processed: false,
+            is_stalled: false,
             created: Date.now()
           })
-      
+
 
         logger.info(`HTTP.UPLOAD_URL updated existing drive: ${JSON.stringify(drive)}`);
       }

@@ -601,11 +601,11 @@ router.get('/useradmin/drive/:dongleId/:driveIdentifier', runAsyncWrapper(async 
     var qlog = '--';
     var rlog = '--';
     for (var c in directoryTree.children[i].children) {
-        if (directoryTree.children[i].children[c].name == 'fcamera.hevc') fcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
-        if (directoryTree.children[i].children[c].name == 'dcamera.hevc') fcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
-        if (directoryTree.children[i].children[c].name == 'qcamera.ts') qcamera = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
-        if (directoryTree.children[i].children[c].name == 'qlog.bz2') qlog = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
-        if (directoryTree.children[i].children[c].name == 'rlog.bz2') rlog = '<a target="_blank" href="' + driveUrl + segment + '/' + directoryTree.children[i].children[c].name + '">' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'fcamera.hevc') fcamera = '' + driveUrl + segment + '<a target="_blank" href="/">' + directoryTree.children[i].children[c].name + '' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'dcamera.hevc') fcamera = '' + driveUrl + segment + '<a target="_blank" href="/">' + directoryTree.children[i].children[c].name + '' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'qcamera.ts') qcamera = '' + driveUrl + segment + '<a target="_blank" href="/">' + directoryTree.children[i].children[c].name + '' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'qlog.bz2') qlog = '' + driveUrl + segment + '<a target="_blank" href="/">' + directoryTree.children[i].children[c].name + '' + directoryTree.children[i].children[c].name + '</a>';
+        if (directoryTree.children[i].children[c].name == 'rlog.bz2') rlog = '' + driveUrl + segment + '<a target="_blank" href="/">' + directoryTree.children[i].children[c].name + '' + directoryTree.children[i].children[c].name + '</a>';
     }
 
     var isProcessed = '?';

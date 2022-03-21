@@ -1,4 +1,4 @@
-import orm from '../models/index.model';
+import orm from '../../models/index.model';
 
 // TODO move everythijng away from this dumb intertwined style
 

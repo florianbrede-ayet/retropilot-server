@@ -1,9 +1,9 @@
 module.exports = [{
   name: 'server',
-  script: 'server.js',
+  script: 'src/server',
   node_args: '-r esm',
 }, {
   name: 'worker',
-  script: 'worker.js',
+  script: 'src/worker',
   node_args: '-r esm',
 }];

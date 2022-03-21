@@ -6,7 +6,7 @@ import {
   AUTH_2FA_ENROLLED,
   AUTH_2FA_BAD_TOKEN,
 } from '../../consistency/terms';
-import orm from '../../models/index.model';
+import orm from '../../../models/index.model';
 
 export async function twoFactorOnboard(account) {
   if (!account || !account.dataValues) { return { success: false, ...AUTH_2FA_BAD_ACCOUNT }; }

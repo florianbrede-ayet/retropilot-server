@@ -2,7 +2,7 @@ import sanitizeFactory from 'sanitize';
 import crypto from 'crypto';
 import dirTree from 'directory-tree';
 import log4js from 'log4js';
-import orm from '../models/index.model';
+import orm from '../../models/index.model';
 
 import { readJWT, validateJWT } from './authentication';
 import { getAccountFromId } from './users';
