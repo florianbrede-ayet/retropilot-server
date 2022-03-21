@@ -9,6 +9,7 @@ RUN npm ci
 
 # Bundle app source
 COPY . .
+RUN npm run build
 
 EXPOSE 3000
-CMD ["node", "-r", "esm", "src/server"]
+CMD ["npm", "run", "server"]

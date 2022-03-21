@@ -18,5 +18,8 @@ test/.devKeys
 *.log
 .env
 
+# Build
+dist
+
 data/*
 !data/nginx

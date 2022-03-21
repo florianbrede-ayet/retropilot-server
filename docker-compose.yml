@@ -12,7 +12,7 @@ services:
       - "4040:4040"
   worker:
     build: .
-    command: node -r esm src/worker
+    command: npm run worker
     restart: unless-stopped
     depends_on:
       - db
