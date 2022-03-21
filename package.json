@@ -2,6 +2,7 @@
   "name": "retropilot-server",
   "version": "1.0.0",
   "description": "replacement for comma.ai backend and useradmin dashboard. can be combined with a modified cabana instance.",
+  "homepage": "https://github.com/RetroPilot/retropilot-server",
   "main": "src/server/index.js",
   "scripts": {
     "test": "mocha",
@@ -9,8 +10,6 @@
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@commaai/log_reader": "^0.9.0",
     "@sendgrid/client": "^7.4.3",
