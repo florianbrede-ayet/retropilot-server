@@ -1,6 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 import { v4 as uuid } from 'uuid';
-import orm from '../../models/index.model';
+import orm from '../../../models/index.model';
 
 let realtime;
 let wss;

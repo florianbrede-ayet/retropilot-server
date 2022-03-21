@@ -1,13 +1,14 @@
-import { WebSocketServer } from 'ws'; import cookie from 'cookie';
+import { WebSocketServer } from 'ws';
+import cookie from 'cookie';
 import jsonwebtoken from 'jsonwebtoken';
 import httpsServer from 'https';
 import httpServer from 'http';
 import { readFileSync } from 'fs';
 import log4js from 'log4js';
-import models from '../../models/index.model';
-import helperFunctions from './helpers';
 
-import deviceController from '../../server/controllers/devices';
+import models from '../../../models/index.model';
+import deviceController from '../../controllers/devices';
+import helperFunctions from './helpers';
 
 const logger = log4js.getLogger('default');
 

@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import cookie from 'cookie';
 import httpServer from 'http';
 import log4js from 'log4js';
-import authenticationController from '../../server/controllers/authentication';
+import authenticationController from '../../controllers/authentication';
 import athenaRealtime from '../athena';
 
 import controlsFunction from './controls';

@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import log4js from 'log4js';
 
 import storageController from './controllers/storage';
-import athena from '../websocket/athena';
+import athena from './websocket/athena';
 import controllers from './controllers';
 import routers from './routes';
 
