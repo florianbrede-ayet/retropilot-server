@@ -6,10 +6,14 @@ services:
     depends_on:
       - db
     volumes:
-      - ./:/app
+      - retropilot-realdata:/realdata
     ports:
       - "3000:3000"
       - "4040:4040"
+    env_file:
+      - .env
+    environment:
+      - STORAGE_PATH=/realdata
   worker:
     build: .
     command: npm run worker
@@ -17,7 +21,11 @@ services:
     depends_on:
       - db
     volumes:
-      - ./:/app
+      - retropilot-realdata:/realdata
+    env_file:
+      - .env
+    environment:
+      - STORAGE_PATH=/realdata
   db:
     image: postgres:14-bullseye
     restart: always
@@ -25,8 +33,12 @@ services:
       - '5438:5432'
     volumes:
       - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
-      - ./data/postgres:/var/lib/postgresql/data
+      - retropilot-db:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
+
+volumes:
+  retropilot-realdata:
+  retropilot-db:

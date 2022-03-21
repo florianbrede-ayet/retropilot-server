@@ -10,8 +10,6 @@ node_modules/
 # Data
 realdata
 database
-*.sqlite
-test/.devKeys
 
 # Miscellaneous
 .DS_Store
