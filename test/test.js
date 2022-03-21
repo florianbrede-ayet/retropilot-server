@@ -1,4 +1,6 @@
+import 'dotenv/config';
 import request from 'supertest';
+
 import app from '../src/server/app';
 
 // TODO better way to only run tests once server is up
