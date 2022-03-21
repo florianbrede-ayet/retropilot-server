@@ -5,7 +5,6 @@ import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import log4js from 'log4js';
-import lockfile from 'proper-lockfile';
 import dirTree from 'directory-tree';
 import { execSync } from 'child_process';
 import Reader from '@commaai/log_reader';
@@ -739,29 +738,23 @@ async function mainWorkerLoop() {
   }
 }
 
-// make sure bunzip2 is available
-try {
-  //execSync('bunzip2 --help');
-} catch (exception) {
-  logger.error('bunzip2 is not installed or not available in environment path');
-  process.exit();
-}
-
-lockfile.lock('retropilot_worker', {
-    realpath: false,
-    stale: 90000,
-    update: 2000
-  })
-  .then((release) => {
-    logger.info('STARTING WORKER...');
-    (async () => {
-      initializeStorage();
-      setTimeout(() => {
-        mainWorkerLoop();
-      }, 0);
-    })();
-  })
-  .catch((e) => {
-    console.error(e);
+const main = async () => {
+  // make sure bunzip2 is available
+  try {
+    //execSync('bunzip2 --help');
+  } catch (exception) {
+    logger.error('bunzip2 is not installed or not available in environment path');
     process.exit();
-  });
+  }
+
+  initializeStorage();
+  setTimeout(() => {
+    mainWorkerLoop();
+  }, 0);
+};
+
+try {
+  main();
+} catch (e) {
+  console.error(e);
+}
