@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import fs from 'fs';
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import path  from 'path';
 
 import log4js from 'log4js';
 import dirTree from 'directory-tree';
@@ -13,19 +12,15 @@ import ffprobeStatic from 'ffprobe-static';
 
 import orm from '../models/index.model';
 
+const startTime = Date.now();
 let lastCleaningTime = 0;
-let startTime = Date.now();
 
 log4js.configure({
-    appenders: { logfile: { type: 'file', filename: 'worker.log' }, out: { type: 'console' } },
-    categories: { default: { appenders: ['out', 'logfile'], level: 'info' } }
+  appenders: { logfile: { type: 'file', filename: 'worker.log' }, out: { type: 'console' } },
+  categories: { default: { appenders: ['out', 'logfile'], level: 'info' } },
 });
 
 const logger = log4js.getLogger('default');
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-global.__basedir = __dirname;
 
 function initializeStorage() {
   const verifiedPath = mkDirByPathSync(process.env.STORAGE_PATH, { isRelativeToScript: (process.env.STORAGE_PATH.indexOf('/') !== 0) });

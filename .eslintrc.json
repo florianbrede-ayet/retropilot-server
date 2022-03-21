@@ -1,11 +1,11 @@
 {
+  "root": true,
   "extends": [
     "airbnb-base"
   ],
   "env": {
     "es6": true,
-    "node": true,
-    "browser": false // do we need this? none of this code will ever run on a browswer
+    "node": true
   },
   "plugins": [
     "no-floating-promise"
@@ -15,6 +15,17 @@
     // https://eslint.org/docs/rules/arrow-body-style
     // retropilot: this seems dumb. do whatever looks nice.
     "arrow-body-style": "off",
+
+    // specify the maximum length of a line in your program
+    // https://eslint.org/docs/rules/max-len
+    // retropilot: ignore comments
+    "max-len": ["error", 100, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": true,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true
+    }],
 
     // disallow use of unary operators, ++ and --
     // http://eslint.org/docs/rules/no-plusplus
@@ -30,17 +41,6 @@
     // http://eslint.org/docs/rules/no-use-before-define
     // retropilot: permit referencing functions before they're defined
     "no-use-before-define": ["error", { "functions": false }],
-
-    // specify the maximum length of a line in your program
-    // https://eslint.org/docs/rules/max-len
-    // retropilot: ignore comments
-    "max-len": ["error", 100, 2, {
-      "ignoreUrls": true,
-      "ignoreComments": true,
-      "ignoreRegExpLiterals": true,
-      "ignoreStrings": true,
-      "ignoreTemplateLiterals": true
-    }],
 
     // TODO: fix and remove
     // retropilot: we are in the process of removing all of these

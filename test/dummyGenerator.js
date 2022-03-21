@@ -1,6 +1,5 @@
-
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
 const devicePrivateKey = "-----BEGIN RSA PRIVATE KEY-----\n" +
     "MIIEowIBAAKCAQEAwhH9PqBd/R/QPvcf1Gom5Vp+zYb1+DLjiFMC7a1lNvV8MUqK\n" +
@@ -63,7 +62,6 @@ function getImei() {
 function getSerial() {
     return crypto.randomBytes(10).toString('hex');
 }
-
 
 
 export default {

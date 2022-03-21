@@ -1,6 +1,1 @@
-cabana
-certs
-node_modules
-static
-test
-config.js
+.gitignore

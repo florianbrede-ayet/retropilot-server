@@ -21,7 +21,7 @@ function mkDirByPathSync(targetDir, { isRelativeToScript = false } = {}) {
   const { sep } = path;
   const initDir = path.isAbsolute(targetDir) ? sep : '';
 
-  const baseDir = isRelativeToScript ? global.__basedir : '.';
+  const baseDir = isRelativeToScript ? __dirname : '.';
 
   return targetDir.split(sep).reduce((parentDir, childDir) => {
     const curDir = path.resolve(baseDir, parentDir, childDir);
