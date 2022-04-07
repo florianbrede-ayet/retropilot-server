@@ -1,0 +1,59 @@
+{
+  "root": true,
+  "extends": [
+    "airbnb-base"
+  ],
+  "env": {
+    "es6": true,
+    "node": true
+  },
+  "plugins": [
+    "no-floating-promise"
+  ],
+  "rules": {
+    // enforces no braces where they can be omitted
+    // https://eslint.org/docs/rules/arrow-body-style
+    // retropilot: this seems dumb. do whatever looks nice.
+    "arrow-body-style": "off",
+
+    // specify the maximum length of a line in your program
+    // https://eslint.org/docs/rules/max-len
+    // retropilot: ignore comments
+    "max-len": ["error", 100, 2, {
+      "ignoreUrls": true,
+      "ignoreComments": true,
+      "ignoreRegExpLiterals": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true
+    }],
+
+    // disallow use of unary operators, ++ and --
+    // http://eslint.org/docs/rules/no-plusplus
+    // retropilot: we allow them in the for loop
+    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+
+    // disallow use of the continue statement
+    // https://eslint.org/docs/rules/no-continue
+    // retropilot: we allow use of the continue statement
+    "no-continue": "off",
+
+    // disallow use of variables before they are defined
+    // http://eslint.org/docs/rules/no-use-before-define
+    // retropilot: permit referencing functions before they're defined
+    "no-use-before-define": ["error", { "functions": false }],
+
+    // TODO: fix and remove
+    // retropilot: we are in the process of removing all of these
+    "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+    // retropilot: we are in the process of moving to es6 let and const
+    "no-var": "off",
+    "one-var": "off",
+    "no-await-in-loop": "off",
+    "no-console": "off",
+    "no-underscore-dangle": "off",
+    // retropilot: we use this for websocket connection properties
+    "no-param-reassign": "off",
+    // retropilot: require promises to be handled correctly
+    "no-floating-promise/no-floating-promise": 2
+  }
+}
