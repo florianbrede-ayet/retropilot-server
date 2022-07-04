@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model accounts {
+  id                      Int                       @id @unique(map: "primary_uni") @default(autoincrement())
+  email                   String                    @unique(map: "accounts_un") @db.VarChar(64)
+  password                String?                   @db.VarChar(246)
+  created                 Int?
+  last_ping               Int?
+  banned                  Boolean?                  @default(false)
+  fa_token                String?                   @map("2fa_token") @db.VarChar(200)
+  admin                   Boolean?                  @default(false)
+  session_seed            String?                   @db.VarChar(256)
+  email_verify_token      String?                   @db.VarChar
+  g_oauth_sub             String?                   @db.VarChar
+  two_factor_enabled      Boolean                   @default(false)
+  device_authorised_users device_authorised_users[]
+  devices                 devices[]
+}
+
+model athena_action_logs {
+  id         Int     @id @unique(map: "athena_action_logs_un") @default(autoincrement())
+  account_id Int?    @default(autoincrement())
+  device_id  Int?    @default(autoincrement())
+  action     String? @db.VarChar(38)
+  user_ip    String? @db.VarChar(1)
+  device_ip  String? @db.VarChar(19)
+  meta       Json?   @db.Json
+  created_at Int?
+  dongle_id  String? @db.VarChar(36)
+}
+
+model athena_returned_data {
+  id          Int     @id @unique(map: "un") @default(autoincrement())
+  device_id   Int     @default(autoincrement())
+  type        String? @db.VarChar(12)
+  data        Json?   @db.Json
+  created_at  Int?
+  uuid        String? @db.VarChar(12)
+  resolved_at Int?
+  devices     devices @relation(fields: [device_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "device_id_fk")
+}
+
+model device_authorised_users {
+  id          Int      @id @unique(map: "device_authorised_users_un") @default(autoincrement())
+  account_id  Int      @default(autoincrement())
+  device_id   Int      @default(autoincrement())
+  athena      Boolean  @default(false)
+  unpair      Boolean  @default(false)
+  view_drives Boolean  @default(false)
+  created_at  Int
+  accounts    accounts @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "device_authorised_users_fk")
+  devices     devices  @relation(fields: [device_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "device_authorised_users_fk_1")
+}
+
+model devices {
+  id                      Int                       @id @unique(map: "devices_un") @default(autoincrement())
+  dongle_id               String                    @db.VarChar(36) @unique(map: "devices_unique_dongle")
+  account_id              Int?
+  imei                    String?
+  serial                  String?
+  device_type             String?
+  public_key              String?
+  created                 Int?
+  last_ping               Int?
+  storage_used            Int?
+  max_storage             Int?
+  ignore_uploads          Boolean?
+  nickname                String?                   @db.VarChar(20)
+  accounts                accounts?                 @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "devices_fk")
+  athena_returned_data    athena_returned_data[]
+  device_authorised_users device_authorised_users[]
+  drive_segments          drive_segments[]
+  drives                  drives[]
+}
+
+model drive_segments {
+  id               Int     @id @unique(map: "drive_segment_uk") @default(autoincrement())
+  segment_id       Int
+  drive_identifier String  @db.VarChar(20)
+  dongle_id        String  @db.VarChar(36)
+  duration         Int?
+  distance_meters  Int?
+  upload_complete  Boolean @default(false)
+  is_processed     Boolean @default(false)
+  is_stalled       Boolean @default(false)
+  created          Int     @default(0)
+  process_attempts Int     @default(0) @db.SmallInt
+  devices          devices @relation(fields: [dongle_id], references: [dongle_id], onDelete: NoAction, onUpdate: NoAction, map: "drive_segments_fk")
+
+  @@unique([dongle_id, drive_identifier, segment_id], map: "drive_segments_unique_constraint")
+}
+
+model drives {
+  id                    Int      @id @unique(map: "drives_un") @default(autoincrement())
+  identifier            String?  @db.VarChar(20)
+  dongle_id             String?  @db.VarChar(36)
+  max_segment           Int?
+  duration              Float?
+  distance_meters       Float?
+  filesize              Int?
+  upload_complete       Boolean  @default(false)
+  is_processed          Boolean  @default(false)
+  created               Int?
+  last_upload           Int?
+  is_preserved          Boolean  @default(false)
+  is_deleted            Boolean  @default(false)
+  drive_date            Int?     @default(0)
+  is_physically_removed Boolean  @default(false)
+  metadata              String?
+  devices               devices? @relation(fields: [dongle_id], references: [dongle_id], onDelete: NoAction, onUpdate: NoAction, map: "drives_fk")
+}
+
+model oauth_accounts {
+  id          Int       @id(map: "oauth_accounts_pk") @default(autoincrement())
+  account_id  Int       @default(autoincrement())
+  email       String    @db.VarChar
+  created     DateTime? @db.Time(6)
+  last_used   String?   @db.VarChar
+  refresh     String?   @db.VarChar
+  provider    String?   @db.VarChar
+  external_id String?   @db.VarChar
+  enabled     Boolean   @default(false)
+}
+
+model sessions {
+  id         Int     @id(map: "sessions_pk") @default(autoincrement())
+  sessionkey String? @db.VarChar
+  account_id Int?
+  ip_address String? @db.VarChar
+  expires    Int?
+}
