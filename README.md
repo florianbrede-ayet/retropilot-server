@@ -51,7 +51,7 @@ find /data/openpilot -type f -exec sed -i 's/https:\/\/api.commadotai.com/https:
 ### [Device] Swapping Servers (Back)
 To switch a device between different servers, you have to remove the old `DongleId` and reboot:
 ```
-rm /data/params/d/DongleID
+rm /data/params/d/DongleId
 reboot
 ```
 
