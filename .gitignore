@@ -1,12 +1,23 @@
-node_modules/
-realdata/
-worker.log
-server.log
-package-lock.json
-database.sqlite
-config.js
-.vscode
+# Editors
 .idea
-database.sqlite
-config.js
-test/.devKeys
+.vscode*
+*.swp
+*.swo
+
+# NPM
+node_modules/
+
+# Data
+realdata
+database
+
+# Miscellaneous
+.DS_Store
+*.log
+.env
+
+# Build
+dist
+
+data/*
+!data/nginx

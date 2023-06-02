@@ -1,4 +1,0 @@
-
-
-
-function getUploadURL(driveType) {}

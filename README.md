@@ -7,10 +7,9 @@ If you don't want to host your own instance, check out https://api.retropilot.or
 
 The server consists of 2 node scripts.
 
-`server.js` is using expressjs and runs the backend (file upload / communication with openpilot) and the useradmin dashboard to manage / view / download drives & logs.
-`worker.js` is a background worker that is processing drives (analyzing video files & logs) to prepare drives for playback in cabana and to gather statistics. It automatically terminates itself after 60 minutes to make sure the video/log libraries do not cause memory leaks.
+- `src/server` is using expressjs and runs the backend (file upload / communication with openpilot) and the useradmin dashboard to manage / view / download drives & logs.
 
-Both scripts can be started with a cronjob each minute, they use locking to make sure they run exclusively.
+- `src/worker` is a background worker that is processing drives (analyzing video files & logs) to prepare drives for playback in cabana and to gather statistics. It automatically terminates itself after 60 minutes to make sure the video/log libraries do not cause memory leaks.
 
 **Attention:** Minimum required node version is **node 10**.
 
@@ -27,15 +26,15 @@ cp database.empty.sqlite database.sqlite
 ### [Server] Running
 
 ```
-node -r esm server.js
+node -r esm src/server
 ```
 ```
-node -r esm worker.js
+node -r esm src/worker
 ```
 
 
 ### [Server] CABANA Support
-A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet/retropilot-cabana) is directly bundled in the `cabana/` subdirectory and will be served by the express app. After starting `server.js`, cabana is ready to use.
+A compiled version of a custom cabana fork (https://github.com/florianbrede-ayet/retropilot-cabana) is directly bundled in the `cabana/` subdirectory and will be served by the express app. After starting `index.js`, cabana is ready to use.
 
 -----
 
@@ -89,3 +88,11 @@ The athena websockets interface is not implemented yet, so the comma app and ath
 ![image](https://user-images.githubusercontent.com/48515354/118385075-2a459c80-b60c-11eb-976c-bc331a609391.png)
 
 ![image](https://user-images.githubusercontent.com/48515354/118385084-37fb2200-b60c-11eb-8d3e-6db458827808.png)
+
+
+## UAT
+
+Launch with:
+```
+docker-compose -f docker-compose.yml -f docker-compose.uat.yml up -d
+```
