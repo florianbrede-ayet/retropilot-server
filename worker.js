@@ -278,7 +278,33 @@ var rlog_prevLngExternal=-1000;
 var rlog_totalDistExternal = 0;
 var qcamera_duration = 0;
 
+/**
+ * The capnp-split library sometimes throws internal, uncatchable errors if rlog files are broken.
+ * This function checks if the file is allowed to be processed (or has been attempted before) and writes its path to the lockfile.
+ * @param {*} filePath 
+ * @returns 
+ */
+function checkAllowProcess(filePath) {
+    const lockFilePath = path.join(__dirname, 'rlog_lockfile.txt');
+    // Check if the lockfile exists and has the same file path
+    if (fs.existsSync(lockFilePath)) {
+        const content = fs.readFileSync(lockFilePath, 'utf8');
+        if (content === filePath) {
+        return false;
+        }
+    }
 
+    // If file is allowed to be processed, write its path to the lockfile
+    fs.writeFileSync(lockFilePath, filePath, 'utf8');
+
+    return true;
+}
+
+/**
+ * This function processes a single rlog file to extract the information we want for our drive overview.
+ * @param {*} rLogPath 
+ * @returns 
+ */
 function processSegmentRLog(rLogPath) {
 
     rlog_lastTsInternal=0;
@@ -291,6 +317,11 @@ function processSegmentRLog(rLogPath) {
     rlog_totalDistExternal = 0;
     rlog_CarParams=null;
     rlog_InitData=null;
+
+    if (!checkAllowProcess(rLogPath)) {
+        logger.info("processSegmentRLog not allowed to process "+rLogPath+" again, skipping");
+        return;
+    }
 
     return new Promise(
       function(resolve, reject) {
